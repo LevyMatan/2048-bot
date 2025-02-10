@@ -1,11 +1,12 @@
 import random
 from players import Player, RandomPlayer, MaxEmptyCellsPlayer, HumanPlayer, MonteCarloPlayer, HeuristicPlayer, MinMaxPlayer, ExpectimaxPlayer
 from board import Board
+from interfaces import GUI2048, CLI2048
 
 MOVE_COUNT_PROGRESS_PRINT = 500
 
 class Game2048:
-    def __init__(self, board: Board | None = None, player: Player | None = None, move_count: int = 0):
+    def __init__(self, board: Board | None = None, player: Player | None = None, move_count: int = 0, interface=None):
         if board is None:
             self.board = Board()
         else:
@@ -21,6 +22,8 @@ class Game2048:
         else:
             self.player = RandomPlayer()
             print("Random player selected.")
+
+        self.interface = interface
 
     def add_random_tile(self):
         empty_tiles = Board.get_empty_tiles(self.board.state)
@@ -51,39 +54,11 @@ class Game2048:
         self.reset()
         while self.play_move():
             self.move_count += 1
+            if self.interface:
+                self.interface.update()
             # if self.move_count % MOVE_COUNT_PROGRESS_PRINT == 0:
             #     print(f"Move count: {self.move_count}")
         return self.get_score(), self.board.get_state(), self.move_count
-
-    def pretty_print(self):
-        """
-        Pretty-print the board with borders.
-        Each tile is displayed as 2**cell if cell > 0, otherwise left blank.
-        """
-        board = self.board
-
-        # Print Score
-        print(f"Score: {self.get_score()}")
-        # Print move count
-        print(f"Move count: {self.move_count}")
-
-        # Unpack the board state to a list of 16 cells in row-major order.
-        cells = [tile for tile in board.get_state(unpack=True)]
-        # Convert each cell: if non-zero, display 2**cell, else empty string.
-        display_cells = [str(2**cell) if cell > 0 else '' for cell in cells]
-
-        # Define column width (adjust as needed)
-        cell_width = 6
-        horizontal_line = '+' + '+'.join(['-' * cell_width] * 4) + '+'
-
-        print(horizontal_line)
-        for row in range(4):
-            row_cells = display_cells[row * 4 : (row + 1) * 4]
-            # Center each cell value in the column.
-            row_str = '|' + '|'.join(cell.center(cell_width) for cell in row_cells) + '|'
-            print(row_str)
-            print(horizontal_line)
-
 
 if __name__ == "__main__":
     import cProfile
@@ -144,6 +119,4 @@ if __name__ == "__main__":
             stats.print_stats()
 
     print("Best game:")
-    game = Game2048(board=Board(best_state),
-                    move_count=best_move_count)
-    game.pretty_print()
+    CLI2048.pretty_print(best_state, best_score, best_move_count)

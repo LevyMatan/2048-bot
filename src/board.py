@@ -1,5 +1,5 @@
 from enum import Enum
-
+from typing import Dict
 class Action(Enum):
     LEFT = 0
     RIGHT = 1
@@ -10,6 +10,7 @@ class Board:
     is_lookup_tables_initialized: bool = False
     left_moves: list[int] = [0] * (2**16)
     right_moves: list[int] = [0] * (2**16)
+    empty_cells: Dict[int, list[tuple[int, int]]] = {}
 
     def __init__(self, state: int = None):
         if state is not None:
@@ -148,10 +149,14 @@ class Board:
 
     @staticmethod
     def get_empty_tiles(state: int) -> list[tuple[int, int]]:
-        empty_tiles = []
-        for i in range(16):
-            if (state >> (i * 4)) & 0xF == 0:
-                empty_tiles.append((i // 4, i % 4))
+        if state in Board.empty_cells:
+            return Board.empty_cells[state]
+        else:
+            empty_tiles = []
+            for i in range(16):
+                if (state >> (i * 4)) & 0xF == 0:
+                    empty_tiles.append((i // 4, i % 4))
+            Board.empty_cells[state] = empty_tiles
         return empty_tiles
 
     @staticmethod
