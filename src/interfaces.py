@@ -37,7 +37,7 @@ class CLI2048(Interface2048):
             print(f"Move count: {move_count}")
 
         # Unpack the board state to a list of 16 cells in row-major order.
-        cells = [tile for tile in Board(board).get_unpacked_state(board)]
+        cells = [tile for tile in Board.get_unpacked_state(board)]
         # Convert each cell: if non-zero, display 2**cell, else empty string.
         display_cells = [str(2**cell) if cell > 0 else '' for cell in cells]
 
@@ -56,7 +56,7 @@ class CLI2048(Interface2048):
     def update(self, state: int, move_count: int) -> None:
         board = Board(state)
         score = sum([2 ** tile for tile in board.get_state(unpack=True) if tile > 0])
-        CLI2048.pretty_print(board, score, move_count)
+        CLI2048.pretty_print(state, score, move_count)
         pass
 
 class GYM2048(Interface2048):

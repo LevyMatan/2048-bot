@@ -143,11 +143,19 @@ class HumanPlayer(Player):
 
     def choose_action(self, valid_actions: list[tuple[Action, int]]) -> tuple[Action, int]:
         while True:
-            action_str = input("Enter action (0: left, 1: right, 2: up, 3: down): ")
+            action_str = input("Enter action (a/A: left, d/D: right, w/W: up, s/S: down): ")
+            if action_str.lower() == 'a':
+                action = Action.LEFT
+            elif action_str.lower() == 'd':
+                action = Action.RIGHT
+            elif action_str.lower() == 'w':
+                action = Action.UP
+            elif action_str.lower() == 's':
+                action = Action.DOWN
             try:
-                action = Action(int(action_str))
-                if (action, 0) in valid_actions:
-                    return action, 0
+                for act, state in valid_actions:
+                    if act == action:
+                        return act, state
                 else:
                     print("Invalid action.")
                     continue

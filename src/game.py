@@ -55,7 +55,7 @@ class Game2048:
         while self.play_move():
             self.move_count += 1
             if self.interface:
-                self.interface.update()
+                self.interface.update(state=self.board.get_state(), move_count=self.move_count)
             # if self.move_count % MOVE_COUNT_PROGRESS_PRINT == 0:
             #     print(f"Move count: {self.move_count}")
         return self.get_score(), self.board.get_state(), self.move_count
@@ -95,7 +95,7 @@ if __name__ == "__main__":
         print(f"Unknown player type '{args.player}'. Using random player instead.")
         player_cls = RandomPlayer
 
-    game = Game2048(player=player_cls())
+    game = Game2048(player=player_cls(), interface=CLI2048())
     best_score = 0
     best_state = None
     best_move_count = 0
