@@ -12,7 +12,7 @@ class Game2048:
         else:
             self.board = board
 
-        while len(Board.get_empty_tiles(self.board.state)) > 14:
+        while len(Board.get_empty_tiles(self.board.get_state())) > 14:
             self.add_random_tile()
 
         self.move_count: int = move_count
@@ -26,14 +26,14 @@ class Game2048:
         self.interface = interface
 
     def add_random_tile(self):
-        empty_tiles = Board.get_empty_tiles(self.board.state)
+        empty_tiles = Board.get_empty_tiles(self.board.get_state())
         if not empty_tiles:
             return
         row, col = random.choice(empty_tiles)
         self.board.set_state(Board.set_tile(self.board.get_state(), row, col, 1 if random.random() < 0.9 else 2))
 
     def play_move(self):
-        valid_actions = Board.get_valid_move_actions(self.board.state)
+        valid_actions = Board.get_valid_move_actions(self.board.get_state())
         if valid_actions:
             action, next_state = self.player.choose_action(valid_actions)
             self.board.set_state(next_state)
