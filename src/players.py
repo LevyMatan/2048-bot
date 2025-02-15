@@ -13,14 +13,14 @@ class Player(ABC):
 
 class RandomPlayer(Player):
     def __init__(self):
-        self.name = "RandomPlayer"
+        self.name = "Random"
 
     def choose_action(self, valid_actions: list[tuple[Action, int]]) -> tuple[Action, int]:
         return random.choice(valid_actions)
 
 class MaxEmptyCellsPlayer(Player):
     def __init__(self):
-        self.name = "MaxEmptyCellsPlayer"
+        self.name = "MaxEmptyCells"
 
     def evaluate_state(self, state: int) -> int:
         return len(Board.get_empty_tiles(state))
@@ -30,7 +30,7 @@ class MaxEmptyCellsPlayer(Player):
 
 class MinMaxPlayer(Player):
     def __init__(self):
-        self.name = "MinMaxPlayer"
+        self.name = "MinMax"
 
     def evaluate_state(self, state: int) -> int:
         return sum([2 ** tile for tile in Board.get_unpacked_state(state) if tile > 0])
@@ -40,7 +40,7 @@ class MinMaxPlayer(Player):
 
 class HeuristicPlayer(Player):
     def __init__(self):
-        self.name = "HeuristicPlayer"
+        self.name = "Heuristic"
 
     def evaluate_state(self, state: int) -> float:
         """
@@ -108,7 +108,7 @@ class HeuristicPlayer(Player):
 
 class MonteCarloPlayer(Player):
     def __init__(self, simulations: int = 50):
-        self.name = "MonteCarloPlayer"
+        self.name = "MonteCarlo"
         self.simulations = simulations
 
     def simulate_random_game(self, state: int) -> int:
@@ -139,7 +139,7 @@ class MonteCarloPlayer(Player):
 
 class HumanPlayer(Player):
     def __init__(self):
-        self.name = "HumanPlayer"
+        self.name = "Human"
 
     def choose_action(self, valid_actions: list[tuple[Action, int]]) -> tuple[Action, int]:
         while True:
@@ -165,7 +165,7 @@ class HumanPlayer(Player):
 
 class ExpectimaxPlayer(Player):
     def __init__(self, depth: int = 8):
-        self.name = "ExpectimaxPlayer"
+        self.name = "Expectimax"
         self.depth = depth
         self.empty_weight = 270.0
         self.monotonicity_weight = 470.0
