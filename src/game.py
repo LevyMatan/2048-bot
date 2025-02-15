@@ -5,11 +5,15 @@ if __name__ == "__main__" and __package__ is None:
     __package__ = "src"
 
 import random
+import logging
 from .players import Player, RandomPlayer, MaxEmptyCellsPlayer, HumanPlayer, MonteCarloPlayer, HeuristicPlayer, MinMaxPlayer, ExpectimaxPlayer
 from .board import Board
 from .interfaces import GUI2048, CLI2048
 
+
 MOVE_COUNT_PROGRESS_PRINT = 500
+
+logger = logging.getLogger(__name__)
 
 class Game2048:
     def __init__(self, board: Board | None = None, player: Player | None = None, move_count: int = 0, interface=None):
@@ -28,11 +32,11 @@ class Game2048:
     def add_random_tile(self):
         current_state = self.board.get_state()
         empty_tiles = Board.get_empty_tiles(current_state)
-        print("Empty tiles:", empty_tiles)
+        logger.debug("Empty tiles:", empty_tiles)
         if not empty_tiles:
             return
         row, col = random.choice(empty_tiles)
-        print("Chosen tile:", (row, col))
+        logger.debug("Chosen tile:", (row, col))
         new_state = Board.set_tile(current_state, row, col, 1 if random.random() < 0.9 else 2)
         self.board.set_state(new_state)
 
@@ -61,7 +65,7 @@ class Game2048:
             if self.interface:
                 self.interface.update(state=self.board.get_state(), move_count=self.move_count)
             # if self.move_count % MOVE_COUNT_PROGRESS_PRINT == 0:
-            #     print(f"Move count: {self.move_count}")
+            #     logger.debug(f"Move count: {self.move_count}")
         return self.get_score(), self.board.get_state(), self.move_count
 
 if __name__ == "__main__":
@@ -85,18 +89,21 @@ if __name__ == "__main__":
     parser.add_argument("-n", "--num_games", type=int, default=1000, help="Number of games to play")
     parser.add_argument("-p", "--player", type=str, default="RandomPlayer",
                         help=f"Player type {list(player_mapping.keys())}")
+    parser.add_argument("-v", "--verbose", action="store_true", help="Enable debug logging")
     args = parser.parse_args()
 
     if args.profile_en:
         profiler = cProfile.Profile()
         profiler.enable()
+    if args.verbose:
+        logging.basicConfig(level=logging.DEBUG)
 
     # Choose the player from the mapping; use random player as default
     player_key = args.player.lower()
     if player_key in player_mapping:
         player_cls = player_mapping[player_key]
     else:
-        print(f"Unknown player type '{args.player}'. Using random player instead.")
+        logger.info(f"Unknown player type '{args.player}'. Using random player instead.")
         player_cls = RandomPlayer
 
     game = Game2048(player=player_cls(), interface=CLI2048())
@@ -104,7 +111,7 @@ if __name__ == "__main__":
     best_state = None
     best_move_count = 0
     num_of_games = args.num_games
-    print(f"Playing {num_of_games} games with {player_cls.__name__}...")
+    logger.info(f"Playing {num_of_games} games with {player_cls.__name__}...")
 
     for i in range(num_of_games):
         score, state, move_count = game.play_game()
@@ -122,5 +129,5 @@ if __name__ == "__main__":
             stats = pstats.Stats(profiler, stream=f).sort_stats('cumulative')
             stats.print_stats()
 
-    print("Best game:")
+    logger.info("Best game:")
     CLI2048.pretty_print(best_state, best_score, best_move_count)
