@@ -29,4 +29,10 @@ public:
     uint64_t getState() const {
         return board.getState();
     }
+
+private:
+    double evaluatePosition(uint64_t state) const;
+    double evaluateMonotonicity(uint64_t state) const;
+    double evaluateSmoothness(uint64_t state) const;
+    double evaluateCornerPlacement(uint64_t state) const;
 };
