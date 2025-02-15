@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from board import Action, Board
+from .board import Action, Board
 import random
 
 class Player(ABC):
@@ -143,6 +143,7 @@ class HumanPlayer(Player):
 
     def choose_action(self, valid_actions: list[tuple[Action, int]]) -> tuple[Action, int]:
         while True:
+            action = None
             action_str = input("Enter action (a/A: left, d/D: right, w/W: up, s/S: down): ")
             if action_str.lower() == 'a':
                 action = Action.LEFT

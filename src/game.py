@@ -1,7 +1,13 @@
+if __name__ == "__main__" and __package__ is None:
+    from os import path
+    import sys
+    sys.path.insert(0, path.dirname(path.dirname(path.abspath(__file__))))
+    __package__ = "src"
+
 import random
-from players import Player, RandomPlayer, MaxEmptyCellsPlayer, HumanPlayer, MonteCarloPlayer, HeuristicPlayer, MinMaxPlayer, ExpectimaxPlayer
-from board import Board
-from interfaces import GUI2048, CLI2048
+from .players import Player, RandomPlayer, MaxEmptyCellsPlayer, HumanPlayer, MonteCarloPlayer, HeuristicPlayer, MinMaxPlayer, ExpectimaxPlayer
+from .board import Board
+from .interfaces import GUI2048, CLI2048
 
 MOVE_COUNT_PROGRESS_PRINT = 500
 
@@ -9,28 +15,26 @@ class Game2048:
     def __init__(self, board: Board | None = None, player: Player | None = None, move_count: int = 0, interface=None):
         if board is None:
             self.board = Board()
+            # Only add initial random tiles if creating a new board
+            while len(Board.get_empty_tiles(self.board.get_state())) > 14:
+                self.add_random_tile()
         else:
             self.board = board
 
-        while len(Board.get_empty_tiles(self.board.get_state())) > 14:
-            self.add_random_tile()
-
         self.move_count: int = move_count
-
-        if player:
-            self.player = player
-        else:
-            self.player = RandomPlayer()
-            print("Random player selected.")
-
+        self.player = player if player else RandomPlayer()
         self.interface = interface
 
     def add_random_tile(self):
-        empty_tiles = Board.get_empty_tiles(self.board.get_state())
+        current_state = self.board.get_state()
+        empty_tiles = Board.get_empty_tiles(current_state)
+        print("Empty tiles:", empty_tiles)
         if not empty_tiles:
             return
         row, col = random.choice(empty_tiles)
-        self.board.set_state(Board.set_tile(self.board.get_state(), row, col, 1 if random.random() < 0.9 else 2))
+        print("Chosen tile:", (row, col))
+        new_state = Board.set_tile(current_state, row, col, 1 if random.random() < 0.9 else 2)
+        self.board.set_state(new_state)
 
     def play_move(self):
         valid_actions = Board.get_valid_move_actions(self.board.get_state())

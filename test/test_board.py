@@ -1,4 +1,3 @@
-from src.board import Board
 from src.board import Board, Action
 import io
 import pytest
@@ -13,16 +12,16 @@ class TestBoard:
     def test___init___2(self):
         """
         Test initialization of Board with default state and uninitialized lookup tables.
-        """      
+        """
         # Create a new Board instance without providing a state
         board = Board()
-        
+
         # Check that the state is initialized to 0
         assert board.get_state() == 0
-        
+
         # Check that the lookup tables are now initialized
         assert Board.is_lookup_tables_initialized() == True
-        
+
         with pytest.raises(AttributeError):
             len(Board.__left_moves) == 2**16
         with pytest.raises(AttributeError):
@@ -368,10 +367,10 @@ class TestBoard:
         Test get_empty_tiles with a cached result
         """
         test_state = 0x1230000000000000
-        expected_empty_tiles = [(0, 3), (1, 0), (1, 1), (1, 2), (1, 3), 
-                                (2, 0), (2, 1), (2, 2), (2, 3), 
+        expected_empty_tiles = [(0, 3), (1, 0), (1, 1), (1, 2), (1, 3),
+                                (2, 0), (2, 1), (2, 2), (2, 3),
                                 (3, 0), (3, 1), (3, 2), (3, 3)]
-        
+
         # First call to populate the cache
         result1 = Board.get_empty_tiles(test_state)
         assert result1 == expected_empty_tiles
@@ -423,17 +422,17 @@ class TestBoard:
         """
         # Initialize the Board class
         Board()
-        
+
         # Set up a test state and its corresponding empty tiles
         test_state = 0x1234567800000000
         expected_empty_tiles = [(2, 0), (2, 1), (2, 2), (2, 3), (3, 0), (3, 1), (3, 2), (3, 3)]
-        
+
         # Manually add the test state to Board.empty_cells
         Board.empty_cells[test_state] = expected_empty_tiles
-        
+
         # Call the method and check the result
         result = Board.get_empty_tiles(test_state)
-        
+
         assert result == expected_empty_tiles
         assert result is Board.empty_cells[test_state]
 
@@ -482,7 +481,7 @@ class TestBoard:
         expected = [
             0x1, 0x2, 0x3, 0x4,
             0x5, 0x6, 0x7, 0x8,
-            0x9, 0x0, 0xA, 0xB, 
+            0x9, 0x0, 0xA, 0xB,
             0xC, 0xD, 0xE, 0xF,
         ]
 
@@ -551,7 +550,7 @@ class TestBoard:
         expected = [
             0x1, 0x2, 0x3, 0x4,
             0x5, 0x6, 0x7, 0x8,
-            0x9, 0x0, 0xA, 0xB, 
+            0x9, 0x0, 0xA, 0xB,
             0xC, 0xD, 0xE, 0xF,
         ]
         assert result == expected, f"Expected {expected}, but got {result}"
@@ -667,7 +666,7 @@ class TestBoard:
 
         # Assert that all four directions are valid
         assert len(valid_actions) == 2, f"Expected 4 valid moves, but found {len(valid_actions)}"
-        
+
         # Check if all actions are present
         actions = [action for action, _ in valid_actions]
         assert Action.LEFT in actions, "LEFT action is missing"
@@ -729,7 +728,7 @@ class TestBoard:
 
         # Assert that only two directions are valid
         assert len(valid_actions) == 3, f"Expected 2 valid moves, but found {len(valid_actions)}"
-        
+
         # Check if only LEFT and UP actions are present
         actions = [action for action, _ in valid_actions]
         assert Action.UP in actions, "UP action is missing"
@@ -783,7 +782,7 @@ class TestBoard:
         """
         board1 = Board()
         assert Board.is_lookup_tables_initialized() == True
-        
+
         # Creating a new board should not re-initialize lookup tables
         board2 = Board()
         assert Board.is_lookup_tables_initialized() == True
@@ -830,17 +829,17 @@ class TestBoard:
     def test_init_with_state_and_initialize_lookup_tables(self):
         """
         Test initializing Board with a state and initializing lookup tables.
-        """        
+        """
         # Initialize Board with a specific state
         test_state = 0x1234567890ABCDEF
         board = Board(test_state)
-        
+
         # Check if the state is correctly set
         assert board.get_state() == test_state
-        
+
         # Check if lookup tables are initialized
         assert Board.is_lookup_tables_initialized() == True
-        
+
         # Check if empty_cells dictionary is initialized
         assert isinstance(Board.empty_cells, dict)
 
@@ -994,7 +993,7 @@ class TestBoard:
         '''
         max_state = 2**64 - 1
         expected_output = "-----------\nF F F F\nF F F F\nF F F F\nF F F F\n"
-        
+
         # Redirect stdout to capture printed output
         captured_output = io.StringIO()
         sys.stdout = captured_output
@@ -1006,7 +1005,7 @@ class TestBoard:
         sys.stdout = sys.__stdout__
 
         # Check the captured output
-        assert captured_output.getvalue() == expected_output, f"expected {expected_output} captured {captured_output.getvalue()}"        
+        assert captured_output.getvalue() == expected_output, f"expected {expected_output} captured {captured_output.getvalue()}"
 
     def test_pretty_print_with_negative_state(self):
         """
@@ -1061,7 +1060,7 @@ class TestBoard:
         # Check the captured output
         expected_output = "-----------\n0 0 0 0\n0 0 0 0\n0 0 0 0\n0 0 0 0\n"
         assert captured_output.getvalue() == expected_output
-        
+
     def test_row_right_edge_cases(self):
         """
         Test _row_right with edge case inputs
@@ -1069,13 +1068,13 @@ class TestBoard:
         # Ensure lookup tables are initialized
         if not Board.is_lookup_tables_initialized():
             Board.__init_lookup_tables()
-        
+
         # Test with all zeros (0x0000)
         assert Board._row_right(0) == 0
-        
+
         # Test with all max values (0xFFFF)
         assert Board._row_right(0xFFFF) == 0xFFFF
-        
+
         # Test with alternating zeros and ones (0x5555)
         result = Board._row_right(0x5555)
         assert result != 0x5555, "Right move should change the row"
@@ -1086,7 +1085,7 @@ class TestBoard:
         """
         with pytest.raises(TypeError):
             Board._row_right("1234")  # String instead of int
-        
+
         with pytest.raises(TypeError):
             Board._row_right([1, 2, 3, 4])
 
@@ -1096,7 +1095,7 @@ class TestBoard:
         """
         with pytest.raises(TypeError):
             Board._row_right(None)
-        
+
         with pytest.raises(TypeError):
             Board._row_right([])
 
@@ -1106,7 +1105,7 @@ class TestBoard:
         """
         with pytest.raises(IndexError):
             Board._row_right(2**16)  # Exceeds the size of right_moves list
-        
+
         with pytest.raises(IndexError):
             Board._row_right(-1)
 
@@ -1116,13 +1115,13 @@ class TestBoard:
         """
         # Initialize a Board instance
         board = Board()
-        
+
         # Define a test state
         test_state = 0x1234567890ABCDEF
-        
+
         # Call set_state method
         board.set_state(test_state)
-        
+
         # Verify that the internal state has been updated
         assert board.get_state() == test_state, "set_state did not update the internal state correctly"
 
@@ -1292,10 +1291,10 @@ class TestBoard:
         """
         initial_state = 0
         value = 2
-        
+
         with pytest.raises(ValueError, match="Row and column must be between 0 and 3."):
             Board.set_tile(initial_state, -1, 0, value)
-        
+
         with pytest.raises(ValueError, match="Row and column must be between 0 and 3."):
             Board.set_tile(initial_state, 0, 4, value)
 
@@ -1313,10 +1312,10 @@ class TestBoard:
         """
         initial_state = 0
         row, col = 1, 1
-        
+
         with pytest.raises(ValueError, match="Value must be between 0 and 15."):
             Board.set_tile(initial_state, row, col, -1)
-        
+
         with pytest.raises(ValueError, match="Value must be between 0 and 15."):
             Board.set_tile(initial_state, row, col, 16)
 
@@ -1337,7 +1336,7 @@ class TestBoard:
         state = Board.set_tile(state, 1, 1, 4)
         state = Board.set_tile(state, 2, 2, 8)
         state = Board.set_tile(state, 3, 3, 1)
-        
+
         expected_state = 0x2000_0400_0080_0001
         assert state == expected_state, f"Multiple tiles should be set correctly. state={state:X} expected_state={expected_state:X}"
 
@@ -1363,7 +1362,7 @@ class TestBoard:
         """
         initial_state = 0x0000_0010_0000_0000  # 1 at row 1, col 2
         row, col, value = 1, 2, 2
-        
+
         with pytest.raises(ValueError, match="Tile at given row and column is not empty."):
             Board.set_tile(initial_state, row, col, value)
 
@@ -1395,9 +1394,9 @@ class TestBoard:
         initial_state = 0  # Empty board
         row, col, value = 2, 3, 4
         expected_state = 0x0000_0000_0004_0000
-        
+
         result = Board.set_tile(initial_state, row, col, value)
-        
+
         assert result == expected_state, f"Tile should be set correctly. result={result:X} expected_state={expected_state:X}"
 
     def test_set_tile_valid_input_2(self):

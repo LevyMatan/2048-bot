@@ -25,7 +25,7 @@ class Board:
     @staticmethod
     def is_lookup_tables_initialized() -> bool:
         return Board.__is_lookup_tables_initialized
-    
+
     @staticmethod
     def _move_left(row: list[int]) -> list[int]:
         # Validate input
@@ -71,7 +71,7 @@ class Board:
         # Guard against multiple initializations
         if Board.__is_lookup_tables_initialized:
             return
-            
+
         for i in range(2**16):
             row = [
                 (i >> 12) & 0xF,
@@ -117,41 +117,6 @@ class Board:
         if state >= (2**64):
             raise OverflowError(f"Invalid state: {state}")
         return True
-
-    # @staticmethod
-    # def simulate_move(state: int, action: Action) -> int:
-    #     # Verify action.
-    #     if action not in Action:
-    #         raise ValueError(f"Unsupported action: {action}")
-    #     new_state = 0
-    #     if action in (Action.LEFT, Action.RIGHT):
-    #         for row_index in range(4):
-    #             row = (state >> (16 * row_index)) & 0xFFFF
-    #             if action == Action.LEFT:
-    #                 new_row = Board._row_left(row)
-    #             else:
-    #                 new_row = Board._row_right(row)
-    #             new_state |= new_row << (16 * row_index)
-    #     elif action in (Action.UP, Action.DOWN):
-    #         rows = [(state >> (16 * i)) & 0xFFFF for i in range(4)]
-    #         new_rows = [0, 0, 0, 0]
-    #         for col in range(4):
-    #             col_value = 0
-    #             for row_index in range(4):
-    #                 tile = (rows[row_index] >> (4 * (3 - col))) & 0xF
-    #                 col_value |= tile << (4 * (3 - row_index))
-    #             if action == Action.UP:
-    #                 new_col_value = Board.__left_moves[col_value]
-    #             else:
-    #                 new_col_value = Board.__right_moves[col_value]
-    #             for row_index in range(4):
-    #                 new_tile = (new_col_value >> (4 * (3 - row_index))) & 0xF
-    #                 new_rows[row_index] |= new_tile << (4 * (3 - col))
-    #         for row_index in range(4):
-    #             new_state |= new_rows[row_index] << (16 * row_index)
-    #     else:
-    #         raise ValueError(f"Unsupported action: {action}")
-    #     return new_state
 
     @staticmethod
     def simulate_moves(state: int) -> list[int]:

@@ -1,6 +1,5 @@
 from abc import ABC, abstractmethod
-from board import Action, Board
-import random
+from .board import Board
 
 class Interface2048(ABC):
     def __init__(self):
