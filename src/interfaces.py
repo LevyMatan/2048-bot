@@ -18,7 +18,7 @@ class GUI2048(Interface2048):
 
 class CLI2048(Interface2048):
     def __init__(self):
-        self.name = "GUI"
+        self.name = "CLI"
 
     @staticmethod
     def pretty_print(board: int, score: int, move_count: int):
@@ -60,7 +60,7 @@ class CLI2048(Interface2048):
 
 class GYM2048(Interface2048):
     def __init__(self):
-        self.name = "GUI"
+        self.name = "GYM"
 
-    def update(self, state: int) -> None:
+    def update(self, state: int, move_count: int) -> None:
         pass

@@ -347,7 +347,7 @@ class TestBoard:
         state = 0x1234_5678_0000_0000  # Last two rows are empty
 
         # Clear the Board.empty_cells cache to ensure we're not using cached results
-        Board.empty_cells.clear()
+        Board.reset()
 
         # Call the method
         result = Board.get_empty_tiles(state)
@@ -357,10 +357,6 @@ class TestBoard:
 
         # Assert that the result matches the expected empty tiles
         assert set(result) == set(expected)
-
-        # Assert that the result is now cached in Board.empty_cells
-        assert state in Board.empty_cells
-        assert Board.empty_cells[state] == result
 
     def test_get_empty_tiles_cached_result(self):
         """
@@ -378,7 +374,6 @@ class TestBoard:
         # Second call to test cached result
         result2 = Board.get_empty_tiles(test_state)
         assert result2 == expected_empty_tiles
-        assert result2 is Board.empty_cells[test_state]
 
     def test_get_empty_tiles_empty_board(self):
         """
@@ -427,14 +422,10 @@ class TestBoard:
         test_state = 0x1234567800000000
         expected_empty_tiles = [(2, 0), (2, 1), (2, 2), (2, 3), (3, 0), (3, 1), (3, 2), (3, 3)]
 
-        # Manually add the test state to Board.empty_cells
-        Board.empty_cells[test_state] = expected_empty_tiles
-
         # Call the method and check the result
         result = Board.get_empty_tiles(test_state)
 
         assert result == expected_empty_tiles
-        assert result is Board.empty_cells[test_state]
 
     def test_get_state_2(self):
         """
@@ -839,9 +830,6 @@ class TestBoard:
 
         # Check if lookup tables are initialized
         assert Board.is_lookup_tables_initialized() == True
-
-        # Check if empty_cells dictionary is initialized
-        assert isinstance(Board.empty_cells, dict)
 
     def test_init_with_string_input(self):
         """

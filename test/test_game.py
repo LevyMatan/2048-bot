@@ -9,7 +9,7 @@ import random
 # Add this fixture to clear global state before each test
 @pytest.fixture(autouse=True)
 def reset_board_empty_cells():
-    Board.empty_cells.clear()
+    Board.reset()
 
 class TestGame:
 

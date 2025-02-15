@@ -8,7 +8,7 @@ import random
 import logging
 from .players import Player, RandomPlayer, MaxEmptyCellsPlayer, HumanPlayer, MonteCarloPlayer, HeuristicPlayer, MinMaxPlayer, ExpectimaxPlayer
 from .board import Board
-from .interfaces import GUI2048, CLI2048
+from .interfaces import GUI2048, CLI2048, GYM2048
 
 
 MOVE_COUNT_PROGRESS_PRINT = 500
@@ -32,11 +32,11 @@ class Game2048:
     def add_random_tile(self):
         current_state = self.board.get_state()
         empty_tiles = Board.get_empty_tiles(current_state)
-        logger.debug("Empty tiles:", empty_tiles)
+        logger.debug("Empty tiles: %s", empty_tiles)
         if not empty_tiles:
             return
         row, col = random.choice(empty_tiles)
-        logger.debug("Chosen tile:", (row, col))
+        logger.debug("Chosen tile: %s", (row, col))
         new_state = Board.set_tile(current_state, row, col, 1 if random.random() < 0.9 else 2)
         self.board.set_state(new_state)
 
@@ -75,21 +75,25 @@ if __name__ == "__main__":
 
     # Define a mapping from string to Player subclass.
     player_mapping = {
-        RandomPlayer.__name__.lower(): RandomPlayer,
-        HumanPlayer.__name__.lower(): HumanPlayer,
-        MaxEmptyCellsPlayer.__name__.lower(): MaxEmptyCellsPlayer,
-        MinMaxPlayer.__name__.lower(): MinMaxPlayer,
-        HeuristicPlayer.__name__.lower(): HeuristicPlayer,
-        MonteCarloPlayer.__name__.lower(): MonteCarloPlayer,
-        ExpectimaxPlayer.__name__.lower(): ExpectimaxPlayer
+        cls.__name__.replace("Player", "").lower(): cls
+        for cls in [
+            RandomPlayer,
+            HumanPlayer,
+            MaxEmptyCellsPlayer,
+            MinMaxPlayer,
+            HeuristicPlayer,
+            MonteCarloPlayer,
+            ExpectimaxPlayer,
+        ]
     }
 
     parser = argparse.ArgumentParser(description="2048 Game")
     parser.add_argument("--profile_en", action="store_true", help="Enable profiling")
     parser.add_argument("-n", "--num_games", type=int, default=1000, help="Number of games to play")
-    parser.add_argument("-p", "--player", type=str, default="RandomPlayer",
+    parser.add_argument("-p", "--player", type=str, default="Random",
                         help=f"Player type {list(player_mapping.keys())}")
     parser.add_argument("-v", "--verbose", action="store_true", help="Enable debug logging")
+    parser.add_argument("--opt", action="store_true", help="Enable optimization")
     args = parser.parse_args()
 
     if args.profile_en:
@@ -97,6 +101,8 @@ if __name__ == "__main__":
         profiler.enable()
     if args.verbose:
         logging.basicConfig(level=logging.DEBUG)
+    else:
+        logging.basicConfig(level=logging.INFO)
 
     # Choose the player from the mapping; use random player as default
     player_key = args.player.lower()
@@ -104,9 +110,22 @@ if __name__ == "__main__":
         player_cls = player_mapping[player_key]
     else:
         logger.info(f"Unknown player type '{args.player}'. Using random player instead.")
+        logger.info(f"Available player types: {list(player_mapping.keys())}")
         player_cls = RandomPlayer
 
-    game = Game2048(player=player_cls(), interface=CLI2048())
+    # If the player is Human, force the number of games to be 1
+    if player_cls == HumanPlayer:
+        args.num_games = 1
+
+    if args.num_games > 1:
+        interface = GYM2048()
+    else:
+        interface = CLI2048()
+
+    if args.opt:
+        Board.disable_verifiers()
+
+    game = Game2048(player=player_cls(), interface=interface)
     best_score = 0
     best_state = None
     best_move_count = 0
@@ -125,7 +144,8 @@ if __name__ == "__main__":
         profiler.disable()
         from datetime import datetime
         date_time = datetime.now().strftime("%Y%m%d_%H%M%S")
-        with open(f'profile_results_{date_time}.txt', 'w') as f:
+        profile_filename = f'{player_cls.__name__}_{args.num_games}_{date_time}.txt'
+        with open(profile_filename, 'w') as f:
             stats = pstats.Stats(profiler, stream=f).sort_stats('cumulative')
             stats.print_stats()
 
