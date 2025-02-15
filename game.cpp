@@ -35,22 +35,25 @@ bool Game2048::playMove() {
     addRandomTile();
     return true;
 }
+// bool Game2048::playMove() {
+//     auto validActions = Board::getValidMoveActions(board.getState());
+//     if (validActions.empty()) return false;
+
+//     // Use MCTS player to choose the next move
+//     auto [action, nextState] = player->chooseAction(board.getState());
+
+//     board.setState(nextState);
+//     addRandomTile();
+//     return true;
+// }
+Game2048::Weights Game2048::weights = {0.2, 0.4, 0.1, 0.3};  // Default weights
 
 double Game2048::evaluatePosition(uint64_t state) const {
     double score = 0.0;
-
-    // Weight for empty tiles (0.2)
-    score += 0.2 * Board::getEmptyTiles(state).size();
-
-    // Weight for monotonicity (0.4)
-    score += 0.4 * evaluateMonotonicity(state);
-
-    // Weight for smoothness (0.2)
-    score += 0.2 * evaluateSmoothness(state);
-
-    // Weight for corner placement (0.2)
-    score += 0.2 * evaluateCornerPlacement(state);
-
+    score += weights.emptyTiles * Board::getEmptyTiles(state).size();
+    score += weights.monotonicity * evaluateMonotonicity(state);
+    score += weights.smoothness * evaluateSmoothness(state);
+    score += weights.cornerPlacement * evaluateCornerPlacement(state);
     return score;
 }
 

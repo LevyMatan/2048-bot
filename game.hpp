@@ -2,6 +2,7 @@
 #pragma once
 #include "board.hpp"
 #include <random>
+#include "mcts_player.hpp"
 
 class Game2048 {
 private:
@@ -9,9 +10,21 @@ private:
     int moveCount;
     std::mt19937 rng;
     std::uniform_real_distribution<double> dist;
+    std::unique_ptr<MCTSPlayer> player;
+
+    struct Weights {
+        double emptyTiles;
+        double monotonicity;
+        double smoothness;
+        double cornerPlacement;
+    };
+    static Weights weights;
 
 public:
-    Game2048() : moveCount(0), rng(std::random_device{}()), dist(0.0, 1.0) {
+    Game2048(int mctsSimulations = 1000)
+        : rng(std::random_device{}()),
+          dist(0.0, 1.0),
+          player(std::make_unique<MCTSPlayer>(mctsSimulations)) {
         reset();
     }
 
@@ -28,6 +41,10 @@ public:
 
     uint64_t getState() const {
         return board.getState();
+    }
+
+    static void setWeights(double empty, double mono, double smooth, double corner) {
+        weights = {empty, mono, smooth, corner};
     }
 
 private:
