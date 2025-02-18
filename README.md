@@ -1,6 +1,6 @@
 # 2048 Bot
 
-A bot to play the 2048 game using various AI strategies. The project explores different decision-making algorithms to achieve high scores, with some algorithms capable of reaching scores of 20,000 and beyond.
+A bot to play the 2048 game using various AI strategies implemented in C++. The project explores different decision-making algorithms to achieve high scores, with some algorithms capable of reaching scores of 20,000 and beyond.
 
 ## Features
 
@@ -13,14 +13,14 @@ A bot to play the 2048 game using various AI strategies. The project explores di
   - `MonteCarloPlayer`: Simulates random playouts to choose the best statistically averaged move.
   - `ExpectimaxPlayer`: Uses expectimax search with adjustable depth and weighted heuristics.
 
-- **Customizable Search Depth & Weights:**  
-  The `ExpectimaxPlayer` prints its configuration (depth and heuristic weights) at startup for transparency.
+- **Optimized C++ Implementation:**  
+  The codebase leverages C++'s performance benefits and includes optimizations like:
+  - Precomputed move tables
+  - Efficient board state representation
+  - Memory-optimized data structures
 
 - **Modular Design:**  
-  The project uses clearly separated modules for the game logic (`game.py`), board management (`board.py`), and player strategies (`players.py`). This allows easy tweaking and experimentation.
-
-- **Profiling & Batch Play:**  
-  Run multiple games and enable Python profiling to analyze performance.
+  The project uses clearly separated modules for the game logic, board management, and player strategies, allowing easy experimentation.
 
 ## Project Structure
 
@@ -37,79 +37,84 @@ A bot to play the 2048 game using various AI strategies. The project explores di
 
 ## Setup Instructions
 
-1. **Clone the repository:**
+1. **Prerequisites:**
+   - CMake (3.31 or higher)
+   - C++ compiler supporting C++17
+   - Git
 
+2. **Clone the repository:**
    ```bash
    git clone <repository-url>
    cd 2048-bot
    ```
 
-2. **Install dependencies:**
-
+3. **Build the project:**
    ```bash
-   pip install -r requirements.txt
+   mkdir build
+   cd build
+   cmake ..
+   cmake --build .
    ```
 
 ## Running the Bot
 
-Run the game using the following command. You can choose the player type and number of games via command-line arguments:
+Run the game using the following command from the build directory:
 
 ```bash
-python src/game.py -n 1000 -p ExpectimaxPlayer
+./2048bot [options]
 ```
 
-- **Arguments:**
-  - `-n` or `--num_games`: Number of games to play (default is 1000).
-  - `-p` or `--player`: The player algorithm to use. Available options are:
-    - `randomplayer`
-    - `humanplayer`
-    - `maxemptycellsplayer`
-    - `minmaxplayer`
-    - `heuristicplayer`
-    - `montecarloplayer`
-    - `expectimaxplayer`
-  - `--profile_en`: Enable Python profiling.
+**Command-line options:**
+- `-n, --num-games`: Number of games to play (default: 1000)
+- `-p, --player`: Player type (random, maxempty, minmax, heuristic, montecarlo, expectimax)
+- `-d, --debug`: Enable debug output
+- `-b, --benchmark`: Run performance benchmarks
 
 ## How It Works
 
 1. **Game Initialization:**  
-   The `Game2048` class sets up the board and starts adding random tiles until a meaningful starting position is reached.
+   The game board is initialized with a compact representation optimized for C++.
 
 2. **AI Decision Making:**  
-   The chosen `Player` subclass evaluates possible moves via its `choose_action` method. For example:
-   - *ExpectimaxPlayer* recursively simulates moves (player and chance nodes) to forecast the best move based on a weighted heuristic.
+   Each player type implements the `Player` interface, providing its own move selection strategy.
 
-3. **Board and Tile Management:**  
-   The `Board` class handles all board operations including:
-   - Simulating moves using precomputed lookup tables for efficiency.
-   - Adding random tiles after each move.
-   - Converting, printing, and evaluating board states.
+3. **Board Management:**  
+   - Efficient board operations using bitwise operations
+   - Move simulation using precomputed lookup tables
+   - Optimized random tile generation
 
-4. **Game Play:**  
-   The game loop in `game.py` repeatedly:
-   - Gets valid moves.
-   - Lets the AI decide the next move.
-   - Updates the board and adds a random tile.
-   - Tracks the move count and score.
+4. **Game Loop:**  
+   - Move validation
+   - State updates
+   - Score tracking
+   - Performance monitoring
 
-5. **Output:**  
-   At the end of the games, statistics such as the best score, move count, and game board are printed in a nicely formatted output.
+## Performance Optimization
+
+The C++ implementation includes several optimizations:
+
+- Bit manipulation for board operations
+- Cache-friendly data structures
+- Move lookup tables
+- Minimal memory allocations during gameplay
 
 ## Customization & Contribution
 
-- **Tweak AI Strategies:**  
-  You can adjust parameters (lookahead depth, heuristic weights, simulation count) in the different player classes found in `players.py` to experiment with performance.
-  
-- **Board Improvements:**  
-  The board logic in `board.py` is optimized using lookup tables. Feel free to extend this as needed.
+- **AI Strategy Tuning:**  
+  Modify parameters in the player implementations to experiment with different strategies.
 
-- **Enhancements:**  
-  Contributions to improve strategies, add new player types, or refine the scoring system are welcome. Fork the repository and submit a pull request with your updates.
+- **Performance Improvements:**  
+  The codebase is designed for easy profiling and optimization.
+
+- **Contributing:**  
+  1. Fork the repository
+  2. Create a feature branch
+  3. Submit a pull request with your changes
 
 ## License
 
-[MIT License](LICENSE) (if applicable)
+[MIT License](LICENSE)
 
 ---
 
-Happy coding, and good luck reaching those 2048 and beyond! 🚀
+Happy coding, and good luck reaching those high scores! 🚀
