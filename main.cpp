@@ -5,10 +5,30 @@
 #include <iomanip>
 
 int main(int argc, char* argv[]) {
-    int numGames = (argc > 1) ? std::stoi(argv[1]) : 1000;
+    std::string playerType = (argc > 1) ? argv[1] : "Random";
+    
+    if (playerType != "Random" && playerType != "Heuristic" && playerType != "MCTS") {
+        std::cout << "Usage: " << argv[0] << " [player_type] [num_games]\n"
+                  << "Available players:\n"
+                  << "  Random     - Makes random valid moves (default)\n"
+                  << "  Heuristic  - Uses heuristic evaluation\n"
+                  << "  MCTS       - Uses Monte Carlo Tree Search\n";
+        return 1;
+    }
+
+    int numGames = (argc > 2) ? std::stoi(argv[2]) : 1000;
     const int PROGRESS_INTERVAL = 1;  // Print progress every game
 
-    Game2048 game(2000);
+    Game2048 game = Game2048();
+    if (playerType == "Heuristic") {
+        player = std::make_shared<HeuristicPlayer>();
+    } else if (playerType == "MCTS") {
+        player = std::make_shared<MCTSPlayer>();
+    }
+    else if (playerType == "Random"){
+        player = std::make_shared<RandomPlayer>();
+    }
+    game.setPlayer(player);
     int bestScore = 0;
     uint64_t bestState = 0;
     int bestMoveCount = 0;
@@ -16,7 +36,7 @@ int main(int argc, char* argv[]) {
     auto startTime = std::chrono::high_resolution_clock::now();
     auto lastUpdateTime = startTime;
 
-    std::cout << "Starting " << numGames << " games with Monte Carlo player...\n";
+    std::cout << "Starting " << numGames << " games with " << game.getPlayerName() << "...\n";
 
     for (int i = 0; i < numGames; ++i) {
         // Print progress
