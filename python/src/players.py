@@ -38,9 +38,15 @@ class MinMaxPlayer(Player):
     def choose_action(self, valid_actions: list[tuple[Action, int]]) -> tuple[Action, int]:
         return max(valid_actions, key=lambda x: self.evaluate_state(x[1]))
 
-class HeuristicPlayer(Player):
-    def __init__(self):
-        self.name = "Heuristic"
+class BaseHeuristicPlayer(Player):
+    """Base class for players that use heuristic evaluation."""
+    def __init__(self, name="BaseHeuristic", empty_weight=270.0, monotonicity_weight=470.0, 
+                 smoothness_weight=15.0, max_tile_weight=100.0):
+        self.name = name
+        self.empty_weight = empty_weight
+        self.monotonicity_weight = monotonicity_weight
+        self.smoothness_weight = smoothness_weight
+        self.max_tile_weight = max_tile_weight
 
     def evaluate_state(self, state: int) -> float:
         """
@@ -50,19 +56,16 @@ class HeuristicPlayer(Player):
             tend to be easier to merge.
           - Smoothness: penalize large differences between adjacent tiles.
           - Max tile: reward boards with a high maximum tile.
-        Note: The weights used below are rough estimates and may need tuning.
         """
-        board = Board.get_unpacked_state(state)  # board is a list of 16 numbers (0 means empty, >0 means 2**tile)
-
+        board = Board.get_unpacked_state(state)
+        
         # Factor 1: Count empty cells.
         empty_cells = sum(1 for cell in board if cell == 0)
 
-        # Factor 2: Monotonicity.
-        # Evaluate monotonicity along rows and columns using differences in tile exponents.
+        # Factor 2: Monotonicity
         row_monotonicity = 0
         for r in range(4):
             row = board[r * 4:(r + 1) * 4]
-            # Calculate differences between adjacent cells.
             row_monotonicity += abs(row[0] - row[1]) + abs(row[1] - row[2]) + abs(row[2] - row[3])
         col_monotonicity = 0
         for c in range(4):
@@ -70,40 +73,33 @@ class HeuristicPlayer(Player):
             col_monotonicity += abs(col[0] - col[1]) + abs(col[1] - col[2]) + abs(col[2] - col[3])
         monotonicity = -(row_monotonicity + col_monotonicity)
 
-        # Factor 3: Smoothness.
-        # Penalize adjacent tiles that have a high discrepancy (here we use actual tile values, i.e. 2**exponent).
+        # Factor 3: Smoothness
         smoothness = 0
         for r in range(4):
             for c in range(4):
                 index = r * 4 + c
                 if board[index] != 0:
                     value = 2 ** board[index]
-                    # Check right neighbor.
                     if c < 3 and board[r * 4 + c + 1] != 0:
                         neighbor_value = 2 ** board[r * 4 + c + 1]
                         smoothness -= abs(value - neighbor_value)
-                    # Check bottom neighbor.
                     if r < 3 and board[(r + 1) * 4 + c] != 0:
                         neighbor_value = 2 ** board[(r + 1) * 4 + c]
                         smoothness -= abs(value - neighbor_value)
 
-        # Factor 4: Maximum tile.
+        # Factor 4: Maximum tile
         max_tile = max(board)
 
-        # Weights for each factor (needs tuning)
-        empty_weight = 270.0
-        monotonicity_weight = 47.0
-        smoothness_weight = 15.0
-        max_tile_weight = 100.0
+        return (empty_cells * self.empty_weight +
+                monotonicity * self.monotonicity_weight +
+                smoothness * self.smoothness_weight +
+                max_tile * self.max_tile_weight)
 
-        score = (empty_cells * empty_weight) + \
-                (monotonicity * monotonicity_weight) + \
-                (smoothness * smoothness_weight) + \
-                (max_tile * max_tile_weight)
-        return score
+class HeuristicPlayer(BaseHeuristicPlayer):
+    def __init__(self):
+        super().__init__(name="Heuristic")
 
     def choose_action(self, valid_actions: list[tuple[Action, int]]) -> tuple[Action, int]:
-        # Choose the action that maximizes the evaluation function.
         return max(valid_actions, key=lambda action_state: self.evaluate_state(action_state[1]))
 
 class MonteCarloPlayer(Player):
@@ -163,68 +159,47 @@ class HumanPlayer(Player):
             except ValueError:
                 print("Invalid input.")
 
-class ExpectimaxPlayer(Player):
+class ExpectimaxPlayer(BaseHeuristicPlayer):
     def __init__(self, depth: int = 8):
-        self.name = "Expectimax"
+        super().__init__(
+            name="Expectimax", 
+            empty_weight=270.0, 
+            monotonicity_weight=470.0, 
+            smoothness_weight=15.0, 
+            max_tile_weight=100.0
+        )
         self.depth = depth
-        self.empty_weight = 270.0
-        self.monotonicity_weight = 470.0
-        self.smoothness_weight = 15.0
-        self.max_tile_weight = 100.0
         print(f"Using {self.name} with depth = {self.depth}")
         print(f"Weights: empty = {self.empty_weight}, "
               f"monotonicity = {self.monotonicity_weight}, "
               f"smoothness = {self.smoothness_weight}, "
               f"max_tile = {self.max_tile_weight}")
-
-    def evaluate_state(self, state: int) -> float:
-        """
-        Use a heuristic similar to that used by HeuristicPlayer.
-        Factors include empty cells, monotonicity, smoothness, and maximum tile.
-        Adjust weights as needed.
-        """
-        board = Board.get_unpacked_state(state)
-        empty_cells = sum(1 for cell in board if cell == 0)
-
-        row_monotonicity = 0
-        for r in range(4):
-            row = board[r * 4:(r + 1) * 4]
-            row_monotonicity += abs(row[0] - row[1]) + abs(row[1] - row[2]) + abs(row[2] - row[3])
-        col_monotonicity = 0
-        for c in range(4):
-            col = [board[r * 4 + c] for r in range(4)]
-            col_monotonicity += abs(col[0] - col[1]) + abs(col[1] - col[2]) + abs(col[2] - col[3])
-        monotonicity = -(row_monotonicity + col_monotonicity)
-
-        smoothness = 0
-        for r in range(4):
-            for c in range(4):
-                index = r * 4 + c
-                if board[index] != 0:
-                    value = 2 ** board[index]
-                    if c < 3 and board[r * 4 + c + 1] != 0:
-                        neighbor_value = 2 ** board[r * 4 + c + 1]
-                        smoothness -= abs(value - neighbor_value)
-                    if r < 3 and board[(r + 1) * 4 + c] != 0:
-                        neighbor_value = 2 ** board[(r + 1) * 4 + c]
-                        smoothness -= abs(value - neighbor_value)
-
-        max_tile = max(board)
-
-        return (empty_cells * self.empty_weight +
-                monotonicity * self.monotonicity_weight +
-                smoothness * self.smoothness_weight +
-                max_tile * self.max_tile_weight)
-
+        self._cache = {}  # State cache for memoization
+        
+    def clear_cache(self):
+        """Clear the memoization cache."""
+        self._cache = {}
+        
     def expectimax(self, state: int, depth: int, is_player_turn: bool) -> float:
+        # Create a unique key for the cache
+        cache_key = (state, depth, is_player_turn)
+        
+        # Return cached result if available
+        if cache_key in self._cache:
+            return self._cache[cache_key]
+            
         valid_moves = Board.get_valid_move_actions(state)
         # Terminal conditions: depth cutoff or no valid moves.
         if depth == 0 or not valid_moves:
-            return self.evaluate_state(state)
+            result = self.evaluate_state(state)
+            self._cache[cache_key] = result
+            return result
+            
         if is_player_turn:
             best = float('-inf')
             for _, next_state in valid_moves:
                 best = max(best, self.expectimax(next_state, depth - 1, False))
+            self._cache[cache_key] = best
             return best
         else:
             # Chance node: average over all possible placements.
@@ -240,9 +215,13 @@ class ExpectimaxPlayer(Player):
                     # We assume Board.set_tile returns a new state without modifying the original.
                     new_state = Board.set_tile(state, row, col, tile_value)
                     total += prob_per_tile * tile_prob * self.expectimax(new_state, depth - 1, True)
+            self._cache[cache_key] = total
             return total
 
     def choose_action(self, valid_actions: list[tuple[Action, int]]) -> tuple[Action, int]:
+        # Clear cache for each new decision to avoid memory issues
+        self.clear_cache()
+        
         best_move = None
         best_value = float('-inf')
         for action, next_state in valid_actions:
