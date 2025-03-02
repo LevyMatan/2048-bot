@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from .board import Action, Board
 import random
+import readchar
 
 class Player(ABC):
     def __init__(self):
@@ -105,27 +106,43 @@ class HeuristicPlayer(BaseHeuristicPlayer):
 class HumanPlayer(Player):
     def __init__(self):
         self.name = "Human"
-
+        
     def choose_action(self, valid_actions: list[tuple[Action, int]]) -> tuple[Action, int]:
+        valid_action_types = [action for action, _ in valid_actions]
+        
         while True:
-            action = None
-            action_str = input("Enter action (a/A: left, d/D: right, w/W: up, s/S: down): ")
-            if action_str.lower() == 'a':
-                action = Action.LEFT
-            elif action_str.lower() == 'd':
-                action = Action.RIGHT
-            elif action_str.lower() == 'w':
-                action = Action.UP
-            elif action_str.lower() == 's':
-                action = Action.DOWN
             try:
-                for act, state in valid_actions:
-                    if act == action:
-                        return act, state
-                else:
-                    print("Invalid action.")
-                    continue
-            except ValueError:
-                print("Invalid input.")
+                # Wait for a single keypress without requiring Enter
+                key = readchar.readkey()
+                
+                action = None
+                # Map both arrow keys and WASD to actions
+                if key in [readchar.key.LEFT, 'a', 'A']:
+                    action = Action.LEFT
+                elif key in [readchar.key.RIGHT, 'd', 'D']:
+                    action = Action.RIGHT
+                elif key in [readchar.key.UP, 'w', 'W']:
+                    action = Action.UP
+                elif key in [readchar.key.DOWN, 's', 'S']:
+                    action = Action.DOWN
+                elif key in ['q', 'Q']:  # Allow graceful exit with q
+                    print("\nExiting game. Thanks for playing!")
+                    import sys
+                    sys.exit(0)  # Exit cleanly with status code 0
+                
+                # Check if the action is valid
+                if action in valid_action_types:
+                    for act, state in valid_actions:
+                        if act == action:
+                            return act, state
+                elif action is not None:
+                    # Only show message for invalid moves (not for unrecognized keys)
+                    print("Invalid move!")
+                    
+            except KeyboardInterrupt:
+                # Handle Ctrl+C gracefully
+                print("\nExiting game. Thanks for playing!")
+                import sys
+                sys.exit(0)
 
 # You can add additional player types by inheriting from Player and implementing choose_action.
