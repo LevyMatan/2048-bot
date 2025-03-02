@@ -26,6 +26,7 @@ class Game2048:
             self.board = board
 
         self.move_count: int = move_count
+        self.score: int = 0  # Initialize score to 0
         self.player = player if player else RandomPlayer()
         self.interface = interface
 
@@ -43,30 +44,31 @@ class Game2048:
     def play_move(self):
         valid_actions = Board.get_valid_move_actions(self.board.get_state())
         if valid_actions:
-            action, next_state = self.player.choose_action(valid_actions)
+            # Player now needs to choose from actions that include score
+            action, next_state, move_score = self.player.choose_action(valid_actions)
+            self.score += move_score  # Add the score from this move
             self.board.set_state(next_state)
             self.add_random_tile()
             return True
         return False
 
     def get_score(self) -> int:
-        return sum([2 ** tile for tile in self.board.get_state(unpack=True) if tile > 0])
+        return self.score
 
     def reset(self):
         self.board = Board()
         self.move_count = 0
+        self.score = 0
         self.add_random_tile()
         self.add_random_tile()
 
     def play_game(self):
         self.reset()
-        self.interface.display_initial_board(self.board.get_state())
+        self.interface.display_initial_board(self.board.get_state(), self.score)
         while self.play_move():
             self.move_count += 1
             if self.interface:
-                self.interface.update(state=self.board.get_state(), move_count=self.move_count)
-            # if self.move_count % MOVE_COUNT_PROGRESS_PRINT == 0:
-            #     logger.debug(f"Move count: {self.move_count}")
+                self.interface.update(state=self.board.get_state(), move_count=self.move_count, score=self.score)
         return self.get_score(), self.board.get_state(), self.move_count
 
 if __name__ == "__main__":

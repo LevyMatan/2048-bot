@@ -8,15 +8,15 @@ class Player(ABC):
         self.name = ""
 
     @abstractmethod
-    def choose_action(self, valid_actions: list[tuple[Action, int]]) -> tuple[Action, int]:
-        """Return a chosen action and the resulting state given a list of valid actions."""
+    def choose_action(self, valid_actions: list[tuple[Action, int, int]]) -> tuple[Action, int, int]:
+        """Return a chosen action, the resulting state, and the score for this move."""
         pass
 
 class RandomPlayer(Player):
     def __init__(self):
         self.name = "Random"
 
-    def choose_action(self, valid_actions: list[tuple[Action, int]]) -> tuple[Action, int]:
+    def choose_action(self, valid_actions: list[tuple[Action, int, int]]) -> tuple[Action, int, int]:
         return random.choice(valid_actions)
 
 class MaxEmptyCellsPlayer(Player):
@@ -26,7 +26,7 @@ class MaxEmptyCellsPlayer(Player):
     def evaluate_state(self, state: int) -> int:
         return len(Board.get_empty_tiles(state))
 
-    def choose_action(self, valid_actions: list[tuple[Action, int]]) -> tuple[Action, int]:
+    def choose_action(self, valid_actions: list[tuple[Action, int, int]]) -> tuple[Action, int, int]:
         return max(valid_actions, key=lambda x: self.evaluate_state(x[1]))
 
 class MinMaxPlayer(Player):
@@ -36,7 +36,7 @@ class MinMaxPlayer(Player):
     def evaluate_state(self, state: int) -> int:
         return sum([2 ** tile for tile in Board.get_unpacked_state(state) if tile > 0])
 
-    def choose_action(self, valid_actions: list[tuple[Action, int]]) -> tuple[Action, int]:
+    def choose_action(self, valid_actions: list[tuple[Action, int, int]]) -> tuple[Action, int, int]:
         return max(valid_actions, key=lambda x: self.evaluate_state(x[1]))
 
 class BaseHeuristicPlayer(Player):
@@ -100,15 +100,17 @@ class HeuristicPlayer(BaseHeuristicPlayer):
     def __init__(self):
         super().__init__(name="Heuristic")
 
-    def choose_action(self, valid_actions: list[tuple[Action, int]]) -> tuple[Action, int]:
-        return max(valid_actions, key=lambda action_state: self.evaluate_state(action_state[1]))
+    def choose_action(self, valid_actions: list[tuple[Action, int, int]]) -> tuple[Action, int, int]:
+        return max(valid_actions, key=lambda action_state_score: self.evaluate_state(action_state_score[1]))
 
 class HumanPlayer(Player):
     def __init__(self):
         self.name = "Human"
+        self._first_move = True
         
-    def choose_action(self, valid_actions: list[tuple[Action, int]]) -> tuple[Action, int]:
-        valid_action_types = [action for action, _ in valid_actions]
+    def choose_action(self, valid_actions: list[tuple[Action, int, int]]) -> tuple[Action, int, int]:
+        # Extract just the actions for validation
+        valid_action_types = [action for action, _, _ in valid_actions]
         
         while True:
             try:
@@ -132,9 +134,9 @@ class HumanPlayer(Player):
                 
                 # Check if the action is valid
                 if action in valid_action_types:
-                    for act, state in valid_actions:
+                    for act, state, score in valid_actions:
                         if act == action:
-                            return act, state
+                            return act, state, score
                 elif action is not None:
                     # Only show message for invalid moves (not for unrecognized keys)
                     print("Invalid move!")

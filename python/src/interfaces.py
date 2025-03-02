@@ -6,18 +6,21 @@ class Interface2048(ABC):
     def __init__(self):
         self.name = ""
 
-    def display_initial_board(self, state: int):
+    def display_initial_board(self, state: int, score: int = 0):
         pass
 
     @abstractmethod
-    def update(self, state: int) -> None:
+    def update(self, state: int, move_count: int, score: int) -> None:
         pass
 
 class GUI2048(Interface2048):
     def __init__(self):
         self.name = "GUI"
 
-    def update(self, state: int) -> None:
+    def display_initial_board(self, state: int, score: int = 0):
+        pass
+
+    def update(self, state: int, move_count: int, score: int) -> None:
         pass
 
 class CLI2048(Interface2048):
@@ -35,8 +38,7 @@ class CLI2048(Interface2048):
         os.system('cls' if os.name == 'nt' else 'clear')
         
         # Print Score
-        if score:
-            print(f"Score: {score}")
+        print(f"Score: {score}")
         # Print move count
         if move_count:
             print(f"Move count: {move_count}")
@@ -58,21 +60,17 @@ class CLI2048(Interface2048):
             print(row_str)
             print(horizontal_line)
 
-    def display_initial_board(self, state: int):
+    def display_initial_board(self, state: int, score: int = 0):
         """
         Display the initial board state right after initialization.
         This should be called once at the beginning of the game.
         """
-        board = Board(state)
-        score = sum([2 ** tile for tile in board.get_state(unpack=True) if tile > 0])
         CLI2048.pretty_print(state, score, 0)  # Move count is 0 at initialization
         print("\nUse arrow keys or WASD to move. Press 'q' to quit.")
         print("Waiting for your move...", flush=True)
         self.first_update = False  # Set this to False so instructions aren't shown again
 
-    def update(self, state: int, move_count: int) -> None:
-        board = Board(state)
-        score = sum([2 ** tile for tile in board.get_state(unpack=True) if tile > 0])
+    def update(self, state: int, move_count: int, score: int) -> None:
         CLI2048.pretty_print(state, score, move_count)
         
         # Display instructions on first update and ensure output is flushed
@@ -85,5 +83,8 @@ class GYM2048(Interface2048):
     def __init__(self):
         self.name = "GYM"
 
-    def update(self, state: int, move_count: int) -> None:
+    def display_initial_board(self, state: int, score: int = 0):
+        pass
+
+    def update(self, state: int, move_count: int, score: int) -> None:
         pass

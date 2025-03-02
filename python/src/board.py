@@ -13,6 +13,8 @@ class Board:
     __is_lookup_tables_initialized: bool = False
     __left_moves: list[int] = [0] * (2**16)
     __right_moves: list[int] = [0] * (2**16)
+    __left_scores: list[int] = [0] * (2**16)  # New lookup table for scores from left moves
+    __right_scores: list[int] = [0] * (2**16)  # New lookup table for scores from right moves
     __empty_cells: Dict[int, list[tuple[int, int]]] = {}
 
     def __init__(self, state: int = None):
@@ -52,12 +54,13 @@ class Board:
             raise TypeError("Invalid row type")
 
     @staticmethod
-    def _move_left(row: list[int]) -> list[int]:
+    def _move_left_with_score(row: list[int]) -> tuple[list[int], int]:
         # Validate input
         Board.__move_left_verifier(row)
 
         non_zero = [x for x in row if x != 0]
         result = [0, 0, 0, 0]
+        score = 0
         skip = False
         i = j = 0
         while i < len(non_zero):
@@ -74,18 +77,20 @@ class Board:
                     skip = True
                 else:
                     result[j] = non_zero[i] + 1
+                    # Add score for the merge: 2^(value+1)
+                    score += 2 ** (non_zero[i] + 1)
                     skip = True
             else:
                 result[j] = non_zero[i]
             i += 1
             j += 1
-        return result
+        return result, score
 
     @staticmethod
-    def _move_right(row: list[int]) -> list[int]:
+    def _move_right_with_score(row: list[int]) -> tuple[list[int], int]:
         reversed_row = list(reversed(row))
-        moved = Board._move_left(reversed_row)
-        return list(reversed(moved))
+        moved, score = Board._move_left_with_score(reversed_row)
+        return list(reversed(moved)), score
 
     @staticmethod
     def __init_lookup_tables():
@@ -100,13 +105,15 @@ class Board:
                 (i >> 4) & 0xF,
                 i & 0xF
             ]
-            new_row_left = Board._move_left(row)
+            new_row_left, left_score = Board._move_left_with_score(row)
             new_value_left = (new_row_left[0] << 12) | (new_row_left[1] << 8) | (new_row_left[2] << 4) | new_row_left[3]
             Board.__left_moves[i] = new_value_left
+            Board.__left_scores[i] = left_score
 
-            new_row_right = Board._move_right(row)
+            new_row_right, right_score = Board._move_right_with_score(row)
             new_value_right = (new_row_right[0] << 12) | (new_row_right[1] << 8) | (new_row_right[2] << 4) | new_row_right[3]
             Board.__right_moves[i] = new_value_right
+            Board.__right_scores[i] = right_score
 
     @staticmethod
     def __verify_row_left(row: int) -> None:
@@ -116,10 +123,10 @@ class Board:
             raise IndexError(f"Invalid row: {row}")
 
     @staticmethod
-    def _row_left(row: int) -> int:
+    def _row_left(row: int) -> tuple[int, int]:
         # Verify row.
         Board.__verify_row_left(row)
-        return Board.__left_moves[row]
+        return Board.__left_moves[row], Board.__left_scores[row]
 
     @staticmethod
     def __verify_row_right(row: int) -> None:
@@ -129,11 +136,11 @@ class Board:
             raise IndexError(f"Invalid row: {row}")
 
     @staticmethod
-    def _row_right(row: int) -> int:
+    def _row_right(row: int) -> tuple[int, int]:
         Board.__verify_row_right(row)
         if not Board.__is_lookup_tables_initialized:
             Board.__init_lookup_tables()
-        return Board.__right_moves[row]
+        return Board.__right_moves[row], Board.__right_scores[row]
 
     @staticmethod
     def __verify_state(state: int) -> bool:
@@ -146,30 +153,36 @@ class Board:
         return True
 
     @staticmethod
-    def simulate_moves(state: int) -> list[int]:
+    def simulate_moves(state: int) -> list[tuple[int, int]]:
         # Verify input
         Board.__verify_state(state)
 
         # Horizontal moves: LEFT and RIGHT.
         new_state_left = new_state_right = 0
+        score_left = score_right = 0
         for row_index in range(4):
             row = (state >> (16 * row_index)) & 0xFFFF
-            new_row_left = Board.__left_moves[row]
-            new_row_right = Board.__right_moves[row]
+            new_row_left, row_score_left = Board._row_left(row)
+            new_row_right, row_score_right = Board._row_right(row)
             new_state_left |= new_row_left << (16 * row_index)
             new_state_right |= new_row_right << (16 * row_index)
+            score_left += row_score_left
+            score_right += row_score_right
 
         # Vertical moves: reuse the row extraction.
         rows = [(state >> (16 * i)) & 0xFFFF for i in range(4)]
         new_rows_up = [0, 0, 0, 0]
         new_rows_down = [0, 0, 0, 0]
+        score_up = score_down = 0
         for col in range(4):
             col_value = 0
             for row_index in range(4):
                 tile = (rows[row_index] >> (4 * (3 - col))) & 0xF
                 col_value |= tile << (4 * (3 - row_index))
-            new_col_value_up = Board.__right_moves[col_value]
-            new_col_value_down = Board.__left_moves[col_value]
+            new_col_value_up, col_score_up = Board._row_right(col_value)
+            new_col_value_down, col_score_down = Board._row_left(col_value)
+            score_up += col_score_up
+            score_down += col_score_down
             for row_index in range(4):
                 new_tile_up = (new_col_value_up >> (4 * (3 - row_index))) & 0xF
                 new_tile_down = (new_col_value_down >> (4 * (3 - row_index))) & 0xF
@@ -180,15 +193,18 @@ class Board:
             new_state_up |= new_rows_up[row_index] << (16 * row_index)
             new_state_down |= new_rows_down[row_index] << (16 * row_index)
 
-        return [new_state_left, new_state_right, new_state_up, new_state_down]
+        return [(new_state_left, score_left), 
+                (new_state_right, score_right), 
+                (new_state_up, score_up), 
+                (new_state_down, score_down)]
 
     @staticmethod
-    def get_valid_move_actions(state: int) -> list[tuple[Action, int]]:
+    def get_valid_move_actions(state: int) -> list[tuple[Action, int, int]]:
         valid_actions = []
-        next_states = Board.simulate_moves(state)
-        for action_value, next_state in enumerate(next_states):
+        next_states_with_scores = Board.simulate_moves(state)
+        for action_value, (next_state, score) in enumerate(next_states_with_scores):
             if next_state != state:
-                valid_actions.append((Action(action_value), next_state))
+                valid_actions.append((Action(action_value), next_state, score))
         return valid_actions
 
     @staticmethod
