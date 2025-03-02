@@ -60,6 +60,7 @@ class Game2048:
 
     def play_game(self):
         self.reset()
+        self.interface.display_initial_board(self.board.get_state())
         while self.play_move():
             self.move_count += 1
             if self.interface:
