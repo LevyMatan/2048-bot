@@ -88,11 +88,10 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="2048 Game")
     parser.add_argument("--profile_en", action="store_true", help="Enable profiling")
-    parser.add_argument("-n", "--num_games", type=int, default=1000, help="Number of games to play")
-    parser.add_argument("-p", "--player", type=str, default="Random",
+    parser.add_argument("-n", "--num_games", type=int, default=1, help="Number of games to play")
+    parser.add_argument("-p", "--player", type=str, default="human",
                         help=f"Player type {list(player_mapping.keys())}")
     parser.add_argument("-v", "--verbose", action="store_true", help="Enable debug logging")
-    parser.add_argument("--opt", action="store_true", help="Enable optimization")
     args = parser.parse_args()
 
     if args.profile_en:
@@ -103,14 +102,14 @@ if __name__ == "__main__":
     else:
         logging.basicConfig(level=logging.INFO)
 
-    # Choose the player from the mapping; use random player as default
+    # Choose the player from the mapping; use Human player as default
     player_key = args.player.lower()
     if player_key in player_mapping:
         player_cls = player_mapping[player_key]
     else:
-        logger.info(f"Unknown player type '{args.player}'. Using random player instead.")
+        logger.info(f"Unknown player type '{args.player}'. Using Human player instead.")
         logger.info(f"Available player types: {list(player_mapping.keys())}")
-        player_cls = RandomPlayer
+        player_cls = HumanPlayer
 
     # If the player is Human, force the number of games to be 1
     if player_cls == HumanPlayer:
@@ -118,11 +117,10 @@ if __name__ == "__main__":
 
     if args.num_games > 1:
         interface = GYM2048()
+        # Disable verifiers for improved performance when running multiple games
+        Board.disable_verifiers()
     else:
         interface = CLI2048()
-
-    if args.opt:
-        Board.disable_verifiers()
 
     game = Game2048(player=player_cls(), interface=interface)
     best_score = 0
