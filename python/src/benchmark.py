@@ -14,8 +14,7 @@ from tabulate import tabulate  # You may need to install this: pip install tabul
 from .game import Game2048
 from .board import Board
 from .players import (
-    RandomPlayer, MaxEmptyCellsPlayer, MinMaxPlayer, HeuristicPlayer,
-    MonteCarloPlayer, ExpectimaxPlayer
+    RandomPlayer, MaxEmptyCellsPlayer, MinMaxPlayer, HeuristicPlayer
 )
 from .interfaces import GYM2048, CLI2048
 
@@ -44,61 +43,69 @@ def run_benchmark(num_games, players, optimize=False, show_progress=True):
     """
     results = {}
     
+    verifiers_disabled = False
     if optimize:
         Board.disable_verifiers()
+        verifiers_disabled = True
     
-    for player_cls in players:
-        player_name = player_cls.__name__.replace("Player", "")
-        logger.info(f"Benchmarking {player_name} for {num_games} games...")
-        
-        # Initialize metrics
-        start_time = time.time()
-        scores = []
-        highest_tiles = []
-        move_counts = []
-        best_score = 0
-        best_state = None
-        best_moves = 0
-        
-        # Create game instance with silent interface
-        game = Game2048(player=player_cls(), interface=GYM2048())
-        
-        # Run games
-        for i in range(num_games):
-            if show_progress and i > 0 and i % 10 == 0:
-                elapsed = time.time() - start_time
-                eta = (elapsed / i) * (num_games - i)
-                logger.info(f"{player_name}: {i}/{num_games} games completed. ETA: {eta:.1f}s")
+    try:
+        for player_cls in players:
+            player_name = player_cls.__name__.replace("Player", "")
+            logger.info(f"Benchmarking {player_name} for {num_games} games...")
             
-            score, state, move_count = game.play_game()
-            scores.append(score)
-            highest_tiles.append(get_highest_tile(state))
-            move_counts.append(move_count)
+            # Initialize metrics
+            start_time = time.time()
+            scores = []
+            highest_tiles = []
+            move_counts = []
+            best_score = 0
+            best_state = None
+            best_moves = 0
             
-            if score > best_score:
-                best_score = score
-                best_state = state
-                best_moves = move_count
+            # Create game instance with silent interface
+            game = Game2048(player=player_cls(), interface=GYM2048())
+            
+            # Run games
+            for i in range(num_games):
+                if show_progress and i > 0 and i % 10 == 0:
+                    elapsed = time.time() - start_time
+                    eta = (elapsed / i) * (num_games - i)
+                    logger.info(f"{player_name}: {i}/{num_games} games completed. ETA: {eta:.1f}s")
+                
+                score, state, move_count = game.play_game()
+                scores.append(score)
+                highest_tiles.append(get_highest_tile(state))
+                move_counts.append(move_count)
+                
+                if score > best_score:
+                    best_score = score
+                    best_state = state
+                    best_moves = move_count
+            
+            elapsed_time = time.time() - start_time
+            
+            # Store results
+            results[player_name] = {
+                "avg_score": sum(scores) / num_games,
+                "max_score": best_score,
+                "best_state": best_state,
+                "best_moves": best_moves,
+                "avg_moves": sum(move_counts) / num_games,
+                "highest_tile_counts": defaultdict(int),
+                "time_per_game": elapsed_time / num_games,
+                "total_time": elapsed_time
+            }
+            
+            # Count tile frequencies
+            for tile in highest_tiles:
+                results[player_name]["highest_tile_counts"][tile] += 1
         
-        elapsed_time = time.time() - start_time
-        
-        # Store results
-        results[player_name] = {
-            "avg_score": sum(scores) / num_games,
-            "max_score": best_score,
-            "best_state": best_state,
-            "best_moves": best_moves,
-            "avg_moves": sum(move_counts) / num_games,
-            "highest_tile_counts": defaultdict(int),
-            "time_per_game": elapsed_time / num_games,
-            "total_time": elapsed_time
-        }
-        
-        # Count tile frequencies
-        for tile in highest_tiles:
-            results[player_name]["highest_tile_counts"][tile] += 1
-    
-    return results
+        return results
+    finally:
+        # Re-enable verifiers if they were disabled, ensuring cleanup even if exceptions occur
+        if verifiers_disabled:
+            Board.enable_verifiers()
+            logger.debug("Board verifiers re-enabled after benchmarking")
 
 def generate_report(results):
     """Generate a formatted report from benchmark results."""
@@ -192,9 +199,7 @@ def main():
         "random": RandomPlayer,
         "maxemptycells": MaxEmptyCellsPlayer,
         "minmax": MinMaxPlayer,
-        "heuristic": HeuristicPlayer,
-        # "montecarlo": MonteCarloPlayer,
-        # "expectimax": ExpectimaxPlayer
+        "heuristic": HeuristicPlayer
     }
 
     # Select players to benchmark

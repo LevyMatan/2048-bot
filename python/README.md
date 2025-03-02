@@ -10,8 +10,6 @@ This directory contains the Python implementation of the 2048 game bot, designed
   - `MaxEmptyCellsPlayer`: Selects moves that maximize empty cells.
   - `MinMaxPlayer`: Uses a simple min/max heuristic based on board values.
   - `HeuristicPlayer`: Applies a multi-factor heuristic considering empty cells, monotonicity, smoothness, and max tiles.
-  - `MonteCarloPlayer`: Simulates random playouts to choose the best statistically averaged move.
-  - `ExpectimaxPlayer`: Uses expectimax search with adjustable depth and weighted heuristics.
 
 - **Python-Specific Advantages:**  
   - Clear, object-oriented design
@@ -61,7 +59,7 @@ python -m src.bot [options]
 
 **Command-line options:**
 - `--games`: Number of games to play (default: 100)
-- `--player`: Player type (random, maxempty, minmax, heuristic, montecarlo, expectimax)
+- `--player`: Player type (random, maxempty, minmax, heuristic)
 - `--verbose`: Enable detailed output
 - `--visualize`: Show graphical representation of the game
 

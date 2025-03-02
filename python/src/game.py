@@ -6,7 +6,7 @@ if __name__ == "__main__" and __package__ is None:
 
 import random
 import logging
-from .players import Player, RandomPlayer, MaxEmptyCellsPlayer, HumanPlayer, MonteCarloPlayer, HeuristicPlayer, MinMaxPlayer, ExpectimaxPlayer
+from .players import Player, RandomPlayer, MaxEmptyCellsPlayer, HumanPlayer, HeuristicPlayer, MinMaxPlayer
 from .board import Board
 from .interfaces import GUI2048, CLI2048, GYM2048
 
@@ -82,8 +82,6 @@ if __name__ == "__main__":
             MaxEmptyCellsPlayer,
             MinMaxPlayer,
             HeuristicPlayer,
-            MonteCarloPlayer,
-            ExpectimaxPlayer,
         ]
     }
 
