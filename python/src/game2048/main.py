@@ -43,12 +43,12 @@ def play_games(args: argparse.Namespace) -> None:
     player_mapping = get_player_mapping()
     player_key = args.player.lower()
     
-    if player_key in player_mapping:
-        player_cls = player_mapping[player_key]
-    else:
-        logger.info(f"Unknown player type '{args.player}'. Using Human player instead.")
-        logger.info(f"Available player types: {list(player_mapping.keys())}")
-        player_cls = HumanPlayer
+    if player_key not in player_mapping:
+        logger.error(f"Unknown player type '{args.player}'")
+        logger.error(f"Available player types: {list(player_mapping.keys())}")
+        raise SystemExit(1)
+        
+    player_cls = player_mapping[player_key]
 
     # If the player is Human, force the number of games to be 1
     if player_cls == HumanPlayer:
