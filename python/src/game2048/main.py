@@ -5,6 +5,7 @@ import cProfile
 import logging
 import pstats
 from datetime import datetime
+from collections import defaultdict
 
 from .game import Game2048
 from .board import Board
@@ -107,9 +108,11 @@ def main() -> int:
     # Benchmark command
     benchmark_parser = subparsers.add_parser("benchmark", help="Run benchmarks")
     benchmark_parser.add_argument("-n", "--num_games", type=int, default=100, help="Number of games per player")
+    benchmark_parser.add_argument("--players", type=str, nargs="+", help="Specific players to benchmark")
     benchmark_parser.add_argument("--optimize", action="store_true", help="Enable board optimizations")
-    benchmark_parser.add_argument("-o", "--output", type=str, default="benchmark_results.txt",
-                              help="Output file for benchmark results")
+    benchmark_parser.add_argument("-o", "--output", type=str, help="Output file for benchmark results")
+    benchmark_parser.add_argument("--format", type=str, choices=["text", "html"], default="text",
+                               help="Output format (default: text)")
     benchmark_parser.add_argument("-v", "--verbose", action="store_true", help="Enable debug logging")
 
     args = parser.parse_args()
@@ -123,7 +126,53 @@ def main() -> int:
     if args.command == "play":
         play_games(args)
     elif args.command == "benchmark":
-        benchmark.main()
+        # Get available players
+        available_players = []
+        player_mapping = get_player_mapping()
+        
+        if args.players:
+            # Use specified players
+            for p in args.players:
+                p_lower = p.lower()
+                if p_lower in player_mapping:
+                    available_players.append(player_mapping[p_lower])
+                else:
+                    logger.error(f"Unknown player: {p}")
+                    logger.error(f"Available players: {list(player_mapping.keys())}")
+                    return 1
+        else:
+            # Use all non-human players
+            available_players = [cls for name, cls in player_mapping.items() if cls != HumanPlayer]
+        
+        if not available_players:
+            logger.error("No valid players specified")
+            return 1
+            
+        # Run benchmark with the selected players
+        results = benchmark.run_benchmark(
+            num_games=args.num_games,
+            players=available_players,
+            optimize=args.optimize,
+            show_progress=True
+        )
+        
+        # Generate report in requested format
+        if args.format == "html":
+            report = benchmark.generate_html_report(results)
+        else:
+            report = benchmark.generate_report(results)
+        
+        # Display report if not HTML
+        if args.format == "text":
+            print(report)
+        
+        # Save report to file if requested
+        if args.output:
+            with open(args.output, 'w', encoding='utf-8') as f:
+                f.write(report)
+            logger.info(f"Benchmark results saved to {args.output}")
+            if args.format == "html":
+                logger.info("Open the HTML file in a web browser to view the report")
     else:
         parser.print_help()
         return 1
