@@ -7,24 +7,23 @@ void Game2048::addRandomTile() {
     auto emptyTiles = Board::getEmptyTiles(board.getState());
     if (emptyTiles.empty()) return;
 
-    int idx = rng() % emptyTiles.size();
+    // Choose a random empty tile
+    int idx = static_cast<int>(dist(rng) * emptyTiles.size());
     auto [row, col] = emptyTiles[idx];
-    int value = (dist(rng) < 0.9) ? 1 : 2;
 
+    // 90% chance of a 2, 10% chance of a 4
+    int value = (dist(rng) < 0.9) ? 1 : 2;
     board.setState(Board::setTile(board.getState(), row, col, value));
 }
 
-bool Game2048::playMove() {
-    if (!player) return false;
-
+bool Game2048::playMove(int action, uint64_t nextState) {
     // Get action and next state with score
     auto validMoves = Board::getValidMoveActionsWithScores(board.getState());
     if (validMoves.empty()) {
         return false;
     }
 
-    // Let the player choose an action
-    auto [action, nextState] = player->chooseAction(board.getState());
+    // Validate the action and next state
     if (action == -1) {
         return false;
     }
@@ -34,18 +33,18 @@ bool Game2048::playMove() {
     for (const auto& [moveAction, moveState, moveScoreValue] : validMoves) {
         if (moveAction == static_cast<Action>(action) && moveState == nextState) {
             moveScore = moveScoreValue;
-            break;
+            board.setState(nextState);
+            score += moveScore;
+            moveCount++;
+            
+            // Add a new random tile
+            addRandomTile();
+            return true;
         }
     }
 
-    // Update the board state and score
-    board.setState(nextState);
-    score += moveScore;
-    moveCount++;
-    
-    // Add a new random tile
-    addRandomTile();
-    return true;
+    // If we get here, the action was invalid
+    return false;
 }
 
 void Game2048::reset() {
@@ -56,15 +55,24 @@ void Game2048::reset() {
     addRandomTile();
 }
 
-std::tuple<int, uint64_t, int> Game2048::playGame() {
+std::tuple<int, uint64_t, int> Game2048::playGame(std::function<std::pair<int, uint64_t>(uint64_t)> chooseActionFn) {
     reset();
-    if (!player) {
-        player = std::make_unique<RandomPlayer>();
-        std::cout << "No player set, using random player" << std::endl;
+    
+    while (true) {
+        auto validMoves = Board::getValidMoveActionsWithScores(board.getState());
+        if (validMoves.empty()) {
+            break;
+        }
+        
+        // Let the provided function choose an action
+        auto [action, nextState] = chooseActionFn(board.getState());
+        
+        // Apply the move
+        if (!playMove(action, nextState)) {
+            break;
+        }
     }
-    while (playMove()) {
-        // Move count is incremented in playMove
-    }
+    
     return {score, board.getState(), moveCount};
 }
 
@@ -80,12 +88,11 @@ void Game2048::prettyPrint() const {
             int pos = (i * 4 + j) * 4;
             int value = (state >> pos) & 0xF;
             if (value == 0) {
-                std::cout << std::setw(3) << ' ' << '|';
+                std::cout << std::setw(4) << " " << '|';
             } else {
-                std::cout << std::setw(3) << (1 << value) << '|';
+                std::cout << std::setw(4) << Board::valueToTile(value) << '|';
             }
         }
-        std::cout << '\n';
-        std::cout << std::string(17, '-') << '\n';
+        std::cout << '\n' << std::string(17, '-') << '\n';
     }
 }

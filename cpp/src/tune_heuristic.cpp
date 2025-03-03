@@ -53,9 +53,13 @@ void evaluateWeights(WeightSet& weightSet, int numGames) {
     
     for (int i = 0; i < numGames; ++i) {
         auto player = std::make_unique<HeuristicPlayer>(weightSet.weights);
-        game.setPlayer(std::move(player));
         
-        auto [score, state, moves] = game.playGame();
+        // Create a lambda that captures the player and calls its chooseAction method
+        auto chooseActionFn = [&player](uint64_t state) {
+            return player->chooseAction(state);
+        };
+        
+        auto [score, state, moves] = game.playGame(chooseActionFn);
         
         totalScore += score;
         maxScore = std::max(maxScore, score);

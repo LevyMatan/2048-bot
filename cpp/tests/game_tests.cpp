@@ -10,8 +10,23 @@ public:
     MockPlayer(int fixedAction) : fixedAction_(fixedAction) {}
     
     std::pair<int, uint64_t> chooseAction(uint64_t state) override {
-        // Return the fixed action and the state (no simulation)
-        return {fixedAction_, state};
+        // For testing purposes, we'll simulate a simple move
+        // In a real scenario, we would use Board::getValidMoveActions
+        auto validMoves = Board::getValidMoveActions(state);
+        if (validMoves.empty()) {
+            return {-1, state};
+        }
+        
+        // Find the action that matches our fixed action, or use the first valid move
+        for (const auto& [action, nextState] : validMoves) {
+            if (static_cast<int>(action) == fixedAction_) {
+                return {fixedAction_, nextState};
+            }
+        }
+        
+        // If our fixed action isn't valid, use the first valid move
+        auto [action, nextState] = validMoves[0];
+        return {static_cast<int>(action), nextState};
     }
     
     std::string getName() const override {
@@ -25,16 +40,26 @@ private:
 class GameTest : public ::testing::Test {
 protected:
     void SetUp() override {
-        // Create a game with a mock player that always moves left (0)
+        // Create a game
         game = new Game2048();
-        game->setPlayer(std::make_unique<MockPlayer>(0));
+        
+        // Create a mock player that always tries to move left (0)
+        mockPlayer = new MockPlayer(0);
     }
     
     void TearDown() override {
         delete game;
+        delete mockPlayer;
     }
     
     Game2048* game;
+    MockPlayer* mockPlayer;
+    
+    // Helper function to play a move using the mock player
+    bool playMoveWithMockPlayer() {
+        auto [action, nextState] = mockPlayer->chooseAction(game->getState());
+        return game->playMove(action, nextState);
+    }
 };
 
 // Test game initialization
@@ -44,9 +69,6 @@ TEST_F(GameTest, InitializationTest) {
     
     // Initial score should be 0
     EXPECT_EQ(game->getScore(), 0);
-    
-    // Game should have a player
-    EXPECT_EQ(game->getPlayerName(), "MockPlayer");
 }
 
 // Test game step
@@ -55,7 +77,7 @@ TEST_F(GameTest, StepTest) {
     uint64_t initialState = game->getState();
     
     // Perform a step
-    bool validMove = game->playMove();
+    bool validMove = playMoveWithMockPlayer();
     
     // The move should be valid or invalid depending on the board state
     // We can't assert a specific outcome since the initial board is random
@@ -69,8 +91,8 @@ TEST_F(GameTest, StepTest) {
 // Test game reset
 TEST_F(GameTest, ResetTest) {
     // Play a few moves
-    game->playMove();
-    game->playMove();
+    playMoveWithMockPlayer();
+    playMoveWithMockPlayer();
     
     // Record the state and score
     uint64_t stateBeforeReset = game->getState();
@@ -94,7 +116,7 @@ TEST_F(GameTest, PlayLimitedMovesTest) {
     int moveCount = 0;
     int maxMoves = 10;
     
-    while (moveCount < maxMoves && game->playMove()) {
+    while (moveCount < maxMoves && playMoveWithMockPlayer()) {
         moveCount++;
     }
     
@@ -102,6 +124,22 @@ TEST_F(GameTest, PlayLimitedMovesTest) {
     EXPECT_GE(game->getScore(), 0);
     EXPECT_NE(game->getState(), 0);
     EXPECT_GT(game->getMoveCount(), 0);
+}
+
+// Test playing a full game
+TEST_F(GameTest, PlayFullGameTest) {
+    // Create a lambda that captures the mock player and calls its chooseAction method
+    auto chooseActionFn = [this](uint64_t state) {
+        return mockPlayer->chooseAction(state);
+    };
+    
+    // Play a full game
+    auto [score, state, moves] = game->playGame(chooseActionFn);
+    
+    // Game should have completed
+    EXPECT_GE(score, 0);
+    EXPECT_NE(state, 0);
+    EXPECT_GT(moves, 0);
 }
 
 int main(int argc, char **argv) {

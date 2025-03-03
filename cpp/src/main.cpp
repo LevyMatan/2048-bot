@@ -66,6 +66,7 @@ int main(int argc, char* argv[]) {
     Game2048 game;
     std::unique_ptr<Player> player;
 
+    // Create the appropriate player based on user input
     if (playerType == "Heuristic") {
         if (!weightsFile.empty()) {
             std::cout << "Using custom weights from file: " << weightsFile << std::endl;
@@ -78,7 +79,6 @@ int main(int argc, char* argv[]) {
     } else {
         player = std::make_unique<RandomPlayer>();
     }
-    game.setPlayer(std::move(player));
 
     int bestScore = 0;
     uint64_t bestState = 0;
@@ -87,7 +87,12 @@ int main(int argc, char* argv[]) {
     auto startTime = std::chrono::high_resolution_clock::now();
     auto lastUpdateTime = startTime;
 
-    std::cout << "Starting " << numGames << " games with " << playerType << "...\n";
+    std::cout << "Starting " << numGames << " games with " << player->getName() << "...\n";
+
+    // Create a lambda that captures the player and calls its chooseAction method
+    auto chooseActionFn = [&player](uint64_t state) {
+        return player->chooseAction(state);
+    };
 
     for (int i = 0; i < numGames; ++i) {
         // Print progress
@@ -104,7 +109,7 @@ int main(int argc, char* argv[]) {
             lastUpdateTime = currentTime;
         }
 
-        auto [score, state, moveCount] = game.playGame();
+        auto [score, state, moveCount] = game.playGame(chooseActionFn);
 
         if (score > bestScore) {
             bestScore = score;

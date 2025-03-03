@@ -2,7 +2,13 @@
 #pragma once
 #include "board.hpp"
 #include <random>
-#include "player.hpp"
+#include <tuple>
+#include <iostream>
+#include <vector>
+#include <functional>
+
+// Forward declaration of Action enum
+enum class Action;
 
 class Game2048 {
 private:
@@ -11,7 +17,6 @@ private:
     int score;
     std::mt19937 rng;
     std::uniform_real_distribution<double> dist;
-    std::unique_ptr<Player> player;
 
 public:
     Game2048()
@@ -21,13 +26,13 @@ public:
     }
 
     void addRandomTile();
-    bool playMove();
+    bool playMove(int action, uint64_t nextState);
     int getScore() const { return score; }
     void setScore(int newScore) { score = newScore; }
     int getMoveCount() const { return moveCount; }
     void setMoveCount(int newMoveCount) { moveCount = newMoveCount; }
     void reset();
-    std::tuple<int, uint64_t, int> playGame();
+    std::tuple<int, uint64_t, int> playGame(std::function<std::pair<int, uint64_t>(uint64_t)> chooseActionFn);
     void prettyPrint() const;
 
     void setState(uint64_t state) {
@@ -38,14 +43,8 @@ public:
         return board.getState();
     }
 
-    void setPlayer(std::unique_ptr<Player> newPlayer) {
-        player = std::move(newPlayer);
+    // Get valid moves for the current state
+    std::vector<std::tuple<Action, uint64_t, int>> getValidMoves() const {
+        return Board::getValidMoveActionsWithScores(board.getState());
     }
-
-    std::string getPlayerName() const { 
-        return player ? player->getName() : "No Player"; 
-    }
-
-private:
-
 };
