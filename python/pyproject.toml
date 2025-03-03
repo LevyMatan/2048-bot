@@ -33,7 +33,7 @@ game2048 = "game2048.main:main"
 pythonpath = ["src"]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
-addopts = "-ra -q --cov=game2048"
+addopts = "-ra -q --cov=src.game2048"
 
 [tool.black]
 line-length = 100
