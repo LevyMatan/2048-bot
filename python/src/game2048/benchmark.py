@@ -66,6 +66,9 @@ def run_benchmark(num_games, players, optimize=False, show_progress=True):
             best_state = None
             best_moves = 0
             
+            # Track time for this player
+            start_time = time.time()
+            
             for _ in range(num_games):
                 score, state, move_count = game.play_game()
                 scores.append(score)
@@ -78,6 +81,10 @@ def run_benchmark(num_games, players, optimize=False, show_progress=True):
                     best_moves = move_count
                 game.reset()
             
+            # Calculate time statistics
+            total_time = time.time() - start_time
+            time_per_game = total_time / num_games
+            
             # Store results
             results[player_name] = {
                 "avg_score": sum(scores) / num_games,
@@ -86,8 +93,8 @@ def run_benchmark(num_games, players, optimize=False, show_progress=True):
                 "best_moves": best_moves,
                 "avg_moves": sum(move_counts) / num_games,
                 "highest_tile_counts": defaultdict(int),
-                "time_per_game": 0,  # Not tracking time in this version
-                "total_time": 0
+                "time_per_game": time_per_game,
+                "total_time": total_time
             }
             
             # Count tile frequencies
