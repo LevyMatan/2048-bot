@@ -13,19 +13,14 @@ class Board:
     __is_lookup_tables_initialized: bool = False
     __left_moves: list[int] = [0] * (2**16)
     __right_moves: list[int] = [0] * (2**16)
-    __left_scores: list[int] = [0] * (2**16)  # New lookup table for scores from left moves
-    __right_scores: list[int] = [0] * (2**16)  # New lookup table for scores from right moves
+    __left_scores: list[int] = [0] * (2**16)
+    __right_scores: list[int] = [0] * (2**16)
     __empty_cells: Dict[int, list[tuple[int, int]]] = {}
 
-    def __init__(self, state: int = None):
-        if state is not None:
-            Board.__verify_state(state=state)
-            self.__state = state
-        else:
-            self.__state = 0
-        if not Board.__is_lookup_tables_initialized:
+    def __init__(self, state: int = 0):
+        self.__state = state
+        if not Board.is_lookup_tables_initialized():
             Board.__init_lookup_tables()
-            Board.__is_lookup_tables_initialized = True
 
     @staticmethod
     def get_empty_cells(state: int) -> Dict[int, list[tuple[int, int]]]:
@@ -114,6 +109,8 @@ class Board:
             new_value_right = (new_row_right[0] << 12) | (new_row_right[1] << 8) | (new_row_right[2] << 4) | new_row_right[3]
             Board.__right_moves[i] = new_value_right
             Board.__right_scores[i] = right_score
+
+        Board.__is_lookup_tables_initialized = True
 
     @staticmethod
     def __verify_row_left(row: int) -> None:
