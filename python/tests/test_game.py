@@ -1,7 +1,7 @@
-from src.board import Board
-from src.game import Game2048
-from src.interfaces import CLI2048
-from src.players import Player, RandomPlayer
+from game2048.board import Board
+from game2048.game import Game2048
+from game2048.interfaces import CLI2048
+from game2048.players import Player, RandomPlayer
 from unittest.mock import MagicMock
 import pytest
 import random

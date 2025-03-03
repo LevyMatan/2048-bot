@@ -1,4 +1,4 @@
-from src.board import Board, Action
+from game2048.board import Board, Action
 import io
 import pytest
 import sys
