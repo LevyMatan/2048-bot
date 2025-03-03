@@ -17,7 +17,7 @@ class TestBoard:
 
     def test_initialization_validation(self):
         """Test board initialization with invalid inputs"""
-        with pytest.raises((TypeError, ValueError)):
+        with pytest.raises(TypeError):
             Board("invalid string")
             
         with pytest.raises(ValueError):

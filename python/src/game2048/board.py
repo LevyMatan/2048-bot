@@ -18,6 +18,7 @@ class Board:
     __empty_cells: Dict[int, list[tuple[int, int]]] = {}
 
     def __init__(self, state: int = 0):
+        Board.__verify_state(state)
         self.__state = state
         if not Board.is_lookup_tables_initialized():
             Board.__init_lookup_tables()
