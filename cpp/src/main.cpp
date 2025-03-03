@@ -89,11 +89,14 @@ int main(int argc, char* argv[]) {
 
     std::cout << "Best score: " << bestScore << " (moves: " << bestMoveCount << ")\n";
     std::cout << "Best board:\n";
-
-    Game2048 tmpGame;
-    tmpGame.reset();
-    tmpGame.setState(bestState);
-    tmpGame.prettyPrint();
+    
+    // Create a temporary game to display the best board
+    Game2048 tempGame;
+    tempGame.setState(bestState);
+    // Set the score and move count for the best game
+    tempGame.setScore(bestScore);
+    tempGame.setMoveCount(bestMoveCount);
+    tempGame.prettyPrint();
 
     return 0;
 }

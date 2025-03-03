@@ -15,34 +15,43 @@ void Game2048::addRandomTile() {
 }
 
 bool Game2048::playMove() {
+    if (!player) return false;
 
-    uint64_t nextState;
-    auto [action, state] = player->chooseAction(board.getState());
-    if (-1 == action) {
+    // Get action and next state with score
+    auto validMoves = Board::getValidMoveActionsWithScores(board.getState());
+    if (validMoves.empty()) {
         return false;
     }
-    nextState = state;
 
-    board.setState(nextState);
-    addRandomTile();
-    return true;
-}
+    // Let the player choose an action
+    auto [action, nextState] = player->chooseAction(board.getState());
+    if (action == -1) {
+        return false;
+    }
 
-int Game2048::getScore() const {
-    int score = 0;
-    uint64_t state = board.getState();
-    for (int i = 0; i < 16; ++i) {
-        int value = (state >> (i * 4)) & 0xF;
-        if (value > 0) {
-            score += 1 << value;
+    // Find the score for this action
+    int moveScore = 0;
+    for (const auto& [moveAction, moveState, moveScoreValue] : validMoves) {
+        if (moveAction == static_cast<Action>(action) && moveState == nextState) {
+            moveScore = moveScoreValue;
+            break;
         }
     }
-    return score;
+
+    // Update the board state and score
+    board.setState(nextState);
+    score += moveScore;
+    moveCount++;
+    
+    // Add a new random tile
+    addRandomTile();
+    return true;
 }
 
 void Game2048::reset() {
     board.setState(0);
     moveCount = 0;
+    score = 0;
     addRandomTile();
     addRandomTile();
 }
@@ -54,21 +63,29 @@ std::tuple<int, uint64_t, int> Game2048::playGame() {
         std::cout << "No player set, using random player" << std::endl;
     }
     while (playMove()) {
-        moveCount++;
+        // Move count is incremented in playMove
     }
-    return {getScore(), board.getState(), moveCount};
+    return {score, board.getState(), moveCount};
 }
 
 void Game2048::prettyPrint() const {
-    std::cout << std::string(11, '-') << '\n';
+    std::cout << std::string(17, '-') << '\n';
+    std::cout << "Score: " << score << " | Moves: " << moveCount << '\n';
+    std::cout << std::string(17, '-') << '\n';
+    
     uint64_t state = board.getState();
     for (int i = 0; i < 4; ++i) {
-        uint16_t row = (state >> (48 - i * 16)) & 0xFFFF;
-        std::cout << std::hex << std::uppercase
-                  << ((row >> 12) & 0xF) << ' '
-                  << ((row >> 8) & 0xF) << ' '
-                  << ((row >> 4) & 0xF) << ' '
-                  << (row & 0xF) << '\n';
+        std::cout << '|';
+        for (int j = 0; j < 4; ++j) {
+            int pos = (i * 4 + j) * 4;
+            int value = (state >> pos) & 0xF;
+            if (value == 0) {
+                std::cout << std::setw(3) << ' ' << '|';
+            } else {
+                std::cout << std::setw(3) << (1 << value) << '|';
+            }
+        }
+        std::cout << '\n';
+        std::cout << std::string(17, '-') << '\n';
     }
-    std::cout << std::dec;
 }

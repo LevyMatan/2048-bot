@@ -8,6 +8,7 @@ class Game2048 {
 private:
     Board board;
     int moveCount;
+    int score;
     std::mt19937 rng;
     std::uniform_real_distribution<double> dist;
     std::unique_ptr<Player> player;
@@ -21,7 +22,10 @@ public:
 
     void addRandomTile();
     bool playMove();
-    int getScore() const;
+    int getScore() const { return score; }
+    void setScore(int newScore) { score = newScore; }
+    int getMoveCount() const { return moveCount; }
+    void setMoveCount(int newMoveCount) { moveCount = newMoveCount; }
     void reset();
     std::tuple<int, uint64_t, int> playGame();
     void prettyPrint() const;
