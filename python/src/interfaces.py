@@ -3,6 +3,24 @@ from .board import Board
 import os
 import time
 
+# Define color codes for each tile value (foreground and background)
+TILE_COLORS = {
+    1: ('\033[97m', '\033[48;5;223m'),  # 2: white text on light peach
+    2: ('\033[97m', '\033[48;5;216m'),  # 4: white text on salmon
+    3: ('\033[97m', '\033[48;5;209m'),  # 8: white text on coral
+    4: ('\033[97m', '\033[48;5;203m'),  # 16: white text on light red
+    5: ('\033[97m', '\033[48;5;197m'),  # 32: white text on bright red
+    6: ('\033[97m', '\033[48;5;164m'),  # 64: white text on magenta
+    7: ('\033[97m', '\033[48;5;127m'),  # 128: white text on purple
+    8: ('\033[97m', '\033[48;5;214m'),  # 256: white text on orange
+    9: ('\033[97m', '\033[48;5;220m'),  # 512: white text on gold
+    10: ('\033[97m', '\033[48;5;226m'), # 1024: white text on yellow
+    11: ('\033[30m', '\033[48;5;228m'), # 2048: black text on light yellow
+    12: ('\033[30m', '\033[48;5;231m'), # 4096: black text on bright white
+}
+RESET_COLOR = '\033[0m'
+CELL_WIDTH = 6
+
 class Interface2048(ABC):
     def __init__(self):
         self.name = ""
@@ -31,34 +49,37 @@ class CLI2048(Interface2048):
 
     @staticmethod
     def pretty_print(board: int, score: int, move_count: int, clear_screen: bool = True):
-        """
-        Pretty-print the board with borders.
-        Each tile is displayed as 2**cell if cell > 0, otherwise left blank.
-        """
-        # Clear the screen for better visibility (optional)
         if clear_screen:
             os.system('cls' if os.name == 'nt' else 'clear')
         
-        # Print Score
         print(f"Score: {score}")
-        # Print move count
         if move_count:
             print(f"Move count: {move_count}")
 
-        # Unpack the board state to a list of 16 cells in row-major order.
         cells = [tile for tile in Board.get_unpacked_state(board)]
-        # Convert each cell: if non-zero, display 2**cell, else empty string.
-        display_cells = [str(2**cell) if cell > 0 else '' for cell in cells]
+        
+        # Convert each cell: if non-zero, display 2**cell with color, else empty string
+        display_cells = []
+        for cell in cells:
+            if cell > 0:
+                fg_color, bg_color = TILE_COLORS.get(cell, TILE_COLORS[12])
+                value = str(2**cell)
+                # Calculate padding to center the number in CELL_WIDTH
+                left_padding = ' ' * ((CELL_WIDTH - len(value)) // 2)
+                right_padding = ' ' * (CELL_WIDTH - len(value) - len(left_padding))
+                # Apply colors to the entire cell including padding
+                display_cells.append(f"{fg_color}{bg_color}{left_padding}{value}{right_padding}{RESET_COLOR}")
+            else:
+                # Empty cell with consistent width
+                display_cells.append(' ' * CELL_WIDTH)
 
-        # Define column width (adjust as needed)
-        cell_width = 6
-        horizontal_line = '+' + '+'.join(['-' * cell_width] * 4) + '+'
+        # Define borders with consistent width
+        horizontal_line = '+' + ('-' * CELL_WIDTH + '+') * 4
 
         print(horizontal_line)
         for row in range(4):
             row_cells = display_cells[row * 4 : (row + 1) * 4]
-            # Center each cell value in the column.
-            row_str = '|' + '|'.join(cell.center(cell_width) for cell in row_cells) + '|'
+            row_str = '|' + '|'.join(row_cells) + '|'
             print(row_str)
             print(horizontal_line)
 
