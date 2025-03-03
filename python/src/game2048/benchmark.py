@@ -116,11 +116,13 @@ def generate_report(results):
     """Generate a formatted report from benchmark results."""
     # Basic performance table
     performance_table = []
-    headers = ["Player", "Avg Score", "Max Score", "Avg Moves", "Time/Game (s)"]
+    headers = ["Player", "Games", "Avg Score", "Max Score", "Avg Moves", "Time/Game (s)"]
     
     for player, data in results.items():
+        total_games = sum(data["highest_tile_counts"].values())
         performance_table.append([
             player,
+            total_games,
             f"{data['avg_score']:.1f}",
             data['max_score'],
             f"{data['avg_moves']:.1f}",
@@ -128,7 +130,7 @@ def generate_report(results):
         ])
     
     # Highest tile distribution table
-    tile_headers = ["Player"] + [str(2**i) for i in range(1, 12)]  # Tiles from 2 to 2048
+    tile_headers = ["Player"] + [str(2**i) for i in range(1, 12)]  # Just the tile values
     tile_table = []
     
     for player, data in results.items():
@@ -156,23 +158,19 @@ def generate_report(results):
     report += "HIGHEST TILE DISTRIBUTION:\n"
     report += tabulate(tile_table, headers=tile_headers, tablefmt="grid") + "\n\n"
     
-    # Add best game visualizations - use pretty_print to generate string representation
+    # Add best game visualizations
     report += "BEST GAMES:\n"
     for player, data in results.items():
         report += f"\n{player} (Score: {data['max_score']}, Moves: {data['best_moves']}):\n"
-        # Fix: Use a string buffer to capture the output of pretty_print
         import io
         import sys
         
-        # Temporarily redirect stdout to capture pretty_print output
         original_stdout = sys.stdout
         string_buffer = io.StringIO()
         sys.stdout = string_buffer
         
-        # Call the CLI2048.pretty_print method that exists
         CLI2048.pretty_print(data['best_state'], data['max_score'], data['best_moves'])
         
-        # Get the captured output and restore stdout
         board_string = string_buffer.getvalue()
         sys.stdout = original_stdout
         
@@ -346,6 +344,7 @@ def generate_html_report(results):
         <table>
             <tr>
                 <th>Player</th>
+                <th>Games</th>
                 <th>Avg Score</th>
                 <th>Max Score</th>
                 <th>Avg Moves</th>
@@ -354,9 +353,11 @@ def generate_html_report(results):
 
     # Add performance data
     for player, data in results.items():
+        total_games = sum(data["highest_tile_counts"].values())
         html += f"""
             <tr>
                 <td>{player}</td>
+                <td>{total_games}</td>
                 <td>{data['avg_score']:.1f}</td>
                 <td>{data['max_score']}</td>
                 <td>{data['avg_moves']:.1f}</td>
@@ -373,9 +374,9 @@ def generate_html_report(results):
             <tr>
                 <th>Player</th>"""
 
-    # Add tile headers
+    # Add simplified tile headers
     for i in range(1, 12):
-        html += f"<th>2^{i} ({2**i})</th>"
+        html += f"<th>{2**i}</th>"
     html += "</tr>"
 
     # Add tile distribution data
