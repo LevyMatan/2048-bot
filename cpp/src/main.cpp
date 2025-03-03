@@ -61,7 +61,9 @@ int main(int argc, char* argv[]) {
     }
 
     int numGames = (argc > 2) ? std::stoi(argv[2]) : 1000;
-    const int PROGRESS_INTERVAL = 1;  // Print progress every game
+    
+    // Set progress interval to 10% of total games, with a minimum of 1
+    const int PROGRESS_INTERVAL = std::max(1, numGames / 10);
 
     Game2048 game;
     std::unique_ptr<Player> player;
