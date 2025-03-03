@@ -25,13 +25,12 @@ This project contains both C++ and Python implementations of the 2048 game bot, 
 
 ### [C++ Implementation](cpp/README.md)
 
-The C++ implementation focuses on performance optimization and is suitable for running large numbers of games or deep search algorithms. It leverages:
-
-- Bitwise operations for efficient board representation
-- Precomputed move tables
-- Cache-friendly data structures
-- Memory optimization techniques
+The C++ implementation provides:
+- Fast and efficient gameplay
+- Multiple AI player types (Random, Heuristic, MCTS)
 - Heuristic weight tuning using evolutionary algorithms
+- Command-line interface
+- Unit tests for core components
 
 ### [Python Implementation](python/README.md)
 

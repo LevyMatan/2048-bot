@@ -51,13 +51,14 @@ add_executable(tune_heuristic ${TUNE_SOURCES} ${HEADERS})
 target_include_directories(tune_heuristic PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 # Optional: Enable testing
-option(BUILD_TESTS "Build the tests" OFF)
+option(BUILD_TESTS "Build tests" ON)
+
+# Installation rules
+install(TARGETS 2048 tune_heuristic
+    RUNTIME DESTINATION bin
+)
+
 if(BUILD_TESTS)
     enable_testing()
     add_subdirectory(tests)
 endif()
-
-# Optional: Install rules
-install(TARGETS 2048 tune_heuristic
-    RUNTIME DESTINATION bin
-)

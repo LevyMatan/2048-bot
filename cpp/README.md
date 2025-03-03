@@ -60,6 +60,15 @@ cpp/
    cmake --build .
    ```
 
+3. **Build with tests:**
+   ```bash
+   cd cpp
+   mkdir -p build
+   cd build
+   cmake .. -DBUILD_TESTS=ON
+   cmake --build .
+   ```
+
 ## Running the Game
 
 Run the game using the following command from the build directory:
@@ -87,6 +96,24 @@ Run the game using the following command from the build directory:
 # Play 10 games with the MCTS player
 ./Debug/2048 MCTS 10
 ```
+
+## Running the Tests
+
+The project includes unit tests for core components using Google Test. To run the tests:
+
+```bash
+cd build/tests
+./Debug/board_tests
+```
+
+The tests cover various aspects of the `Board` class functionality:
+- Board initialization and state management
+- Tile value conversions
+- Setting and getting tiles
+- Move simulation and validation
+- Edge cases and random board scenarios
+
+Adding more tests for other components is encouraged to maintain code quality and prevent regressions.
 
 ## Heuristic Weight Tuning
 
