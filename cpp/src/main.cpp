@@ -3,15 +3,23 @@
 #include <iostream>
 #include <chrono>
 #include <iomanip>
+#include <string>
 
 int main(int argc, char* argv[]) {
     std::string playerType = (argc > 1) ? argv[1] : "Random";
+    std::string weightsFile = "";
+    
+    // Check if a weights file is provided for Heuristic player
+    if (playerType == "Heuristic" && argc > 3) {
+        weightsFile = argv[3];
+    }
     
     if (playerType != "Random" && playerType != "Heuristic" && playerType != "MCTS") {
-        std::cout << "Usage: " << argv[0] << " [player_type] [num_games]\n"
+        std::cout << "Usage: " << argv[0] << " [player_type] [num_games] [weights_file]\n"
                   << "Available players:\n"
                   << "  Random     - Makes random valid moves (default)\n"
                   << "  Heuristic  - Uses heuristic evaluation\n"
+                  << "              Optional: provide a weights file as third argument\n"
                   << "  MCTS       - Uses Monte Carlo Tree Search\n";
         return 1;
     }
@@ -23,7 +31,12 @@ int main(int argc, char* argv[]) {
     std::unique_ptr<Player> player;
 
     if (playerType == "Heuristic") {
-        player = std::make_unique<HeuristicPlayer>();
+        if (!weightsFile.empty()) {
+            std::cout << "Using custom weights from file: " << weightsFile << std::endl;
+            player = std::make_unique<HeuristicPlayer>(weightsFile);
+        } else {
+            player = std::make_unique<HeuristicPlayer>();
+        }
     } else if (playerType == "MCTS") {
         player = std::make_unique<MCTSPlayer>();
     } else {

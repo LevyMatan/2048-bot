@@ -36,16 +36,28 @@ public:
         double smoothness;     
         double cornerPlacement;
         
-        Weights() : emptyTiles(0.2), monotonicity(0.4), 
-                   smoothness(0.1), cornerPlacement(0.3) {}
+        Weights() : emptyTiles(0.05), monotonicity(0.24), 
+                   smoothness(0.33), cornerPlacement(0.38) {}
+                   
+        // Constructor with explicit values
+        Weights(double e, double m, double s, double c)
+            : emptyTiles(e), monotonicity(m), smoothness(s), cornerPlacement(c) {}
     };
 
     explicit HeuristicPlayer(const Weights& w = Weights());
+    
+    // Constructor that loads weights from a file
+    explicit HeuristicPlayer(const std::string& weightsFile);
+    
     std::pair<int, uint64_t> chooseAction(uint64_t state) override;
     std::string getName() const override;
+    
+    // Static method to load weights from a file
+    static Weights loadWeightsFromFile(const std::string& filename);
 
 private:
     Weights weights;
+    std::string customName;
     
     double evaluatePosition(uint64_t state) const;
     double evaluateMonotonicity(uint64_t state) const;

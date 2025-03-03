@@ -12,7 +12,7 @@ else()
     add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
-# Source files
+# Source files for the main game
 set(SOURCES
     src/main.cpp
     src/board.cpp
@@ -29,11 +29,26 @@ set(HEADERS
     src/player.hpp
 )
 
-# Create executable
+# Create main game executable
 add_executable(2048 ${SOURCES} ${HEADERS})
 
 # Include directories
 target_include_directories(2048 PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+
+# Source files for the heuristic tuning program
+set(TUNE_SOURCES
+    src/tune_heuristic.cpp
+    src/board.cpp
+    src/game.cpp
+    src/heuristic_player.cpp
+    src/random_player.cpp
+)
+
+# Create heuristic tuning executable
+add_executable(tune_heuristic ${TUNE_SOURCES} ${HEADERS})
+
+# Include directories for tuning program
+target_include_directories(tune_heuristic PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 # Optional: Enable testing
 option(BUILD_TESTS "Build the tests" OFF)
@@ -43,6 +58,6 @@ if(BUILD_TESTS)
 endif()
 
 # Optional: Install rules
-install(TARGETS 2048
+install(TARGETS 2048 tune_heuristic
     RUNTIME DESTINATION bin
 )

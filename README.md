@@ -31,6 +31,7 @@ The C++ implementation focuses on performance optimization and is suitable for r
 - Precomputed move tables
 - Cache-friendly data structures
 - Memory optimization techniques
+- Heuristic weight tuning using evolutionary algorithms
 
 ### [Python Implementation](python/README.md)
 
@@ -46,12 +47,14 @@ The Python implementation prioritizes readability and ease of experimentation, m
 - **Multiple AI Strategies:**  
   Both implementations offer various player types including:
   - Random players
-  - Heuristic-based players (empty cells, monotonicity, smoothness)
-  - Search-based players (MinMax, Expectimax)
-  - Simulation-based players (Monte Carlo)
+  - Heuristic-based players (empty cells, monotonicity, smoothness, corner placement)
+  - Monte Carlo Tree Search players
 
 - **Modular Design:**  
   The project uses clearly separated modules for the game logic, board management, and player strategies, allowing easy experimentation.
+
+- **Heuristic Weight Tuning:**
+  The C++ implementation includes a dedicated program for tuning the weights used by the heuristic player. This uses an evolutionary algorithm to find optimal weight combinations that maximize game scores.
 
 ## Getting Started
 

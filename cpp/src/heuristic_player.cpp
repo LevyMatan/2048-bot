@@ -3,6 +3,11 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <string>
+#include <vector>
 
 std::pair<int, uint64_t> HeuristicPlayer::chooseAction(uint64_t state) {
     auto validActions = Board::getValidMoveActions(state);
@@ -141,8 +146,53 @@ double HeuristicPlayer::evaluateCornerPlacement(uint64_t state) const {
     return score / 4.0;  // Normalize to [0, 1]
 }
 
-HeuristicPlayer::HeuristicPlayer(const Weights& w) : weights(w) {}
+HeuristicPlayer::HeuristicPlayer(const Weights& w) : weights(w), customName("Heuristic") {}
+
+HeuristicPlayer::HeuristicPlayer(const std::string& weightsFile) : customName("Heuristic-Custom") {
+    try {
+        weights = loadWeightsFromFile(weightsFile);
+        customName = "Heuristic-" + weightsFile;
+    } catch (const std::exception& e) {
+        std::cerr << "Error loading weights from file: " << e.what() << std::endl;
+        std::cerr << "Using default weights instead." << std::endl;
+        weights = Weights();
+    }
+}
+
+HeuristicPlayer::Weights HeuristicPlayer::loadWeightsFromFile(const std::string& filename) {
+    std::ifstream file(filename);
+    if (!file.is_open()) {
+        throw std::runtime_error("Could not open weights file: " + filename);
+    }
+    
+    std::string line;
+    // Skip header line if it exists
+    std::getline(file, line);
+    
+    // Read the first data line (best weights)
+    if (std::getline(file, line)) {
+        std::stringstream ss(line);
+        std::string token;
+        std::vector<double> values;
+        
+        // Parse CSV values
+        while (std::getline(ss, token, ',')) {
+            try {
+                values.push_back(std::stod(token));
+            } catch (const std::exception& e) {
+                // Skip non-numeric values
+            }
+        }
+        
+        // Check if we have enough values
+        if (values.size() >= 4) {
+            return Weights(values[0], values[1], values[2], values[3]);
+        }
+    }
+    
+    throw std::runtime_error("Invalid format in weights file: " + filename);
+}
 
 std::string HeuristicPlayer::getName() const {
-    return "Heuristic";
+    return customName;
 }
