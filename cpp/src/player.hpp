@@ -9,15 +9,20 @@
 class Player {
 public:
     virtual ~Player() = default;
-    virtual int getMove(uint64_t state) = 0;
-    virtual std::string getName() const = 0;
     virtual std::pair<int, uint64_t> chooseAction(uint64_t state) = 0;
+    virtual std::string getName() const = 0;
+    
+    // Default implementation for getMove that uses chooseAction
+    virtual int getMove(uint64_t state) {
+        return chooseAction(state).first;
+    }
 };
 
 class RandomPlayer : public Player {
 public:
     std::pair<int, uint64_t> chooseAction(uint64_t state) override;
     std::string getName() const override;
+
 private:
     std::random_device rd;
     std::mt19937 rng{rd()};
@@ -26,18 +31,20 @@ private:
 class HeuristicPlayer : public Player {
 public:
     struct Weights {
-        double emptyTiles = 0.2;    
-        double monotonicity = 0.4;   
-        double smoothness = 0.1;     
-        double cornerPlacement = 0.3; 
+        double emptyTiles;    
+        double monotonicity;   
+        double smoothness;     
+        double cornerPlacement;
+        
+        Weights() : emptyTiles(0.2), monotonicity(0.4), 
+                   smoothness(0.1), cornerPlacement(0.3) {}
     };
 
-    explicit HeuristicPlayer(const Weights& w = Weights{});
+    explicit HeuristicPlayer(const Weights& w = Weights());
     std::pair<int, uint64_t> chooseAction(uint64_t state) override;
     std::string getName() const override;
 
 private:
-    static Weights weights;
     Weights weights;
     
     double evaluatePosition(uint64_t state) const;
@@ -56,6 +63,7 @@ public:
     bool isChanceNode;
 
     MCTSNode(uint64_t s, MCTSNode* p = nullptr, bool chance = false);
+    
     double UCB1(double C = 1.41) const;
 };
 
@@ -77,11 +85,12 @@ public:
     std::string getName() const override;
 };
 
+// Optional: Implement DQN player later
 class DQNPlayer : public Player {
 public:
     explicit DQNPlayer(const std::string& model_path);
     std::pair<int, uint64_t> chooseAction(uint64_t state) override;
-    std::string getName() const override;
+    std::string getName() const override { return "DQN"; }
 private:
     // This is a placeholder for the DQN model
     // You'll need to integrate with your preferred ML framework

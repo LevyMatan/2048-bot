@@ -19,16 +19,18 @@ int main(int argc, char* argv[]) {
     int numGames = (argc > 2) ? std::stoi(argv[2]) : 1000;
     const int PROGRESS_INTERVAL = 1;  // Print progress every game
 
-    Game2048 game = Game2048();
+    Game2048 game;
+    std::unique_ptr<Player> player;
+
     if (playerType == "Heuristic") {
-        player = std::make_shared<HeuristicPlayer>();
+        player = std::make_unique<HeuristicPlayer>();
     } else if (playerType == "MCTS") {
-        player = std::make_shared<MCTSPlayer>();
+        player = std::make_unique<MCTSPlayer>();
+    } else {
+        player = std::make_unique<RandomPlayer>();
     }
-    else if (playerType == "Random"){
-        player = std::make_shared<RandomPlayer>();
-    }
-    game.setPlayer(player);
+    game.setPlayer(std::move(player));
+
     int bestScore = 0;
     uint64_t bestState = 0;
     int bestMoveCount = 0;
@@ -36,7 +38,7 @@ int main(int argc, char* argv[]) {
     auto startTime = std::chrono::high_resolution_clock::now();
     auto lastUpdateTime = startTime;
 
-    std::cout << "Starting " << numGames << " games with " << game.getPlayerName() << "...\n";
+    std::cout << "Starting " << numGames << " games with " << playerType << "...\n";
 
     for (int i = 0; i < numGames; ++i) {
         // Print progress

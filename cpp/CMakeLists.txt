@@ -17,9 +17,9 @@ set(SOURCES
     src/main.cpp
     src/board.cpp
     src/game.cpp
+    src/random_player.cpp
     src/heuristic_player.cpp
     src/mcts_player.cpp
-    src/random_player.cpp
 )
 
 # Header files
@@ -33,7 +33,7 @@ set(HEADERS
 add_executable(2048 ${SOURCES} ${HEADERS})
 
 # Include directories
-target_include_directories(2048 PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(2048 PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 # Optional: Enable testing
 option(BUILD_TESTS "Build the tests" OFF)

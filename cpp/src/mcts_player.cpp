@@ -3,13 +3,16 @@
 #include <cmath>
 #include <algorithm>
 #include <limits>
+#include <random>
 
 MCTSNode::MCTSNode(uint64_t s, MCTSNode* p, bool chance)
     : state(s), visits(0), totalScore(0), parent(p), isChanceNode(chance) {}
 
 double MCTSNode::UCB1(double C) const {
     if (visits == 0) return std::numeric_limits<double>::infinity();
-    return (totalScore / visits) + C * std::sqrt(std::log(parent->visits) / visits);
+    double exploitation = totalScore / visits;
+    double exploration = C * std::sqrt(std::log(parent->visits) / visits);
+    return exploitation + exploration;
 }
 
 MCTSPlayer::MCTSPlayer(int sims) 
@@ -19,50 +22,67 @@ MCTSNode* MCTSPlayer::select(MCTSNode* node) {
     while (!node->children.empty()) {
         if (node->isChanceNode) {
             // For chance nodes, randomly select a child
-            int idx = std::uniform_int_distribution<>(0, node->children.size()-1)(rng);
-            node = node->children[idx].get();
+            std::uniform_int_distribution<> dist(0, static_cast<int>(node->children.size()) - 1);
+            node = node->children[dist(rng)].get();
         } else {
             // For decision nodes, use UCB1
-            node = std::max_element(node->children.begin(), node->children.end(),
+            node = std::max_element(
+                node->children.begin(),
+                node->children.end(),
                 [](const auto& a, const auto& b) {
                     return a->UCB1() < b->UCB1();
-                })->get();
+                }
+            )->get();
         }
     }
     return node;
 }
 
 void MCTSPlayer::expand(MCTSNode* node) {
-    if (node->isChanceNode) {
-        auto emptyTiles = Board::getEmptyTiles(node->state);
-        for (auto [row, col] : emptyTiles) {
-            // Add both possible new tile values (2 and 4)
-            for (int value : {1, 2}) {
-                uint64_t newState = Board::setTile(node->state, row, col, value);
-                node->children.push_back(
-                    std::make_unique<MCTSNode>(newState, node, false));
-            }
+    auto validActions = Board::getValidMoveActions(node->state);
+    if (validActions.empty()) {
+        return;
+    }
+
+    if (!node->isChanceNode) {
+        // Expand decision node with all possible moves
+        for (const auto& [action, nextState] : validActions) {
+            auto child = std::make_unique<MCTSNode>(nextState, node, true);
+            node->children.push_back(std::move(child));
         }
     } else {
-        auto actions = Board::getValidMoveActions(node->state);
-        for (const auto& [action, nextState] : actions) {
-            node->children.push_back(
-                std::make_unique<MCTSNode>(nextState, node, true));
+        // Expand chance node with possible new tile positions
+        auto emptyTiles = Board::getEmptyTiles(node->state);
+        for (const auto& [row, col] : emptyTiles) {
+            // Add both 2 and 4 tiles with their respective probabilities
+            for (int value : {1, 2}) {  // 1 represents 2, 2 represents 4
+                uint64_t nextState = Board::setTile(node->state, row, col, value);
+                auto child = std::make_unique<MCTSNode>(nextState, node, false);
+                node->children.push_back(std::move(child));
+            }
         }
     }
+}
+
+// Helper function to get tile value at position
+static int getTileValue(uint64_t state, int row, int col) {
+    int shift = (15 - (row * 4 + col)) * 4;
+    return (state >> shift) & 0xF;
 }
 
 double MCTSPlayer::evaluate(uint64_t state) const {
     double score = 0.0;
     int maxTile = 0;
-    int emptyCells = Board::getEmptyTiles(state).size();
+    int emptyCells = static_cast<int>(Board::getEmptyTiles(state).size());
 
     // Score based on tile values
-    for (int i = 0; i < 16; ++i) {
-        int value = (state >> (i * 4)) & 0xF;
-        if (value > 0) {
-            score += (1 << value);
-            maxTile = std::max(maxTile, value);
+    for (int row = 0; row < 4; ++row) {
+        for (int col = 0; col < 4; ++col) {
+            int value = getTileValue(state, row, col);
+            if (value > 0) {
+                score += (1 << value);
+                maxTile = std::max(maxTile, value);
+            }
         }
     }
 
@@ -70,10 +90,15 @@ double MCTSPlayer::evaluate(uint64_t state) const {
     score += emptyCells * 100.0;
 
     // Bonus for maintaining high values in corners
-    int corners[] = {0, 3, 12, 15};
-    for (int pos : corners) {
-        int value = (state >> (pos * 4)) & 0xF;
-        if (value == maxTile) {
+    int corners[] = {
+        getTileValue(state, 0, 0),
+        getTileValue(state, 0, 3),
+        getTileValue(state, 3, 0),
+        getTileValue(state, 3, 3)
+    };
+    
+    for (int corner : corners) {
+        if (corner == maxTile) {
             score *= 1.5;
         }
     }
@@ -82,42 +107,45 @@ double MCTSPlayer::evaluate(uint64_t state) const {
 }
 
 double MCTSPlayer::simulate(uint64_t state) {
-    double score = 0;
-    uint64_t currentState = state;
-    int depth = 0;
-    const int MAX_DEPTH = 20;
-    double discount = 0.95;
+    int moves = 0;
+    int maxTile = 0;
 
-    while (depth < MAX_DEPTH) {
-        auto actions = Board::getValidMoveActions(currentState);
-        if (actions.empty()) break;
+    while (moves < 1000) {
+        auto validActions = Board::getValidMoveActions(state);
+        if (validActions.empty()) break;
 
-        auto bestAction = std::max_element(actions.begin(), actions.end(),
-            [this](const auto& a, const auto& b) {
-                return evaluate(std::get<1>(a)) < evaluate(std::get<1>(b));
-            });
+        // Make a random move
+        std::uniform_int_distribution<> dist(0, static_cast<int>(validActions.size()) - 1);
+        int idx = dist(rng);
+        auto [action, nextState] = validActions[idx];
+        state = nextState;
 
-        auto [action, nextState] = *bestAction;
+        // Add a random tile
+        auto emptyTiles = Board::getEmptyTiles(state);
+        if (!emptyTiles.empty()) {
+            std::uniform_int_distribution<> posDist(0, static_cast<int>(emptyTiles.size()) - 1);
+            auto [row, col] = emptyTiles[posDist(rng)];
+            std::uniform_real_distribution<> valueDist(0, 1);
+            int value = valueDist(rng) < 0.9 ? 1 : 2;  // 90% chance for 2, 10% chance for 4
+            state = Board::setTile(state, row, col, value);
+        }
 
-        auto emptyTiles = Board::getEmptyTiles(nextState);
-        if (emptyTiles.empty()) break;
-
-        int tileIdx = std::uniform_int_distribution<>(0, emptyTiles.size()-1)(rng);
-        auto [row, col] = emptyTiles[tileIdx];
-        int value = (std::uniform_real_distribution<>(0, 1)(rng) < 0.9) ? 1 : 2;
-
-        currentState = Board::setTile(nextState, row, col, value);
-        double immediateReward = evaluate(currentState);
-        score += std::pow(discount, depth) * immediateReward;
-        depth++;
+        moves++;
+        
+        // Update max tile
+        for (int row = 0; row < 4; ++row) {
+            for (int col = 0; col < 4; ++col) {
+                maxTile = std::max(maxTile, getTileValue(state, row, col));
+            }
+        }
     }
 
-    score += std::pow(discount, depth) * evaluate(currentState);
-    return score;
+    // Score based on max tile and number of moves
+    return std::pow(2, maxTile) + moves;
 }
 
 void MCTSPlayer::backpropagate(MCTSNode* node, double score) {
-    while (node) {
+    while (node != nullptr) {
         node->visits++;
         node->totalScore += score;
         node = node->parent;
@@ -130,30 +158,33 @@ double MCTSPlayer::getExplorationConstant(int depth) const {
 
 std::pair<int, uint64_t> MCTSPlayer::chooseAction(uint64_t state) {
     MCTSNode root(state);
+    root.visits = 1;  // Initialize root visits to 1
 
+    // Run MCTS for the specified number of simulations
     for (int i = 0; i < simulations; ++i) {
         MCTSNode* node = select(&root);
-        if (node->visits > 0) {
-            expand(node);
-            if (!node->children.empty()) {
-                node = node->children[0].get();
-            }
-        }
+        expand(node);
         double score = simulate(node->state);
         backpropagate(node, score);
     }
 
-    auto bestChild = std::max_element(root.children.begin(), root.children.end(),
+    // Choose the best child based on visit count
+    if (root.children.empty()) {
+        return {-1, state};
+    }
+
+    auto bestChild = std::max_element(
+        root.children.begin(),
+        root.children.end(),
         [](const auto& a, const auto& b) {
             return a->visits < b->visits;
-        });
-
-    return std::make_pair(
-        static_cast<int>(std::distance(root.children.begin(), bestChild)),
-        (*bestChild)->state
+        }
     );
+
+    int bestAction = static_cast<int>(std::distance(root.children.begin(), bestChild));
+    return {bestAction, (*bestChild)->state};
 }
 
 std::string MCTSPlayer::getName() const {
-    return "Monte Carlo Tree Search Player";
+    return "MCTS";
 } 

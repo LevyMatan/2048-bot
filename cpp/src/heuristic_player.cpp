@@ -1,8 +1,8 @@
 #include "player.hpp"
-#include "game.hpp"
+#include "board.hpp"
+#include <algorithm>
 #include <cmath>
-
-HeuristicPlayer::HeuristicPlayer(const Weights& w) : weights(w) {}
+#include <limits>
 
 std::pair<int, uint64_t> HeuristicPlayer::chooseAction(uint64_t state) {
     auto validActions = Board::getValidMoveActions(state);
@@ -10,25 +10,28 @@ std::pair<int, uint64_t> HeuristicPlayer::chooseAction(uint64_t state) {
         return {-1, state};
     }
 
+    int bestAction = -1;
     double bestScore = -std::numeric_limits<double>::infinity();
-    std::pair<int, uint64_t> bestAction;
+    uint64_t bestState = state;
 
     for (const auto& [action, nextState] : validActions) {
         double score = evaluatePosition(nextState);
         if (score > bestScore) {
             bestScore = score;
-            bestAction = {action, nextState};
+            bestAction = static_cast<int>(action);
+            bestState = nextState;
         }
     }
 
-    return bestAction;
-}
-
-std::string HeuristicPlayer::getName() const {
-    return "Heuristic Player";
+    return {bestAction, bestState};
 }
 
 double HeuristicPlayer::evaluatePosition(uint64_t state) const {
+    auto validActions = Board::getValidMoveActions(state);
+    if (validActions.empty()) {
+        return -std::numeric_limits<double>::infinity();
+    }
+
     double score = 0.0;
     score += weights.emptyTiles * Board::getEmptyTiles(state).size();
     score += weights.monotonicity * evaluateMonotonicity(state);
@@ -37,77 +40,109 @@ double HeuristicPlayer::evaluatePosition(uint64_t state) const {
     return score;
 }
 
+// Helper function to get tile value at position
+static int getTileValue(uint64_t state, int row, int col) {
+    int shift = (15 - (row * 4 + col)) * 4;
+    return (state >> shift) & 0xF;
+}
+
 double HeuristicPlayer::evaluateMonotonicity(uint64_t state) const {
     double score = 0.0;
-    for (int i = 0; i < 4; ++i) {
+    
+    // Check rows
+    for (int row = 0; row < 4; ++row) {
         bool increasing = true;
         bool decreasing = true;
-
-        // Check horizontal monotonicity
-        for (int j = 0; j < 3; ++j) {
-            int current = (state >> ((15-i*4-j) * 4)) & 0xF;
-            int next = (state >> ((15-i*4-j-1) * 4)) & 0xF;
-            if (current > next) increasing = false;
-            if (current < next) decreasing = false;
-        }
-        score += increasing || decreasing ? 1.0 : 0.0;
-
-        // Reset flags for vertical check
-        increasing = true;
-        decreasing = true;
-
-        // Check vertical monotonicity
-        for (int j = 0; j < 3; ++j) {
-            int current = (state >> ((15-i-j*4) * 4)) & 0xF;
-            int next = (state >> ((15-i-(j+1)*4) * 4)) & 0xF;
-            if (current > next) increasing = false;
-            if (current < next) decreasing = false;
+        int prev = getTileValue(state, row, 0);
+        
+        for (int col = 1; col < 4; ++col) {
+            int curr = getTileValue(state, row, col);
+            if (curr < prev) increasing = false;
+            if (curr > prev) decreasing = false;
+            prev = curr;
         }
         score += increasing || decreasing ? 1.0 : 0.0;
     }
-    return score / 8.0;
+    
+    // Check columns
+    for (int col = 0; col < 4; ++col) {
+        bool increasing = true;
+        bool decreasing = true;
+        int prev = getTileValue(state, 0, col);
+        
+        for (int row = 1; row < 4; ++row) {
+            int curr = getTileValue(state, row, col);
+            if (curr < prev) increasing = false;
+            if (curr > prev) decreasing = false;
+            prev = curr;
+        }
+        score += increasing || decreasing ? 1.0 : 0.0;
+    }
+    
+    return score / 8.0;  // Normalize to [0, 1]
 }
 
 double HeuristicPlayer::evaluateSmoothness(uint64_t state) const {
-    double score = 0.0;
-    for (int i = 0; i < 4; ++i) {
-        for (int j = 0; j < 4; ++j) {
-            int current = (state >> ((15-i*4-j) * 4)) & 0xF;
-            if (current == 0) continue;
-
-            if (j < 3) {
-                int right = (state >> ((15-i*4-j-1) * 4)) & 0xF;
-                if (right != 0) {
-                    score += 1.0 / (1.0 + std::abs(current - right));
-                }
-            }
-            if (i < 3) {
-                int bottom = (state >> ((15-(i+1)*4-j) * 4)) & 0xF;
-                if (bottom != 0) {
-                    score += 1.0 / (1.0 + std::abs(current - bottom));
-                }
+    double smoothness = 0.0;
+    int totalTiles = 0;
+    
+    // Check horizontal smoothness
+    for (int row = 0; row < 4; ++row) {
+        for (int col = 0; col < 3; ++col) {
+            int curr = getTileValue(state, row, col);
+            int next = getTileValue(state, row, col + 1);
+            if (curr > 0 && next > 0) {
+                smoothness += 1.0 / (1.0 + std::abs(curr - next));
+                totalTiles++;
             }
         }
     }
-    return score;
+    
+    // Check vertical smoothness
+    for (int col = 0; col < 4; ++col) {
+        for (int row = 0; row < 3; ++row) {
+            int curr = getTileValue(state, row, col);
+            int next = getTileValue(state, row + 1, col);
+            if (curr > 0 && next > 0) {
+                smoothness += 1.0 / (1.0 + std::abs(curr - next));
+                totalTiles++;
+            }
+        }
+    }
+    
+    return totalTiles > 0 ? smoothness / totalTiles : 0.0;
 }
 
 double HeuristicPlayer::evaluateCornerPlacement(uint64_t state) const {
     double score = 0.0;
-    int maxValue = 0;
-    int maxPos = -1;
-
-    for (int i = 0; i < 16; ++i) {
-        int value = (state >> (i * 4)) & 0xF;
-        if (value > maxValue) {
-            maxValue = value;
-            maxPos = i;
+    int maxTile = 0;
+    
+    // Find the maximum tile
+    for (int row = 0; row < 4; ++row) {
+        for (int col = 0; col < 4; ++col) {
+            maxTile = std::max(maxTile, getTileValue(state, row, col));
         }
     }
-
-    if (maxPos == 0 || maxPos == 3 || maxPos == 12 || maxPos == 15) {
-        score += 2.0;
+    
+    // Check corners
+    int corners[] = {
+        getTileValue(state, 0, 0),
+        getTileValue(state, 0, 3),
+        getTileValue(state, 3, 0),
+        getTileValue(state, 3, 3)
+    };
+    
+    for (int corner : corners) {
+        if (corner == maxTile) {
+            score += 1.0;
+        }
     }
+    
+    return score / 4.0;  // Normalize to [0, 1]
+}
 
-    return score;
+HeuristicPlayer::HeuristicPlayer(const Weights& w) : weights(w) {}
+
+std::string HeuristicPlayer::getName() const {
+    return "Heuristic";
 }
