@@ -119,7 +119,7 @@ if __name__ == "__main__":
 
     if args.num_games > 1:
         interface = GYM2048()
-        # Disable verifiers for improved performance when running multiple games
+        interface.set_total_games(args.num_games)
         Board.disable_verifiers()
     else:
         interface = CLI2048()
@@ -139,6 +139,10 @@ if __name__ == "__main__":
             best_move_count = move_count
         game.reset()
 
+    # Add a newline after progress updates
+    if args.num_games > 1:
+        print("\n")
+
     if args.profile_en:
         profiler.disable()
         from datetime import datetime
@@ -149,4 +153,4 @@ if __name__ == "__main__":
             stats.print_stats()
 
     logger.info("Best game:")
-    CLI2048.pretty_print(best_state, best_score, best_move_count)
+    CLI2048.pretty_print(best_state, best_score, best_move_count, clear_screen=False)
