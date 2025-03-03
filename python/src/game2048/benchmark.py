@@ -14,7 +14,7 @@ from tabulate import tabulate  # You may need to install this: pip install tabul
 from .game import Game2048
 from .board import Board
 from .players import (
-    RandomPlayer, MaxEmptyCellsPlayer, MinMaxPlayer, HeuristicPlayer
+    RandomPlayer, MaxEmptyCellsPlayer, MinMaxPlayer, HeuristicPlayer, HumanPlayer
 )
 from .interfaces import GYM2048, CLI2048
 
@@ -416,79 +416,136 @@ def generate_html_report(results):
 """
     return html
 
-def main():
-    parser = argparse.ArgumentParser(description="Benchmark 2048 AI players")
-    parser.add_argument("-n", "--num_games", type=int, default=100, 
-                        help="Number of games to run per player")
-    parser.add_argument("--players", type=str, nargs="+", 
-                        help="Specific players to benchmark (default: all)")
-    parser.add_argument("--optimize", action="store_true", 
-                        help="Enable board optimizations")
-    parser.add_argument("-o", "--output", type=str, 
-                        help="Output file for benchmark results")
+def add_arguments(parser):
+    """Add benchmark-specific arguments to the argument parser."""
+    parser.add_argument("-n", "--num_games", type=int, default=100,
+                      help="Number of games per player")
+    parser.add_argument("--players", type=str, nargs="+",
+                      help="Specific players to benchmark")
+    parser.add_argument("--optimize", action="store_true",
+                      help="Enable board optimizations")
+    parser.add_argument("-o", "--output", type=str,
+                      help="Output file for benchmark results")
     parser.add_argument("--format", type=str, choices=["text", "html"], default="text",
-                        help="Output format (default: text)")
-    parser.add_argument("-v", "--verbose", action="store_true", 
-                        help="Enable verbose logging")
-    args = parser.parse_args()
+                      help="Output format (default: text)")
+    parser.add_argument("-v", "--verbose", action="store_true",
+                      help="Enable debug logging")
 
+def handle_benchmark_command(args):
+    """Handle the benchmark command from main.py."""
     # Configure logging
     log_level = logging.DEBUG if args.verbose else logging.INFO
-    logging.basicConfig(level=log_level, 
-                        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    logging.basicConfig(level=log_level,
+                      format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
-    # Define available players
-    available_players = {
-        "random": RandomPlayer,
-        "maxemptycells": MaxEmptyCellsPlayer,
-        "minmax": MinMaxPlayer,
-        "heuristic": HeuristicPlayer
-    }
-
-    # Select players to benchmark
-    if args.players:
-        players_to_benchmark = []
-        for p in args.players:
-            p_lower = p.lower()
-            if p_lower in available_players:
-                players_to_benchmark.append(available_players[p_lower])
-            else:
-                logger.warning(f"Unknown player: {p}")
+    try:
+        # Get players to benchmark
+        players_to_benchmark = get_available_players(args.players)
         
-        if not players_to_benchmark:
-            logger.error("No valid players specified. Available players: " + 
-                         ", ".join(available_players.keys()))
-            return
-    else:
-        players_to_benchmark = list(available_players.values())
+        logger.info(f"Starting benchmark with {len(players_to_benchmark)} players for {args.num_games} games each")
+        
+        # Run the benchmark
+        results = run_benchmark(
+            num_games=args.num_games,
+            players=players_to_benchmark,
+            optimize=args.optimize,
+            show_progress=True
+        )
+        
+        # Generate report in requested format
+        if args.format == "html":
+            report = generate_html_report(results)
+        else:
+            report = generate_report(results)
+        
+        # Display report if not HTML
+        if args.format == "text":
+            print(report)
+        
+        # Save report to file if requested
+        if args.output:
+            save_report(report, args.output, args.format)
+            
+    except ValueError as e:
+        logger.error(str(e))
+        return 1
+        
+    return 0
 
-    logger.info(f"Starting benchmark with {len(players_to_benchmark)} players for {args.num_games} games each")
+def main():
+    """Main entry point when running benchmark.py directly."""
+    parser = argparse.ArgumentParser(description="Benchmark 2048 AI players")
+    add_arguments(parser)
+    args = parser.parse_args()
+    return handle_benchmark_command(args)
+
+def get_available_players(specified_players=None, include_human=False):
+    """
+    Get a list of player classes based on specified names.
     
-    # Run the benchmark
-    results = run_benchmark(
-        num_games=args.num_games,
-        players=players_to_benchmark,
-        optimize=args.optimize,
-        show_progress=True
+    Args:
+        specified_players: List of player names to use, or None for all players
+        include_human: Whether to include HumanPlayer in available players
+        
+    Returns:
+        List of player classes to use for benchmarking
+    
+    Raises:
+        ValueError: If no valid players are found or if an unknown player is specified
+    """
+    from .players import (
+        RandomPlayer,
+        HumanPlayer,
+        MaxEmptyCellsPlayer,
+        MinMaxPlayer,
+        HeuristicPlayer,
     )
     
-    # Generate report in requested format
-    if args.format == "html":
-        report = generate_html_report(results)
-    else:
-        report = generate_report(results)
+    # Define available players
+    available_players = {
+        cls.__name__.replace("Player", "").lower(): cls
+        for cls in [
+            RandomPlayer,
+            MaxEmptyCellsPlayer,
+            MinMaxPlayer,
+            HeuristicPlayer,
+        ]
+    }
     
-    # Display report if not HTML
-    if args.format == "text":
-        print(report)
+    if include_human:
+        available_players["human"] = HumanPlayer
     
-    # Save report to file if requested
-    if args.output:
-        with open(args.output, 'w', encoding='utf-8') as f:
-            f.write(report)
-        logger.info(f"Benchmark results saved to {args.output}")
-        if args.format == "html":
-            logger.info("Open the HTML file in a web browser to view the report")
+    if not specified_players:
+        return list(available_players.values())
+        
+    # Use specified players
+    selected_players = []
+    for p in specified_players:
+        p_lower = p.lower()
+        if p_lower in available_players:
+            selected_players.append(available_players[p_lower])
+        else:
+            raise ValueError(f"Unknown player: {p}. Available players: {list(available_players.keys())}")
+    
+    if not selected_players:
+        raise ValueError(f"No valid players specified. Available players: {list(available_players.keys())}")
+        
+    return selected_players
+
+def save_report(report, output_file, format="text"):
+    """
+    Save benchmark report to a file.
+    
+    Args:
+        report: The report content (text or HTML)
+        output_file: Path to save the report to
+        format: Output format ("text" or "html")
+    """
+    with open(output_file, 'w', encoding='utf-8') as f:
+        f.write(report)
+    logger.info(f"Benchmark results saved to {output_file}")
+    if format == "html":
+        logger.info("Open the HTML file in a web browser to view the report")
 
 if __name__ == "__main__":
     main()
