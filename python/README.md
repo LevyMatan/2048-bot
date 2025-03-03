@@ -17,20 +17,32 @@ This directory contains the Python implementation of the 2048 game bot, designed
   - Simplified API for creating new player strategies
   - Visualization capabilities
   - Comprehensive test suite
+  - Detailed benchmarking with HTML reports
 
 ## Directory Structure
 
 ```bash
 python/
-├── src/                 # Source code
-│   ├── board.py         # Board representation and operations
-│   ├── game.py          # Game logic and flow control
-│   ├── players.py       # Player strategy implementations
-│   └── bot.py           # Main entry point
-└── test/                # Test suite
-    ├── test_board.py    # Tests for board functionality
-    ├── test_game.py     # Tests for game logic
-    └── test_players.py  # Tests for player strategies
+├── src/
+│   └── game2048/           # Main package
+│       ├── __init__.py
+│       ├── board.py        # Board representation and operations
+│       ├── game.py         # Game logic and flow control
+│       ├── players.py      # Player strategy implementations
+│       ├── interfaces.py   # Game interfaces (CLI, GYM)
+│       ├── benchmark.py    # Benchmarking functionality
+│       └── main.py         # Main entry point
+├── tests/                  # Test suite
+│   ├── __init__.py
+│   ├── test_board.py      # Tests for board functionality
+│   ├── test_game.py       # Tests for game logic
+│   └── test_benchmark.py  # Tests for benchmark functionality
+├── examples/              # Example scripts and usage
+├── htmlcov/              # Coverage reports
+├── setup.py              # Package setup file
+├── setup.bat            # Windows setup script
+├── pyproject.toml       # Project configuration
+└── README.md           # This file
 ```
 
 ## Setup Instructions
@@ -40,6 +52,7 @@ python/
    - pip (Python package manager)
 
 2. **Installation:**
+
    ```bash
    # Create and activate a virtual environment (optional but recommended)
    python -m venv venv
@@ -49,19 +62,50 @@ python/
    pip install -r requirements.txt
    ```
 
-## Running the Bot
+   On Windows, you can also use the provided setup script:
+   ```bash
+   setup.bat
+   ```
 
-Run the game using the following command:
+## Running the Game
+
+The game supports two main commands: `play` for playing games and `benchmark` for comparing AI players.
+
+### Play Command
+
+Run individual games or multiple games with a specific player:
 
 ```bash
-python -m src.bot [options]
+python -m game2048.main play [options]
 ```
 
-**Command-line options:**
-- `--games`: Number of games to play (default: 100)
-- `--player`: Player type (random, maxempty, minmax, heuristic)
-- `--verbose`: Enable detailed output
-- `--visualize`: Show graphical representation of the game
+**Play command options:**
+- `-n, --num_games`: Number of games to play (default: 1)
+- `-p, --player`: Player type (random, maxempty, minmax, heuristic, human)
+- `--profile_en`: Enable profiling
+- `-v, --verbose`: Enable debug logging
+
+### Benchmark Command
+
+Compare the performance of different AI players:
+
+```bash
+python -m game2048.main benchmark [options]
+```
+
+**Benchmark command options:**
+- `-n, --num_games`: Number of games per player (default: 100)
+- `--players`: Specific players to benchmark (if not specified, all non-human players are tested)
+- `--optimize`: Enable board optimizations for faster execution
+- `-o, --output`: Output file for benchmark results
+- `--format`: Output format (text or html)
+- `-v, --verbose`: Enable debug logging
+
+The benchmark command generates detailed reports including:
+- Performance metrics (average score, max score, moves per game, time per game)
+- Highest tile distribution statistics
+- Best game boards for each player
+- Optional HTML report with interactive visualizations
 
 ## How It Works
 
@@ -82,12 +126,25 @@ python -m src.bot [options]
    - Score tracking
    - Game state monitoring
 
+5. **Benchmarking:**
+   - Automated testing of multiple AI strategies
+   - Performance metrics collection
+   - Statistical analysis
+   - HTML and text report generation
+
 ## Running Tests
 
 Tests can be run using pytest:
 
 ```bash
-pytest test/
+pytest tests/
+```
+
+For test coverage reports:
+```bash
+coverage run -m pytest tests/
+coverage report
+coverage html  # Generates HTML report in htmlcov/
 ```
 
 ## Customization
@@ -96,8 +153,11 @@ pytest test/
   Extend the `Player` class and implement the `get_move()` method to create your own AI strategy.
 
 - **Visualization Customization:**  
-  Modify the visualization settings in the configuration to change the appearance of the game.
+  Modify the visualization settings in the interfaces module to change the appearance of the game.
+
+- **Benchmark Reports:**
+  The HTML reports can be customized by modifying the templates in `benchmark.py`.
 
 ---
 
-Return to [Main README](../README.md) 
+Return to [Main README](../README.md)
