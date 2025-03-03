@@ -14,19 +14,19 @@ endif()
 
 # Source files
 set(SOURCES
-    main.cpp
-    board.cpp
-    game.cpp
-    heuristic_player.cpp
-    mcts_player.cpp
-    random_player.cpp
+    src/main.cpp
+    src/board.cpp
+    src/game.cpp
+    src/heuristic_player.cpp
+    src/mcts_player.cpp
+    src/random_player.cpp
 )
 
 # Header files
 set(HEADERS
-    board.hpp
-    game.hpp
-    player.hpp
+    src/board.hpp
+    src/game.hpp
+    src/player.hpp
 )
 
 # Create executable
