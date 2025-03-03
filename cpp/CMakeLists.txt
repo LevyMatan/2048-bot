@@ -1,6 +1,29 @@
 cmake_minimum_required(VERSION 3.10)
 project(2048 VERSION 1.0)
 
+# Set default build type if not specified
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Choose the type of build (Debug or Release)" FORCE)
+endif()
+
+# Set optimization flags for Release builds
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
+    if(MSVC)
+        add_compile_options(/O2)
+    else()
+        add_compile_options(-O3)
+    endif()
+    # Define NDEBUG to disable assertions in Release mode
+    add_definitions(-DNDEBUG)
+else()
+    # Debug-specific flags
+    if(MSVC)
+        # No specific debug flags needed for MSVC
+    else()
+        add_compile_options(-O0 -g)
+    endif()
+endif()
+
 # Specify C++ standard
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)

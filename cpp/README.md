@@ -56,8 +56,14 @@ cpp/
    cd cpp
    mkdir -p build
    cd build
+   
+   # For Debug build (default)
    cmake ..
-   cmake --build .
+   cmake --build . --config Debug
+   
+   # For Release build (optimized)
+   cmake .. -DCMAKE_BUILD_TYPE=Release
+   cmake --build . --config Release
    ```
 
 3. **Build with tests:**
@@ -65,8 +71,14 @@ cpp/
    cd cpp
    mkdir -p build
    cd build
+   
+   # For Debug build with tests
    cmake .. -DBUILD_TESTS=ON
-   cmake --build .
+   cmake --build . --config Debug
+   
+   # For Release build with tests
+   cmake .. -DBUILD_TESTS=ON -DCMAKE_BUILD_TYPE=Release
+   cmake --build . --config Release
    ```
 
 ## Running the Game
@@ -74,7 +86,11 @@ cpp/
 Run the game using the following command from the build directory:
 
 ```bash
+# For Debug build
 ./Debug/2048 [player_type] [num_games] [weights_file]
+
+# For Release build (faster execution)
+./Release/2048 [player_type] [num_games] [weights_file]
 ```
 
 **Command-line options:**
@@ -84,17 +100,23 @@ Run the game using the following command from the build directory:
 
 **Examples:**
 ```bash
-# Play 100 games with the Random player
+# Play 100 games with the Random player (Debug build)
 ./Debug/2048 Random 100
 
-# Play 50 games with the Heuristic player using default weights
+# Play 50 games with the Heuristic player using default weights (Debug build)
 ./Debug/2048 Heuristic 50
 
-# Play 25 games with the Heuristic player using custom weights
+# Play 25 games with the Heuristic player using custom weights (Debug build)
 ./Debug/2048 Heuristic 25 best_weights.csv
 
-# Play 10 games with the MCTS player
+# Play 10 games with the MCTS player (Debug build)
 ./Debug/2048 MCTS 10
+
+# Play 1000 games with the Heuristic player (Release build - much faster)
+./Release/2048 Heuristic 1000
+
+# Run performance benchmark with 5000 games (Release build recommended)
+./Release/2048 Heuristic 5000
 ```
 
 ## Running the Tests
@@ -102,8 +124,21 @@ Run the game using the following command from the build directory:
 The project includes unit tests for core components using Google Test. To run the tests:
 
 ```bash
+# Run tests (Debug build)
+cd build
+ctest -C Debug
+
+# Run specific test (Debug build)
 cd build/tests
 ./Debug/board_tests
+
+# Run tests (Release build - faster execution)
+cd build
+ctest -C Release
+
+# Run specific test (Release build)
+cd build/tests
+./Release/board_tests
 ```
 
 The tests cover various aspects of the `Board` class functionality:
@@ -122,7 +157,11 @@ The project includes a dedicated program for tuning the weights used by the `Heu
 ### Running the Tuning Program
 
 ```bash
+# Debug build
 ./Debug/tune_heuristic [options]
+
+# Release build (recommended for tuning as it's much faster)
+./Release/tune_heuristic [options]
 ```
 
 **Available options:**
@@ -137,14 +176,20 @@ The project includes a dedicated program for tuning the weights used by the `Heu
 
 **Examples:**
 ```bash
-# Run with default parameters
+# Run with default parameters (Debug build)
 ./Debug/tune_heuristic
 
-# Run with custom parameters
+# Run with custom parameters (Debug build)
 ./Debug/tune_heuristic --population 30 --generations 15 --games 20
 
-# Continue optimization from previous run
+# Continue optimization from previous run (Debug build)
 ./Debug/tune_heuristic --continue --population 20 --generations 5 --games 10
+
+# Run extensive optimization (Release build recommended)
+./Release/tune_heuristic --population 50 --generations 30 --games 50
+
+# Continue optimization with more generations (Release build)
+./Release/tune_heuristic --continue --population 50 --generations 20 --games 50
 ```
 
 ### Understanding the Weights

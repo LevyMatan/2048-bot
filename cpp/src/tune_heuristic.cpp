@@ -159,7 +159,7 @@ std::vector<WeightSet> loadWeightsFromFile(const std::string& filename) {
         if (values.size() >= 7) {
             WeightSet ws(values[0], values[1], values[2], values[3]);
             ws.avgScore = values[4];
-            ws.maxScore = values[5];
+            ws.maxScore = static_cast<int>(values[5]);
             ws.gamesPlayed = static_cast<int>(values[6]);
             weightSets.push_back(ws);
         }
@@ -308,9 +308,9 @@ int main(int argc, char* argv[]) {
         // Generate new individuals through mutation
         while (nextGeneration.size() < populationSize) {
             // Select a parent using tournament selection
-            std::uniform_int_distribution<int> dist(0, population.size() - 1);
-            int idx1 = dist(rng);
-            int idx2 = dist(rng);
+            std::uniform_int_distribution<size_t> dist(0, population.size() - 1);
+            size_t idx1 = dist(rng);
+            size_t idx2 = dist(rng);
             const WeightSet& parent = (population[idx1].avgScore > population[idx2].avgScore) 
                                      ? population[idx1] : population[idx2];
             

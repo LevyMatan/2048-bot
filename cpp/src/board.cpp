@@ -45,7 +45,7 @@ uint16_t Board::moveLeft(uint16_t row, int& score) {
         }
     }
 
-    return (result[0] << 12) | (result[1] << 8) | (result[2] << 4) | result[3];
+    return static_cast<uint16_t>((result[0] << 12) | (result[1] << 8) | (result[2] << 4) | result[3]);
 }
 
 uint16_t Board::moveRight(uint16_t row, int& score) {
@@ -60,8 +60,8 @@ void Board::initLookupTables() {
     for (int i = 0; i < (1 << 16); ++i) {
         int leftScore = 0;
         int rightScore = 0;
-        leftMoves[i] = moveLeft(i, leftScore);
-        rightMoves[i] = moveRight(i, rightScore);
+        leftMoves[i] = static_cast<uint16_t>(moveLeft(static_cast<uint16_t>(i), leftScore));
+        rightMoves[i] = static_cast<uint16_t>(moveRight(static_cast<uint16_t>(i), rightScore));
         leftScores[i] = leftScore;
         rightScores[i] = rightScore;
     }

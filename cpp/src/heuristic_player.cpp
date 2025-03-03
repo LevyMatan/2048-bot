@@ -179,7 +179,7 @@ HeuristicPlayer::Weights HeuristicPlayer::loadWeightsFromFile(const std::string&
         while (std::getline(ss, token, ',')) {
             try {
                 values.push_back(std::stod(token));
-            } catch (const std::exception& e) {
+            } catch (const std::exception&) {
                 // Skip non-numeric values
             }
         }

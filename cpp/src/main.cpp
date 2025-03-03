@@ -1,11 +1,47 @@
 // main.cpp
-#include "game.hpp"
 #include <iostream>
-#include <chrono>
-#include <iomanip>
 #include <string>
+#include <chrono>
+#include <fstream>
+#include <iomanip>  // Add this for std::setprecision
+#include "game.hpp"
+#include "player.hpp"
+#include "board.hpp"
+
+// Performance test function
+void runPerformanceTest() {
+    std::cout << "Running performance test..." << std::endl;
+    
+    // Create a board with a fixed state for consistent testing
+    uint64_t state = 0x0000000100020003;  // Some fixed state
+    
+    const int iterations = 1000000;
+    
+    auto start = std::chrono::high_resolution_clock::now();
+    
+    // Perform a computationally intensive operation many times
+    int totalScore = 0;
+    for (int i = 0; i < iterations; i++) {
+        auto moves = Board::simulateMovesWithScores(state);
+        for (const auto& move : moves) {
+            totalScore += std::get<1>(move);
+        }
+    }
+    
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double, std::milli> elapsed = end - start;
+    
+    std::cout << "Performance test completed in " << elapsed.count() << "ms" << std::endl;
+    std::cout << "Total score (to prevent optimization): " << totalScore << std::endl;
+}
 
 int main(int argc, char* argv[]) {
+    // Check if we're running the performance test
+    if (argc > 1 && std::string(argv[1]) == "perf") {
+        runPerformanceTest();
+        return 0;
+    }
+    
     std::string playerType = (argc > 1) ? argv[1] : "Random";
     std::string weightsFile = "";
     
