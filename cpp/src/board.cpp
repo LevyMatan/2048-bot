@@ -7,6 +7,7 @@ uint16_t Board::leftMoves[1 << 16];
 uint16_t Board::rightMoves[1 << 16];
 int Board::leftScores[1 << 16];
 int Board::rightScores[1 << 16];
+int Board::emptyTileCounts[1 << 16];
 
 uint16_t Board::moveLeft(uint16_t row, int& score) {
     int values[4] = {
@@ -56,6 +57,16 @@ uint16_t Board::moveRight(uint16_t row, int& score) {
            ((moved & 0xF00) >> 4) | ((moved & 0xF000) >> 12);
 }
 
+int Board::countEmptyTiles(uint16_t row) {
+    int count = 0;
+    for (int i = 0; i < 4; ++i) {
+        if (((row >> (i * 4)) & 0xF) == 0) {
+            count++;
+        }
+    }
+    return count;
+}
+
 void Board::initLookupTables() {
     for (int i = 0; i < (1 << 16); ++i) {
         int leftScore = 0;
@@ -64,7 +75,18 @@ void Board::initLookupTables() {
         rightMoves[i] = static_cast<uint16_t>(moveRight(static_cast<uint16_t>(i), rightScore));
         leftScores[i] = leftScore;
         rightScores[i] = rightScore;
+        emptyTileCounts[i] = countEmptyTiles(static_cast<uint16_t>(i));
     }
+}
+
+int Board::getEmptyTileCount(uint64_t state) {
+    // Use the lookup table to count empty tiles in each row
+    int count = 0;
+    for (int i = 0; i < 4; ++i) {
+        uint16_t row = (state >> (16 * i)) & 0xFFFF;
+        count += emptyTileCounts[row];
+    }
+    return count;
 }
 
 std::vector<std::tuple<int, int>> Board::getEmptyTiles(uint64_t state) {

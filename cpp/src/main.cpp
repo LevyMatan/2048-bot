@@ -4,6 +4,10 @@
 #include <chrono>
 #include <fstream>
 #include <iomanip>  // Add this for std::setprecision
+#include <thread>   // Add this for std::thread
+#include <mutex>    // Add this for std::mutex
+#include <vector>   // Already included, but making it explicit
+#include <atomic>   // Add this for std::atomic
 #include "game.hpp"
 #include "player.hpp"
 #include "board.hpp"
@@ -33,6 +37,48 @@ void runPerformanceTest() {
     
     std::cout << "Performance test completed in " << elapsed.count() << "ms" << std::endl;
     std::cout << "Total score (to prevent optimization): " << totalScore << std::endl;
+}
+
+// Function to run games in parallel
+void runGamesParallel(int startIdx, int endIdx, std::unique_ptr<Player>& player, 
+                     std::atomic<int>& bestScore, std::atomic<uint64_t>& bestState, 
+                     std::atomic<int>& bestMoveCount, std::mutex& printMutex,
+                     int numGames, int PROGRESS_INTERVAL) {
+    
+    Game2048 game;
+    
+    // Create a lambda that captures the player and calls its chooseAction method
+    auto chooseActionFn = [&player](uint64_t state) {
+        return player->chooseAction(state);
+    };
+    
+    for (int i = startIdx; i < endIdx; ++i) {
+        auto [score, state, moveCount] = game.playGame(chooseActionFn);
+        
+        // Update best score if better (using atomic compare-exchange)
+        int currentBest = bestScore.load();
+        while (score > currentBest && !bestScore.compare_exchange_weak(currentBest, score)) {
+            // Keep trying if another thread updated the value
+        }
+        
+        if (score > currentBest) {
+            bestState.store(state);
+            bestMoveCount.store(moveCount);
+            
+            // Print new best score (with mutex to avoid garbled output)
+            std::lock_guard<std::mutex> lock(printMutex);
+            std::cout << "\nNew best score: " << score
+                     << " (moves: " << moveCount << ")\n" << std::flush;
+        }
+        
+        // Print progress (with mutex to avoid garbled output)
+        if (i % PROGRESS_INTERVAL == 0) {
+            std::lock_guard<std::mutex> lock(printMutex);
+            std::cout << "\rGame " << i << "/" << numGames
+                     << " (Best: " << bestScore.load()
+                     << ")" << std::flush;
+        }
+    }
 }
 
 int main(int argc, char* argv[]) {
@@ -65,7 +111,6 @@ int main(int argc, char* argv[]) {
     // Set progress interval to 10% of total games, with a minimum of 1
     const int PROGRESS_INTERVAL = std::max(1, numGames / 10);
 
-    Game2048 game;
     std::unique_ptr<Player> player;
 
     // Create the appropriate player based on user input
@@ -82,45 +127,43 @@ int main(int argc, char* argv[]) {
         player = std::make_unique<RandomPlayer>();
     }
 
-    int bestScore = 0;
-    uint64_t bestState = 0;
-    int bestMoveCount = 0;
+    // Use atomic variables for thread safety
+    std::atomic<int> bestScore(0);
+    std::atomic<uint64_t> bestState(0);
+    std::atomic<int> bestMoveCount(0);
+    std::mutex printMutex;
 
     auto startTime = std::chrono::high_resolution_clock::now();
-    auto lastUpdateTime = startTime;
 
     std::cout << "Starting " << numGames << " games with " << player->getName() << "...\n";
 
-    // Create a lambda that captures the player and calls its chooseAction method
-    auto chooseActionFn = [&player](uint64_t state) {
-        return player->chooseAction(state);
-    };
-
-    for (int i = 0; i < numGames; ++i) {
-        // Print progress
-        if (i % PROGRESS_INTERVAL == 0) {
-            auto currentTime = std::chrono::high_resolution_clock::now();
-            auto gameTime = std::chrono::duration_cast<std::chrono::seconds>(currentTime - lastUpdateTime).count();
-
-            if (i > 0) {
-                std::cout << "\rGame " << i << "/" << numGames
-                         << " (Best: " << bestScore
-                         << ", Last game time: " << gameTime << "s)"
-                         << std::flush;
-            }
-            lastUpdateTime = currentTime;
-        }
-
-        auto [score, state, moveCount] = game.playGame(chooseActionFn);
-
-        if (score > bestScore) {
-            bestScore = score;
-            bestState = state;
-            bestMoveCount = moveCount;
-            // Print immediately when we find a new best score
-            std::cout << "\nNew best score: " << bestScore
-                     << " (moves: " << moveCount << ")\n" << std::flush;
-        }
+    // Determine number of threads based on hardware
+    unsigned int numThreads = std::thread::hardware_concurrency();
+    // Ensure at least 2 threads and not more than 8 (to avoid excessive thread creation)
+    numThreads = std::max(2u, std::min(8u, numThreads));
+    
+    // For small number of games, use fewer threads
+    if (numGames < 100) {
+        numThreads = std::min(numThreads, static_cast<unsigned int>(numGames));
+    }
+    
+    std::vector<std::thread> threads;
+    int gamesPerThread = numGames / numThreads;
+    
+    // Create and start threads
+    for (unsigned int i = 0; i < numThreads; ++i) {
+        int startIdx = i * gamesPerThread;
+        int endIdx = (i == numThreads - 1) ? numGames : (i + 1) * gamesPerThread;
+        
+        threads.emplace_back(runGamesParallel, startIdx, endIdx, std::ref(player), 
+                            std::ref(bestScore), std::ref(bestState), 
+                            std::ref(bestMoveCount), std::ref(printMutex),
+                            numGames, PROGRESS_INTERVAL);
+    }
+    
+    // Wait for all threads to complete
+    for (auto& thread : threads) {
+        thread.join();
     }
 
     auto endTime = std::chrono::high_resolution_clock::now();
@@ -143,15 +186,15 @@ int main(int argc, char* argv[]) {
                  << (static_cast<double>(duration.count()) / numGames) << "ms\n";
     }
 
-    std::cout << "Best score: " << bestScore << " (moves: " << bestMoveCount << ")\n";
+    std::cout << "Best score: " << bestScore.load() << " (moves: " << bestMoveCount.load() << ")\n";
     std::cout << "Best board:\n";
     
     // Create a temporary game to display the best board
     Game2048 tempGame;
-    tempGame.setState(bestState);
+    tempGame.setState(bestState.load());
     // Set the score and move count for the best game
-    tempGame.setScore(bestScore);
-    tempGame.setMoveCount(bestMoveCount);
+    tempGame.setScore(bestScore.load());
+    tempGame.setMoveCount(bestMoveCount.load());
     tempGame.prettyPrint();
 
     return 0;

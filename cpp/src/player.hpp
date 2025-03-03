@@ -60,9 +60,9 @@ private:
     std::string customName;
     
     double evaluatePosition(uint64_t state) const;
-    double evaluateMonotonicity(uint64_t state) const;
-    double evaluateSmoothness(uint64_t state) const;
-    double evaluateCornerPlacement(uint64_t state) const;
+    double evaluateMonotonicity(const int tileValues[4][4]) const;
+    double evaluateSmoothness(const int tileValues[4][4]) const;
+    double evaluateCornerPlacement(const int tileValues[4][4]) const;
 };
 
 class MCTSNode {

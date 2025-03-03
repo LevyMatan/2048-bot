@@ -19,10 +19,12 @@ private:
     static uint16_t rightMoves[1 << 16];
     static int leftScores[1 << 16];
     static int rightScores[1 << 16];
+    static int emptyTileCounts[1 << 16]; // Lookup table for empty tile counts
 
     static void initLookupTables();
     static uint16_t moveLeft(uint16_t row, int& score);
     static uint16_t moveRight(uint16_t row, int& score);
+    static int countEmptyTiles(uint16_t row); // Helper for empty tile counting
 
 public:
     Board() : state(0) {
@@ -36,6 +38,7 @@ public:
     uint64_t getState() const { return state; }
 
     static std::vector<std::tuple<int, int>> getEmptyTiles(uint64_t state);
+    static int getEmptyTileCount(uint64_t state); // New method to get empty tile count
     static std::vector<std::tuple<Action, uint64_t, int>> getValidMoveActionsWithScores(uint64_t state);
     static uint64_t setTile(uint64_t state, int row, int col, int value);
     static std::vector<std::tuple<uint64_t, int>> simulateMovesWithScores(uint64_t state);

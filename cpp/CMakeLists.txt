@@ -1,42 +1,21 @@
 cmake_minimum_required(VERSION 3.10)
-project(2048 VERSION 1.0)
+project(2048)
 
-# Set default build type if not specified
-if(NOT CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE "Debug" CACHE STRING "Choose the type of build (Debug or Release)" FORCE)
-endif()
-
-# Set optimization flags for Release builds
-if(CMAKE_BUILD_TYPE STREQUAL "Release")
-    if(MSVC)
-        add_compile_options(/O2)
-    else()
-        add_compile_options(-O3)
-    endif()
-    # Define NDEBUG to disable assertions in Release mode
-    add_definitions(-DNDEBUG)
-else()
-    # Debug-specific flags
-    if(MSVC)
-        # No specific debug flags needed for MSVC
-    else()
-        add_compile_options(-O0 -g)
-    endif()
-endif()
-
-# Specify C++ standard
+# Set C++ standard
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Add compiler warnings
+# Set optimization flags for different build types
 if(MSVC)
-    add_compile_options(/W4)
+    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /O2 /DNDEBUG")
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /Od /Zi")
 else()
-    add_compile_options(-Wall -Wextra -Wpedantic)
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -g")
+    set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -march=native -flto -DNDEBUG")
 endif()
 
-# Source files for the main game
-set(SOURCES
+# Main executable source files
+set(MAIN_SOURCES
     src/main.cpp
     src/board.cpp
     src/game.cpp
@@ -45,43 +24,52 @@ set(SOURCES
     src/mcts_player.cpp
 )
 
-# Header files
-set(HEADERS
-    src/board.hpp
-    src/game.hpp
-    src/player.hpp
-)
+# Create main executable
+add_executable(2048 ${MAIN_SOURCES})
 
-# Create main game executable
-add_executable(2048 ${SOURCES} ${HEADERS})
-
-# Include directories
-target_include_directories(2048 PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
-
-# Source files for the heuristic tuning program
+# Tuning executable source files
 set(TUNE_SOURCES
     src/tune_heuristic.cpp
     src/board.cpp
     src/game.cpp
     src/heuristic_player.cpp
-    src/random_player.cpp
 )
 
-# Create heuristic tuning executable
-add_executable(tune_heuristic ${TUNE_SOURCES} ${HEADERS})
+# Create tuning executable
+add_executable(tune_heuristic ${TUNE_SOURCES})
 
-# Include directories for tuning program
-target_include_directories(tune_heuristic PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/src)
+# Find Google Test package
+find_package(GTest QUIET)
+if(NOT GTest_FOUND)
+    # If not found, fetch and build it
+    include(FetchContent)
+    FetchContent_Declare(
+        googletest
+        GIT_REPOSITORY https://github.com/google/googletest.git
+        GIT_TAG release-1.12.1
+    )
+    # For Windows: Prevent overriding the parent project's compiler/linker settings
+    set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+    FetchContent_MakeAvailable(googletest)
+endif()
 
-# Optional: Enable testing
-option(BUILD_TESTS "Build tests" ON)
+# Enable testing
+include(GoogleTest)
 
-# Installation rules
-install(TARGETS 2048 tune_heuristic
-    RUNTIME DESTINATION bin
-)
-
-if(BUILD_TESTS)
-    enable_testing()
+# Check if tests directory exists and include it
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/CMakeLists.txt")
     add_subdirectory(tests)
+else()
+    # Add test executables directly if tests/CMakeLists.txt doesn't exist
+    add_executable(board_tests tests/board_tests.cpp src/board.cpp)
+    target_include_directories(board_tests PRIVATE src)
+    target_link_libraries(board_tests GTest::gtest_main)
+
+    add_executable(game_tests tests/game_tests.cpp src/game.cpp src/board.cpp)
+    target_include_directories(game_tests PRIVATE src)
+    target_link_libraries(game_tests GTest::gtest_main)
+
+    # Discover tests
+    gtest_discover_tests(board_tests)
+    gtest_discover_tests(game_tests)
 endif()
