@@ -52,6 +52,9 @@ void runGamesParallel(int startIdx, int endIdx, std::unique_ptr<Player>& player,
         return player->chooseAction(state);
     };
     
+    // Use a shared atomic counter for progress reporting
+    static std::atomic<int> gamesCompleted(0);
+    
     for (int i = startIdx; i < endIdx; ++i) {
         auto [score, state, moveCount] = game.playGame(chooseActionFn);
         
@@ -64,17 +67,13 @@ void runGamesParallel(int startIdx, int endIdx, std::unique_ptr<Player>& player,
         if (score > currentBest) {
             bestState.store(state);
             bestMoveCount.store(moveCount);
-            
-            // Print new best score (with mutex to avoid garbled output)
-            std::lock_guard<std::mutex> lock(printMutex);
-            std::cout << "\nNew best score: " << score
-                     << " (moves: " << moveCount << ")\n" << std::flush;
         }
         
-        // Print progress (with mutex to avoid garbled output)
-        if (i % PROGRESS_INTERVAL == 0) {
+        // Increment shared counter and print progress
+        int completed = ++gamesCompleted;
+        if (completed % PROGRESS_INTERVAL == 0 || completed == numGames) {
             std::lock_guard<std::mutex> lock(printMutex);
-            std::cout << "\rGame " << i << "/" << numGames
+            std::cout << "\rGame " << completed << "/" << numGames
                      << " (Best: " << bestScore.load()
                      << ")" << std::flush;
         }
