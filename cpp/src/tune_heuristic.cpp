@@ -9,6 +9,10 @@
 #include <iomanip>
 #include <fstream>
 #include <sstream>
+#include <thread>
+#include <mutex>
+#include <atomic>
+#include <future>
 
 // Structure to hold a set of weights and its performance
 struct WeightSet {
@@ -45,6 +49,9 @@ struct WeightSet {
     }
 };
 
+// Global counter for total games played
+std::atomic<int> g_totalGamesPlayed(0);
+
 // Evaluate a set of weights by playing multiple games
 void evaluateWeights(WeightSet& weightSet, int numGames) {
     Game2048 game;
@@ -63,6 +70,9 @@ void evaluateWeights(WeightSet& weightSet, int numGames) {
         
         totalScore += score;
         maxScore = std::max(maxScore, score);
+        
+        // Increment the global game counter
+        g_totalGamesPlayed++;
     }
     
     weightSet.avgScore = static_cast<double>(totalScore) / numGames;
@@ -197,16 +207,46 @@ void saveBestWeightsToFile(const WeightSet& bestWeights, const std::string& file
     std::cout << "Best weights saved to " << filename << std::endl;
 }
 
+// Evaluate multiple weight sets in parallel
+void evaluateWeightsInParallel(std::vector<WeightSet>& weightSets, int numGames, int numThreads) {
+    std::mutex outputMutex;
+    std::vector<std::future<void>> futures;
+    
+    // Split the work among threads
+    for (int t = 0; t < numThreads; ++t) {
+        futures.push_back(std::async(std::launch::async, [&, t]() {
+            // Each thread processes a subset of the weight sets
+            for (size_t i = t; i < weightSets.size(); i += numThreads) {
+                if (weightSets[i].gamesPlayed == 0) {
+                    evaluateWeights(weightSets[i], numGames);
+                    
+                    // Thread-safe output
+                    {
+                        std::lock_guard<std::mutex> lock(outputMutex);
+                        std::cout << "Evaluated: " << weightSets[i].toString() << std::endl;
+                    }
+                }
+            }
+        }));
+    }
+    
+    // Wait for all threads to complete
+    for (auto& future : futures) {
+        future.wait();
+    }
+}
+
 int main(int argc, char* argv[]) {
     // Default parameters
     int populationSize = 20;
     int generations = 10;
-    int gamesPerEvaluation = 10;
+    int gamesPerEvaluation = 30;  // Increased from 10 to 30
     double mutationRate = 0.1;
     double elitePercentage = 0.2;
     std::string outputFile = "heuristic_weights.csv";
     std::string bestWeightsFile = "best_weights.csv";
     bool continueFromFile = false;
+    int numThreads = std::thread::hardware_concurrency();  // Default to available CPU cores
     
     // Parse command line arguments
     for (int i = 1; i < argc; i++) {
@@ -217,6 +257,8 @@ int main(int argc, char* argv[]) {
             generations = std::stoi(argv[++i]);
         } else if (arg == "--games" && i + 1 < argc) {
             gamesPerEvaluation = std::stoi(argv[++i]);
+        } else if (arg == "--threads" && i + 1 < argc) {
+            numThreads = std::stoi(argv[++i]);
         } else if (arg == "--mutation" && i + 1 < argc) {
             mutationRate = std::stod(argv[++i]);
         } else if (arg == "--elite" && i + 1 < argc) {
@@ -232,7 +274,8 @@ int main(int argc, char* argv[]) {
                       << "Options:\n"
                       << "  --population N    Set population size (default: 20)\n"
                       << "  --generations N   Set number of generations (default: 10)\n"
-                      << "  --games N         Set games per evaluation (default: 10)\n"
+                      << "  --games N         Set games per evaluation (default: 30)\n"
+                      << "  --threads N       Set number of parallel threads (default: " << numThreads << ")\n"
                       << "  --mutation X      Set mutation rate (default: 0.1)\n"
                       << "  --elite X         Set elite percentage (default: 0.2)\n"
                       << "  --output FILE     Set output file (default: heuristic_weights.csv)\n"
@@ -248,6 +291,7 @@ int main(int argc, char* argv[]) {
               << "Population Size: " << populationSize << "\n"
               << "Generations: " << generations << "\n"
               << "Games per Evaluation: " << gamesPerEvaluation << "\n"
+              << "Threads: " << numThreads << "\n"
               << "Mutation Rate: " << mutationRate << "\n"
               << "Elite Percentage: " << elitePercentage << "\n"
               << "Output File: " << outputFile << "\n"
@@ -257,6 +301,9 @@ int main(int argc, char* argv[]) {
     // Random number generator
     std::random_device rd;
     std::mt19937 rng(rd());
+    
+    // Record start time
+    auto startTime = std::chrono::high_resolution_clock::now();
     
     // Initialize population
     std::vector<WeightSet> population;
@@ -278,13 +325,7 @@ int main(int argc, char* argv[]) {
         std::cout << "Generation " << gen + 1 << "/" << generations << std::endl;
         
         // Evaluate all weight sets
-        for (auto& weightSet : population) {
-            if (weightSet.gamesPlayed == 0) {
-                std::cout << "Evaluating: " << weightSet.toString() << std::endl;
-                evaluateWeights(weightSet, gamesPerEvaluation);
-                std::cout << "Result: " << weightSet.toString() << std::endl;
-            }
-        }
+        evaluateWeightsInParallel(population, gamesPerEvaluation, numThreads);
         
         // Sort by average score (best first)
         std::sort(population.begin(), population.end(), [](const WeightSet& a, const WeightSet& b) {
@@ -345,7 +386,12 @@ int main(int argc, char* argv[]) {
     
     // Evaluate with more games for better accuracy
     std::cout << "Evaluating best weights with " << gamesPerEvaluation * 5 << " games...\n";
-    evaluateWeights(best, gamesPerEvaluation * 5);
+    
+    // Create a vector with just the best weights for parallel evaluation
+    std::vector<WeightSet> bestOnly = {best};
+    best.gamesPlayed = 0; // Reset so it gets evaluated
+    evaluateWeightsInParallel(bestOnly, gamesPerEvaluation * 5, numThreads);
+    best = bestOnly[0];
     
     std::cout << "\nBest Weights Found:\n";
     std::cout << best.toString() << "\n\n";
@@ -359,6 +405,19 @@ int main(int argc, char* argv[]) {
     
     // Save the best weights to a separate file for easy loading
     saveBestWeightsToFile(best, bestWeightsFile);
+    
+    // Calculate and display total time
+    auto endTime = std::chrono::high_resolution_clock::now();
+    auto duration = std::chrono::duration_cast<std::chrono::seconds>(endTime - startTime).count();
+    int64_t hours = duration / 3600;
+    int64_t minutes = (duration % 3600) / 60;
+    int64_t seconds = duration % 60;
+    
+    std::cout << "\nPerformance Statistics:\n";
+    std::cout << "---------------------\n";
+    std::cout << "Total time: " << hours << "h " << minutes << "m " << seconds << "s\n";
+    std::cout << "Total games played: " << g_totalGamesPlayed << "\n";
+    std::cout << "Games per second: " << static_cast<double>(g_totalGamesPlayed) / duration << "\n";
     
     return 0;
 } 
