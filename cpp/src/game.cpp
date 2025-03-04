@@ -98,7 +98,7 @@ void Game2048::prettyPrint() const {
     // Calculate cell width based on the number of digits in the highest tile
     std::ostringstream ss;
     ss << maxTileValue;
-    int cellWidth = ss.str().length() + 2; // +2 for padding
+    int cellWidth = static_cast<int>(ss.str().length()) + 2; // +2 for padding
     
     // Ensure cell width is at least 6 for better appearance
     cellWidth = std::max(cellWidth, 6);
@@ -113,7 +113,7 @@ void Game2048::prettyPrint() const {
     std::ostringstream scoreStream;
     scoreStream << "Score: " << score << " | Moves: " << moveCount;
     std::string scoreInfo = scoreStream.str();
-    int padding = (boardWidth - scoreInfo.length()) / 2;
+    int padding = static_cast<int>((boardWidth - scoreInfo.length()) / 2);
     std::cout << std::string(padding, ' ') << scoreInfo << '\n';
     
     std::cout << std::string(boardWidth, '-') << '\n';
@@ -136,8 +136,8 @@ void Game2048::prettyPrint() const {
             }
             
             // Calculate padding for centering
-            int leftPadding = (cellWidth - cellContent.length()) / 2;
-            int rightPadding = cellWidth - cellContent.length() - leftPadding;
+            int leftPadding = static_cast<int>((cellWidth - cellContent.length()) / 2);
+            int rightPadding = cellWidth - static_cast<int>(cellContent.length()) - leftPadding;
             
             std::cout << std::string(leftPadding, ' ') << cellContent << std::string(rightPadding, ' ') << '|';
         }
