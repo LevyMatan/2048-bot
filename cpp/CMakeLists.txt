@@ -1,9 +1,29 @@
 cmake_minimum_required(VERSION 3.10)
-project(2048)
+project(2048 CXX)
+
+# Enable testing at the top level
+enable_testing()
 
 # Set C++ standard
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+if(APPLE)
+    # Get the macOS SDK path dynamically
+    execute_process(
+        COMMAND xcrun --show-sdk-path
+        OUTPUT_VARIABLE MACOS_SDK_PATH
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+    # Construct the full path to the libc++ headers
+    set(LIBCXX_INCLUDE_PATH "${MACOS_SDK_PATH}/usr/include/c++/v1")
+
+    # Pass the flags to the compiler
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -stdlib=libc++ -isystem ${LIBCXX_INCLUDE_PATH}")
+else()
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra")
+endif()
+
 
 # Set optimization flags for different build types
 if(MSVC)
@@ -13,6 +33,9 @@ else()
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -g")
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -march=native -flto -DNDEBUG")
 endif()
+
+# Include directories
+include_directories(${CMAKE_SOURCE_DIR}/src)
 
 # Main executable source files
 set(MAIN_SOURCES
