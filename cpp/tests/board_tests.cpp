@@ -6,6 +6,7 @@
 #include <random>
 #include <iomanip>
 #include <iostream>
+#include <sstream>
 
 class BoardTest : public ::testing::Test {
 protected:
@@ -375,6 +376,94 @@ TEST_F(BoardTest, SpecificMoveScenarioTest) {
     
     // Verify that the score is positive
     EXPECT_GT(leftScore, 0);
+}
+
+/**
+ * @brief Tests the Board::transpose function
+ * 
+ * Verifies the transpose operation correctly rearranges the board
+ * by swapping rows and columns.
+ */
+TEST_F(BoardTest, TransposeOperation) {
+    // Print values in hex for easier debugging
+    auto printHex = [](uint64_t val) -> std::string {
+        std::stringstream ss;
+        ss << "0x" << std::hex << std::uppercase << val;
+        return ss.str();
+    };
+
+    // Test case 1: Empty board
+    uint64_t emptyBoard = 0x0ULL;
+    EXPECT_EQ(Board::transpose(emptyBoard), emptyBoard)
+        << "Empty board: expected " << printHex(emptyBoard)
+        << ", got " << printHex(Board::transpose(emptyBoard));
+    
+    // Test case 2: Single tile at position (0,0) with value 2 (internal value 1)
+    uint64_t singleTile = 0x1ULL;
+    EXPECT_EQ(Board::transpose(singleTile), singleTile)
+        << "Single tile: expected " << printHex(singleTile)
+        << ", got " << printHex(Board::transpose(singleTile));
+    
+    // Test case 3: Single tile at position (0,1) should move to (1,0)
+    // (0,1) = 4 bits offset = 0x10, (1,0) = 16 bits offset = 0x10000
+    uint64_t tile01 = 0x10ULL;
+    uint64_t tile10 = 0x10000ULL;
+    EXPECT_EQ(Board::transpose(tile01), tile10)
+        << "Tile at (0,1): expected " << printHex(tile10)
+        << ", got " << printHex(Board::transpose(tile01));
+    EXPECT_EQ(Board::transpose(tile10), tile01)
+        << "Tile at (1,0): expected " << printHex(tile01)
+        << ", got " << printHex(Board::transpose(tile10));
+    
+    // Test case 4: Diagonal pattern - should remain unchanged
+    // Set tiles at (0,0), (1,1), (2,2), (3,3) to values 1,2,3,4
+    uint64_t diagonal = 0x4000030000200001ULL;
+    EXPECT_EQ(Board::transpose(diagonal), diagonal)
+        << "Diagonal: expected " << printHex(diagonal)
+        << ", got " << printHex(Board::transpose(diagonal));
+    
+    // Test case 5: Row pattern - should become column pattern
+    // Row 0: [1,2,3,4] -> Column 0: [1,2,3,4] but in column orientation
+    uint64_t firstRow = 0x4321ULL;
+    uint64_t firstCol = 0x4000300020001ULL;  // Corrected value
+    EXPECT_EQ(Board::transpose(firstRow), firstCol)
+        << "First row: expected " << printHex(firstCol)
+        << ", got " << printHex(Board::transpose(firstRow));
+    
+    // Test case 6: Complex pattern
+    // 2 4 0 0     2 8 0 0
+    // 8 0 0 0  -> 4 0 0 0
+    // 0 0 0 0     0 0 0 0
+    // 0 0 0 0     0 0 0 0
+    uint64_t pattern1 = 0x30021ULL;  // Corrected value
+    uint64_t pattern2 = 0x20031ULL;  // Corrected value
+    EXPECT_EQ(Board::transpose(pattern1), pattern2)
+        << "Complex pattern: expected " << printHex(pattern2)
+        << ", got " << printHex(Board::transpose(pattern1));
+    
+    // Test case 7: Double transposition should return original
+    uint64_t randomState = 0x0123456789ABCDEFULL;
+    EXPECT_EQ(Board::transpose(Board::transpose(randomState)), randomState)
+        << "Double transpose: expected " << printHex(randomState)
+        << ", got " << printHex(Board::transpose(Board::transpose(randomState)));
+    
+    // Test case 8: Full board with varied values
+    uint64_t fullBoard = 0xFEDCBA9876543210ULL;
+    uint64_t transposedFullBoard = Board::transpose(fullBoard);
+    EXPECT_EQ(Board::transpose(transposedFullBoard), fullBoard)
+        << "Full board double transpose: expected " << printHex(fullBoard)
+        << ", got " << printHex(Board::transpose(transposedFullBoard));
+    
+    // Visual debugging
+    std::cout << "\nDiagonal board:" << std::endl;
+    printBoardState(diagonal);
+    std::cout << "After transpose:" << std::endl;
+    printBoardState(Board::transpose(diagonal));
+    
+    std::cout << "\nRow pattern:" << std::endl;
+    printBoardState(firstRow);
+    std::cout << "After transpose (should be column):" << std::endl;
+    printBoardState(Board::transpose(firstRow));
 }
 
 int main(int argc, char **argv) {

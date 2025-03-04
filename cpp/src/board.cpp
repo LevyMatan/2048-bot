@@ -113,40 +113,28 @@ std::vector<std::tuple<uint64_t, int>> Board::simulateMovesWithScores(uint64_t s
         std::get<1>(results[i]) = 0;
     }
 
+    // Vertical moves
+    uint64_t transposedState = transpose(state);
     // Horizontal moves
-    for (int row = 0; row < 4; ++row) {
-        uint16_t rowVal = (state >> (16 * row)) & 0xFFFF;
-        std::get<0>(results[0]) |= static_cast<uint64_t>(leftMoves[rowVal]) << (16 * row);
+    for (int idx = 0; idx < 4; ++idx) {
+        uint64_t shift = 16 * idx;
+        uint16_t rowVal = (state >> shift) & 0xFFFF;
+        std::get<0>(results[0]) |= static_cast<uint64_t>(leftMoves[rowVal]) << shift;
         std::get<1>(results[0]) += leftScores[rowVal];
         
-        std::get<0>(results[1]) |= static_cast<uint64_t>(rightMoves[rowVal]) << (16 * row);
+        std::get<0>(results[1]) |= static_cast<uint64_t>(rightMoves[rowVal]) << shift;
         std::get<1>(results[1]) += rightScores[rowVal];
+
+        uint16_t colVal = (transposedState >> shift) & 0xFFFF;
+        std::get<0>(results[2]) |= static_cast<uint64_t>(leftMoves[colVal]) << shift;
+        std::get<1>(results[2]) += leftScores[colVal];
+
+        std::get<0>(results[3]) |= static_cast<uint64_t>(rightMoves[colVal]) << shift;
+        std::get<1>(results[3]) += rightScores[colVal];
     }
 
-    // Vertical moves
-    uint16_t cols[4] = {0};
-    for (int col = 0; col < 4; ++col) {
-        for (int row = 0; row < 4; ++row) {
-            int shift = (3 - row) * 4;
-            cols[col] |= ((state >> ((row * 16) + (12 - col * 4))) & 0xF) << shift;
-        }
-    }
-
-    for (int col = 0; col < 4; ++col) {
-        uint16_t upMove = rightMoves[cols[col]];
-        int upScore = rightScores[cols[col]];
-        
-        uint16_t downMove = leftMoves[cols[col]];
-        int downScore = leftScores[cols[col]];
-
-        for (int row = 0; row < 4; ++row) {
-            std::get<0>(results[2]) |= static_cast<uint64_t>((upMove >> (12 - row * 4)) & 0xF) << ((row * 16) + (12 - col * 4));
-            std::get<0>(results[3]) |= static_cast<uint64_t>((downMove >> (12 - row * 4)) & 0xF) << ((row * 16) + (12 - col * 4));
-        }
-        
-        std::get<1>(results[2]) += upScore;
-        std::get<1>(results[3]) += downScore;
-    }
+    std::get<0>(results[2]) = transpose(std::get<0>(results[2]));
+    std::get<0>(results[3]) = transpose(std::get<0>(results[3]));
 
     return results;
 }
@@ -184,4 +172,24 @@ std::vector<std::tuple<Action, uint64_t>> Board::getValidMoveActions(uint64_t st
     }
     
     return valid;
+}
+
+/**
+ * @brief Transposes the board (converts rows to columns and vice versa)
+ * 
+ * Uses efficient bit manipulation to transpose the 4x4 board by rearranging
+ * the 4-bit tiles within the 64-bit state.
+ * 
+ * @param state 64-bit board state
+ * @return uint64_t Transposed board state
+ */
+uint64_t Board::transpose(uint64_t state) {
+    uint64_t a1 = state & 0xF0F00F0FF0F00F0FULL;
+    uint64_t a2 = state & 0x0000F0F00000F0F0ULL;
+    uint64_t a3 = state & 0x0F0F00000F0F0000ULL;
+    uint64_t a = a1 | (a2 << 12) | (a3 >> 12);
+    uint64_t b1 = a & 0xFF00FF0000FF00FFULL;
+    uint64_t b2 = a & 0x00FF00FF00000000ULL;
+    uint64_t b3 = a & 0x00000000FF00FF00ULL;
+    return b1 | (b2 >> 24) | (b3 << 24);
 }
