@@ -73,24 +73,6 @@ public:
     double UCB1(double C = 1.41) const;
 };
 
-class MCTSPlayer : public Player {
-private:
-    int simulations;
-    std::mt19937 rng;
-
-    MCTSNode* select(MCTSNode* node);
-    void expand(MCTSNode* node);
-    double evaluate(uint64_t state) const;
-    double simulate(uint64_t state);
-    void backpropagate(MCTSNode* node, double score);
-    double getExplorationConstant(int depth) const;
-
-public:
-    explicit MCTSPlayer(int sims = 2000);
-    std::tuple<Action, uint64_t, int> chooseAction(uint64_t state) override;
-    std::string getName() const override;
-};
-
 // Optional: Implement DQN player later
 class DQNPlayer : public Player {
 public:

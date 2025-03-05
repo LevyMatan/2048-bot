@@ -196,6 +196,20 @@ HeuristicPlayer::Weights HeuristicPlayer::loadWeightsFromFile(const std::string&
     throw std::runtime_error("Invalid format in weights file: " + filename);
 }
 
+HeuristicPlayer::Weights::Weights(uint64_t e, uint64_t m, uint64_t s, uint64_t c)
+    : emptyTiles(e), monotonicity(m), smoothness(s), cornerPlacement(c)
+{
+    // Ensure weights sum to 1000
+    uint64_t total = emptyTiles + monotonicity + smoothness + cornerPlacement;
+    if (total != 1000) {
+        double scale = 1000.0 / total;
+        emptyTiles = static_cast<uint64_t>(emptyTiles * scale);
+        monotonicity = static_cast<uint64_t>(monotonicity * scale);
+        smoothness = static_cast<uint64_t>(smoothness * scale);
+        cornerPlacement = 1000 - emptyTiles - monotonicity - smoothness;
+    }
+}
+
 std::string HeuristicPlayer::getName() const {
     return customName;
 }

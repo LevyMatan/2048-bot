@@ -15,14 +15,14 @@
 // Performance test function
 void runPerformanceTest() {
     std::cout << "Running performance test..." << std::endl;
-    
+
     // Create a board with a fixed state for consistent testing
     uint64_t state = 0x0000000100020003;  // Some fixed state
-    
+
     const int iterations = 1000000;
-    
+
     auto start = std::chrono::high_resolution_clock::now();
-    
+
     // Perform a computationally intensive operation many times
     int totalScore = 0;
     for (int i = 0; i < iterations; i++) {
@@ -31,44 +31,44 @@ void runPerformanceTest() {
             totalScore += std::get<1>(move);
         }
     }
-    
+
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double, std::milli> elapsed = end - start;
-    
+
     std::cout << "Performance test completed in " << elapsed.count() << "ms" << std::endl;
     std::cout << "Total score (to prevent optimization): " << totalScore << std::endl;
 }
 
 // Function to run games in parallel
-void runGamesParallel(int startIdx, int endIdx, std::unique_ptr<Player>& player, 
-                     std::atomic<int>& bestScore, std::atomic<uint64_t>& bestState, 
+void runGamesParallel(int startIdx, int endIdx, std::unique_ptr<Player>& player,
+                     std::atomic<int>& bestScore, std::atomic<uint64_t>& bestState,
                      std::atomic<int>& bestMoveCount, std::mutex& printMutex,
                      int numGames, int PROGRESS_INTERVAL) {
-    
+
     Game2048 game;
-    
+
     // Create a lambda that captures the player and calls its chooseAction method
     auto chooseActionFn = [&player](uint64_t state) {
         return player->chooseAction(state);
     };
-    
+
     // Use a shared atomic counter for progress reporting
     static std::atomic<int> gamesCompleted(0);
-    
+
     for (int i = startIdx; i < endIdx; ++i) {
         auto [score, state, moveCount] = game.playGame(chooseActionFn);
-        
+
         // Update best score if better (using atomic compare-exchange)
         int currentBest = bestScore.load();
         while (score > currentBest && !bestScore.compare_exchange_weak(currentBest, score)) {
             // Keep trying if another thread updated the value
         }
-        
+
         if (score > currentBest) {
             bestState.store(state);
             bestMoveCount.store(moveCount);
         }
-        
+
         // Increment shared counter and print progress
         int completed = ++gamesCompleted;
         if (completed % PROGRESS_INTERVAL == 0 || completed == numGames) {
@@ -86,27 +86,26 @@ int main(int argc, char* argv[]) {
         runPerformanceTest();
         return 0;
     }
-    
+
     std::string playerType = (argc > 1) ? argv[1] : "Random";
     std::string weightsFile = "";
-    
+
     // Check if a weights file is provided for Heuristic player
     if (playerType == "Heuristic" && argc > 3) {
         weightsFile = argv[3];
     }
-    
+
     if (playerType != "Random" && playerType != "Heuristic" && playerType != "MCTS") {
         std::cout << "Usage: " << argv[0] << " [player_type] [num_games] [weights_file]\n"
                   << "Available players:\n"
                   << "  Random     - Makes random valid moves (default)\n"
                   << "  Heuristic  - Uses heuristic evaluation\n"
-                  << "              Optional: provide a weights file as third argument\n"
-                  << "  MCTS       - Uses Monte Carlo Tree Search\n";
+                  << "              Optional: provide a weights file as third argument\n";
         return 1;
     }
 
     int numGames = (argc > 2) ? std::stoi(argv[2]) : 1000;
-    
+
     // Set progress interval to 10% of total games, with a minimum of 1
     const int PROGRESS_INTERVAL = std::max(1, numGames / 10);
 
@@ -120,8 +119,6 @@ int main(int argc, char* argv[]) {
         } else {
             player = std::make_unique<HeuristicPlayer>();
         }
-    } else if (playerType == "MCTS") {
-        player = std::make_unique<MCTSPlayer>();
     } else {
         player = std::make_unique<RandomPlayer>();
     }
@@ -140,26 +137,26 @@ int main(int argc, char* argv[]) {
     unsigned int numThreads = std::thread::hardware_concurrency();
     // Ensure at least 2 threads and not more than 8 (to avoid excessive thread creation)
     numThreads = std::max(2u, std::min(8u, numThreads));
-    
+
     // For small number of games, use fewer threads
     if (numGames < 100) {
         numThreads = std::min(numThreads, static_cast<unsigned int>(numGames));
     }
-    
+
     std::vector<std::thread> threads;
     int gamesPerThread = numGames / numThreads;
-    
+
     // Create and start threads
     for (unsigned int i = 0; i < numThreads; ++i) {
         int startIdx = i * gamesPerThread;
         int endIdx = (i == numThreads - 1) ? numGames : (i + 1) * gamesPerThread;
-        
-        threads.emplace_back(runGamesParallel, startIdx, endIdx, std::ref(player), 
-                            std::ref(bestScore), std::ref(bestState), 
+
+        threads.emplace_back(runGamesParallel, startIdx, endIdx, std::ref(player),
+                            std::ref(bestScore), std::ref(bestState),
                             std::ref(bestMoveCount), std::ref(printMutex),
                             numGames, PROGRESS_INTERVAL);
     }
-    
+
     // Wait for all threads to complete
     for (auto& thread : threads) {
         thread.join();
@@ -187,7 +184,7 @@ int main(int argc, char* argv[]) {
 
     std::cout << "Best score: " << bestScore.load() << " (moves: " << bestMoveCount.load() << ")\n";
     std::cout << "Best board:\n";
-    
+
     // Create a temporary game to display the best board
     Game2048 tempGame;
     tempGame.setState(bestState.load());
