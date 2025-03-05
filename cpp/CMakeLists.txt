@@ -20,6 +20,9 @@ if(APPLE)
 
     # Pass the flags to the compiler
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -stdlib=libc++ -isystem ${LIBCXX_INCLUDE_PATH}")
+elseif(MSVC)
+    # Use MSVC-specific warning flags
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W4")
 else()
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra")
 endif()

@@ -2,6 +2,7 @@
 #include "board.hpp"
 #include "player.hpp"
 #include <functional>
+#include <chrono>
 
 class ExpectimaxPlayer : public Player {
 public:
