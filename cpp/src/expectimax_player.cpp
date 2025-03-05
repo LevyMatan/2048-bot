@@ -21,11 +21,11 @@ std::tuple<Action, uint64_t, int> ExpectimaxPlayer::chooseAction(uint64_t state)
 
     Action bestAction = Action::INVALID;
     uint64_t bestState = state;
-    double bestScore = -std::numeric_limits<double>::infinity();
+    uint64_t bestScore = 0;
     int bestMoveScore = 0;
 
     for (const auto& [action, nextState, moveScore] : validMoves) {
-        double score = chanceNode(nextState, searchDepth - 1);
+        uint64_t score = chanceNode(nextState, searchDepth - 1);
         if (score > bestScore) {
             bestScore = score;
             bestAction = action;
@@ -41,24 +41,24 @@ std::tuple<Action, uint64_t, int> ExpectimaxPlayer::chooseAction(uint64_t state)
     return {bestAction, bestState, bestMoveScore};
 }
 
-double ExpectimaxPlayer::expectimax(uint64_t state, int depth, bool isMax) {
+uint64_t ExpectimaxPlayer::expectimax(uint64_t state, int depth, bool isMax) {
     if (depth == 0 || shouldTimeOut()) {
         return evalFn(state);
     }
     return isMax ? maxNode(state, depth) : chanceNode(state, depth);
 }
 
-double ExpectimaxPlayer::chanceNode(uint64_t state, int depth) {
+uint64_t ExpectimaxPlayer::chanceNode(uint64_t state, int depth) {
     if (depth <= 0 || shouldTimeOut()) {
-        return static_cast<double>(evalFn(state));
+        return evalFn(state);
     }
 
     auto emptyTiles = Board::getEmptyTiles(state);
     if (emptyTiles.empty()) {
-        return static_cast<double>(evalFn(state));
+        return evalFn(state);
     }
 
-    double totalScore = 0.0;
+    uint64_t totalScore = 0;
     int numSamples = std::min(config.chanceCovering,
                              static_cast<int>(emptyTiles.size()));
 
@@ -69,24 +69,24 @@ double ExpectimaxPlayer::chanceNode(uint64_t state, int depth) {
         uint64_t newState2 = Board::setTile(state, row, col, 1);
         uint64_t newState4 = Board::setTile(state, row, col, 2);
 
-        totalScore += 0.9 * maxNode(newState2, depth - 1);
-        totalScore += 0.1 * maxNode(newState4, depth - 1);
+        totalScore += 9 * maxNode(newState2, depth - 1);
+        totalScore += 1 * maxNode(newState4, depth - 1);
     }
 
     return totalScore / numSamples;
 }
 
-double ExpectimaxPlayer::maxNode(uint64_t state, int depth) {
+uint64_t ExpectimaxPlayer::maxNode(uint64_t state, int depth) {
     if (depth <= 0 || shouldTimeOut()) {
-        return static_cast<double>(evalFn(state));
+        return (evalFn(state));
     }
 
     auto validMoves = Board::getValidMoveActionsWithScores(state);
     if (validMoves.empty()) {
-        return static_cast<double>(evalFn(state));
+        return evalFn(state);
     }
 
-    double bestScore = -std::numeric_limits<double>::infinity();
+    uint64_t bestScore = 0;
 
     for (const auto& [action, nextState, moveScore] : validMoves) {
         bestScore = std::max(bestScore,

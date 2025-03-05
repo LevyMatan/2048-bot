@@ -35,9 +35,9 @@ private:
     EvaluationFunction evalFn;
     std::chrono::steady_clock::time_point startTime;
 
-    double expectimax(uint64_t state, int depth, bool isMax);
-    double chanceNode(uint64_t state, int depth);
-    double maxNode(uint64_t state, int depth);
+    uint64_t expectimax(uint64_t state, int depth, bool isMax);
+    uint64_t chanceNode(uint64_t state, int depth);
+    uint64_t maxNode(uint64_t state, int depth);
     bool shouldTimeOut() const;
     int getAdaptiveDepth(uint64_t state) const;
 };
