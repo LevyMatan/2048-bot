@@ -180,6 +180,18 @@ public:
     static int valueToTile(int value) {
         return 1 << value;
     }
+
+    /**
+     * @brief Get the value of a tile at the specified position
+     * @param state The 64-bit board state
+     * @param row Row coordinate (0-3)
+     * @param col Column coordinate (0-3)
+     * @return The value at the specified position (0 if empty)
+     */
+    static int getTileAt(uint64_t state, int row, int col) {
+        int pos = (row * 4 + col) * 4;
+        return (state >> pos) & 0xF;
+    }
 };
 
 /**

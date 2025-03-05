@@ -8,8 +8,10 @@
 #include <mutex>    // Add this for std::mutex
 #include <vector>   // Already included, but making it explicit
 #include <atomic>   // Add this for std::atomic
+#include <memory>
 #include "game.hpp"
 #include "player.hpp"
+#include "expectimax_player.hpp"
 #include "board.hpp"
 
 // Performance test function
@@ -80,48 +82,84 @@ void runGamesParallel(int startIdx, int endIdx, std::unique_ptr<Player>& player,
     }
 }
 
+void printUsage(const char* programName) {
+    std::cout << "Usage: " << programName << " [player_type] [num_games] [options]\n"
+              << "Available players:\n"
+              << "  Random     - Makes random valid moves\n"
+              << "  Heuristic  - Uses heuristic evaluation\n"
+              << "              Optional: provide a weights file as third argument\n"
+              << "  Expectimax - Uses expectimax search\n"
+              << "              Options:\n"
+              << "              -d <depth>     Search depth (default: 3)\n"
+              << "              -c <coverage>  Chance coverage (default: 2)\n"
+              << "              -t <time>      Time limit in ms (default: 100)\n"
+              << "              -a             Enable adaptive depth\n";
+}
+
+std::unique_ptr<Player> createExpectimaxPlayer(int argc, char* argv[], int& numGames) {
+    ExpectimaxPlayer::Config config;
+
+    // Start from 2 because argv[1] is the player type
+    for (int i = 2; i < argc; i++) {
+        std::string arg = argv[i];
+        if (arg == "-d" && i + 1 < argc) {
+            config.depth = std::stoi(argv[++i]);
+        } else if (arg == "-c" && i + 1 < argc) {
+            config.chanceCovering = std::stoi(argv[++i]);
+        } else if (arg == "-t" && i + 1 < argc) {
+            config.timeLimit = std::stoi(argv[++i]) / 1000.0;
+        } else if (arg == "-a") {
+            config.adaptiveDepth = true;
+        } else if (std::isdigit(arg[0])) {
+            // This is the number of games
+            numGames = std::stoi(arg);
+        }
+    }
+
+    std::cout << "Expectimax Configuration:\n"
+              << "  Depth: " << config.depth << "\n"
+              << "  Chance Coverage: " << config.chanceCovering << "\n"
+              << "  Time Limit: " << (config.timeLimit * 1000) << "ms\n"
+              << "  Adaptive Depth: " << (config.adaptiveDepth ? "Yes" : "No") << "\n";
+
+    return std::make_unique<ExpectimaxPlayer>(config);
+}
+
 int main(int argc, char* argv[]) {
-    // Check if we're running the performance test
-    if (argc > 1 && std::string(argv[1]) == "perf") {
-        runPerformanceTest();
-        return 0;
-    }
-
-    std::string playerType = (argc > 1) ? argv[1] : "Random";
-    std::string weightsFile = "";
-
-    // Check if a weights file is provided for Heuristic player
-    if (playerType == "Heuristic" && argc > 3) {
-        weightsFile = argv[3];
-    }
-
-    if (playerType != "Random" && playerType != "Heuristic" && playerType != "MCTS") {
-        std::cout << "Usage: " << argv[0] << " [player_type] [num_games] [weights_file]\n"
-                  << "Available players:\n"
-                  << "  Random     - Makes random valid moves (default)\n"
-                  << "  Heuristic  - Uses heuristic evaluation\n"
-                  << "              Optional: provide a weights file as third argument\n";
+    if (argc < 2) {
+        printUsage(argv[0]);
         return 1;
     }
 
-    int numGames = (argc > 2) ? std::stoi(argv[2]) : 1000;
+    std::string playerType = argv[1];
+    int numGames = 1;  // Default value
+
+    std::unique_ptr<Player> player;
+    try {
+        if (playerType == "Random") {
+            player = std::make_unique<RandomPlayer>();
+            if (argc >= 3) numGames = std::stoi(argv[2]);
+        } else if (playerType == "Heuristic") {
+            if (argc >= 4 && argv[3][0] != '-') {
+                player = std::make_unique<HeuristicPlayer>(argv[3]);
+            } else {
+                player = std::make_unique<HeuristicPlayer>();
+            }
+            if (argc >= 3) numGames = std::stoi(argv[2]);
+        } else if (playerType == "Expectimax") {
+            player = createExpectimaxPlayer(argc, argv, numGames);
+        } else {
+            printUsage(argv[0]);
+            return 1;
+        }
+    } catch (const std::exception& e) {
+        std::cerr << "Error: " << e.what() << "\n";
+        printUsage(argv[0]);
+        return 1;
+    }
 
     // Set progress interval to 10% of total games, with a minimum of 1
     const int PROGRESS_INTERVAL = std::max(1, numGames / 10);
-
-    std::unique_ptr<Player> player;
-
-    // Create the appropriate player based on user input
-    if (playerType == "Heuristic") {
-        if (!weightsFile.empty()) {
-            std::cout << "Using custom weights from file: " << weightsFile << std::endl;
-            player = std::make_unique<HeuristicPlayer>(weightsFile);
-        } else {
-            player = std::make_unique<HeuristicPlayer>();
-        }
-    } else {
-        player = std::make_unique<RandomPlayer>();
-    }
 
     // Use atomic variables for thread safety
     std::atomic<int> bestScore(0);

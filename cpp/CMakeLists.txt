@@ -44,6 +44,7 @@ set(MAIN_SOURCES
     src/game.cpp
     src/random_player.cpp
     src/heuristic_player.cpp
+    src/expectimax_player.cpp
 )
 
 # Create main executable
@@ -55,6 +56,7 @@ set(TUNE_SOURCES
     src/board.cpp
     src/game.cpp
     src/heuristic_player.cpp
+    src/expectimax_player.cpp
 )
 
 # Create tuning executable
