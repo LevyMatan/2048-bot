@@ -55,6 +55,8 @@
         "streambuf": "cpp",
         "text_encoding": "cpp",
         "typeinfo": "cpp",
-        "variant": "cpp"
-    }
+        "variant": "cpp",
+        "locale": "cpp"
+    },
+    "cmake.sourceDirectory": "/Users/matanlevy/2048/2048-bot/cpp"
 }
