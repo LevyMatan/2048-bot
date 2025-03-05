@@ -91,9 +91,20 @@ int Board::getEmptyTileCount(uint64_t state) {
 
 std::vector<std::tuple<int, int>> Board::getEmptyTiles(uint64_t state) {
     std::vector<std::tuple<int, int>> empty;
-    for (int i = 0; i < 16; ++i) {
-        if (((state >> (i * 4)) & 0xF) == 0) {
-            empty.emplace_back(i / 4, i % 4);
+    empty.reserve(16);  // Pre-allocate maximum possible size
+
+    // Use 16-bit word processing
+    for (int row = 0; row < 4; ++row) {
+        uint16_t rowVal = (state >> (row * 16)) & 0xFFFF;
+        // Process 4 tiles at once using lookup table
+        int emptyCount = emptyTileCounts[rowVal];
+        if (emptyCount == 0) continue;
+
+        // Check individual tiles only if there are empty ones
+        for (int col = 0; col < 4; ++col) {
+            if (((rowVal >> (col * 4)) & 0xF) == 0) {
+                empty.emplace_back(row, col);
+            }
         }
     }
     return empty;
@@ -106,7 +117,7 @@ uint64_t Board::setTile(uint64_t state, int row, int col, int value) {
 
 std::vector<std::tuple<uint64_t, int>> Board::simulateMovesWithScores(uint64_t state) {
     std::vector<std::tuple<uint64_t, int>> results(4);
-    
+
     // Initialize all states to the original state and scores to 0
     for (int i = 0; i < 4; ++i) {
         std::get<0>(results[i]) = 0;
@@ -121,7 +132,7 @@ std::vector<std::tuple<uint64_t, int>> Board::simulateMovesWithScores(uint64_t s
         uint16_t rowVal = (state >> shift) & 0xFFFF;
         std::get<0>(results[0]) |= static_cast<uint64_t>(leftMoves[rowVal]) << shift;
         std::get<1>(results[0]) += leftScores[rowVal];
-        
+
         std::get<0>(results[1]) |= static_cast<uint64_t>(rightMoves[rowVal]) << shift;
         std::get<1>(results[1]) += rightScores[rowVal];
 
@@ -136,17 +147,6 @@ std::vector<std::tuple<uint64_t, int>> Board::simulateMovesWithScores(uint64_t s
     std::get<0>(results[2]) = transpose(std::get<0>(results[2]));
     std::get<0>(results[3]) = transpose(std::get<0>(results[3]));
 
-    return results;
-}
-
-std::vector<uint64_t> Board::simulateMoves(uint64_t state) {
-    auto movesWithScores = simulateMovesWithScores(state);
-    std::vector<uint64_t> results(4);
-    
-    for (int i = 0; i < 4; ++i) {
-        results[i] = std::get<0>(movesWithScores[i]);
-    }
-    
     return results;
 }
 
@@ -166,20 +166,20 @@ std::vector<std::tuple<Action, uint64_t, int>> Board::getValidMoveActionsWithSco
 std::vector<std::tuple<Action, uint64_t>> Board::getValidMoveActions(uint64_t state) {
     auto movesWithScores = getValidMoveActionsWithScores(state);
     std::vector<std::tuple<Action, uint64_t>> valid;
-    
+
     for (const auto& [action, nextState, score] : movesWithScores) {
         valid.emplace_back(action, nextState);
     }
-    
+
     return valid;
 }
 
 /**
  * @brief Transposes the board (converts rows to columns and vice versa)
- * 
+ *
  * Uses efficient bit manipulation to transpose the 4x4 board by rearranging
  * the 4-bit tiles within the 64-bit state.
- * 
+ *
  * @param state 64-bit board state
  * @return uint64_t Transposed board state
  */

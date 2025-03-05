@@ -8,7 +8,6 @@ This directory contains the C++ implementation of the 2048 game bot, optimized f
   Choose from several player types including:
   - `RandomPlayer`: Makes random moves.
   - `HeuristicPlayer`: Applies a multi-factor heuristic considering empty cells, monotonicity, smoothness, and corner placement.
-  - `MCTSPlayer`: Uses Monte Carlo Tree Search to simulate and evaluate possible moves.
 
 - **Performance Optimizations:**  
   The C++ implementation includes several optimizations:
@@ -246,4 +245,4 @@ The first line is a header, and subsequent lines contain the weight values follo
 
 ---
 
-Return to [Main README](../README.md) 
+Return to [Main README](../README.md)

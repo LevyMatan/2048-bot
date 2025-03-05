@@ -1,19 +1,17 @@
 #include "player.hpp"
 #include "board.hpp"
 
-std::pair<int, uint64_t> RandomPlayer::chooseAction(uint64_t state) {
-    auto validActions = Board::getValidMoveActions(state);
+std::tuple<Action, uint64_t, int> RandomPlayer::chooseAction(uint64_t state) {
+    auto validActions = Board::getValidMoveActionsWithScores(state);
     if (validActions.empty()) {
-        return {-1, state};
+        return {Action::INVALID, state, 0};
     }
-    
+
     std::uniform_int_distribution<> dist(0, static_cast<int>(validActions.size()) - 1);
     int idx = dist(rng);
-    auto [action, nextState] = validActions[idx];
-    
-    return {static_cast<int>(action), nextState};
+    return validActions[idx];
 }
 
 std::string RandomPlayer::getName() const {
     return "Random";
-} 
+}

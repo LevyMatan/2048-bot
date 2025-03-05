@@ -44,7 +44,6 @@ set(MAIN_SOURCES
     src/game.cpp
     src/random_player.cpp
     src/heuristic_player.cpp
-    src/mcts_player.cpp
 )
 
 # Create main executable

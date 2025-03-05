@@ -20,35 +20,27 @@ void Game2048::addRandomTile() {
     board.setState(Board::setTile(board.getState(), row, col, value));
 }
 
-bool Game2048::playMove(int action, uint64_t nextState) {
-    // Get action and next state with score
-    auto validMoves = Board::getValidMoveActionsWithScores(board.getState());
-    if (validMoves.empty()) {
-        return false;
-    }
-
+/**
+ * @brief Executes a move in the game.
+ *
+ * @param action The action to be performed.
+ * @param nextState The state of the board after the action.
+ * @param moveScore The score obtained from the move.
+ * @return true if the move is valid and executed, false otherwise.
+ */
+bool Game2048::playMove(Action action, uint64_t nextState, int moveScore) {
     // Validate the action and next state
-    if (action == -1) {
+    if (Action::INVALID == action) {
         return false;
     }
 
-    // Find the score for this action
-    int moveScore = 0;
-    for (const auto& [moveAction, moveState, moveScoreValue] : validMoves) {
-        if (moveAction == static_cast<Action>(action) && moveState == nextState) {
-            moveScore = moveScoreValue;
-            board.setState(nextState);
-            score += moveScore;
-            moveCount++;
-            
-            // Add a new random tile
-            addRandomTile();
-            return true;
-        }
-    }
+    board.setState(nextState);
+    score += moveScore;
+    moveCount++;
 
-    // If we get here, the action was invalid
-    return false;
+    // Add a new random tile
+    addRandomTile();
+    return true;
 }
 
 void Game2048::reset() {
@@ -59,24 +51,17 @@ void Game2048::reset() {
     addRandomTile();
 }
 
-std::tuple<int, uint64_t, int> Game2048::playGame(std::function<std::pair<int, uint64_t>(uint64_t)> chooseActionFn) {
+std::tuple<int, uint64_t, int> Game2048::playGame(
+    std::function<std::tuple<Action, uint64_t, int>(uint64_t)> chooseActionFn) {
+
     reset();
-    
-    while (true) {
-        auto validMoves = Board::getValidMoveActionsWithScores(board.getState());
-        if (validMoves.empty()) {
-            break;
-        }
-        
-        // Let the provided function choose an action
-        auto [action, nextState] = chooseActionFn(board.getState());
-        
-        // Apply the move
-        if (!playMove(action, nextState)) {
-            break;
-        }
+    bool gameOver = false;
+
+    while (!gameOver) {
+        auto [action, nextState, moveScore] = chooseActionFn(board.getState());
+        gameOver = !playMove(action, nextState, moveScore);
     }
-    
+
     return {score, board.getState(), moveCount};
 }
 
@@ -94,37 +79,37 @@ void Game2048::prettyPrint() const {
             }
         }
     }
-    
+
     // Calculate cell width based on the number of digits in the highest tile
     std::ostringstream ss;
     ss << maxTileValue;
     int cellWidth = static_cast<int>(ss.str().length()) + 2; // +2 for padding
-    
+
     // Ensure cell width is at least 6 for better appearance
     cellWidth = std::max(cellWidth, 6);
-    
+
     // Calculate total board width
     int boardWidth = cellWidth * 4 + 5; // 4 cells + 5 separators
-    
+
     // Print header
     std::cout << std::string(boardWidth, '-') << '\n';
-    
+
     // Center the score and moves information
     std::ostringstream scoreStream;
     scoreStream << "Score: " << score << " | Moves: " << moveCount;
     std::string scoreInfo = scoreStream.str();
     int padding = static_cast<int>((boardWidth - scoreInfo.length()) / 2);
     std::cout << std::string(padding, ' ') << scoreInfo << '\n';
-    
+
     std::cout << std::string(boardWidth, '-') << '\n';
-    
+
     // Print board
     for (int i = 0; i < 4; ++i) {
         std::cout << '|';
         for (int j = 0; j < 4; ++j) {
             int pos = (i * 4 + j) * 4;
             int value = (state >> pos) & 0xF;
-            
+
             // Center the tile value in the cell
             std::string cellContent;
             if (value == 0) {
@@ -134,11 +119,11 @@ void Game2048::prettyPrint() const {
                 tileStream << Board::valueToTile(value);
                 cellContent = tileStream.str();
             }
-            
+
             // Calculate padding for centering
             int leftPadding = static_cast<int>((cellWidth - cellContent.length()) / 2);
             int rightPadding = cellWidth - static_cast<int>(cellContent.length()) - leftPadding;
-            
+
             std::cout << std::string(leftPadding, ' ') << cellContent << std::string(rightPadding, ' ') << '|';
         }
         std::cout << '\n' << std::string(boardWidth, '-') << '\n';

@@ -5,22 +5,20 @@
 #include <string>
 #include <memory>
 #include <random>
+#include "board.hpp"
 
 class Player {
 public:
     virtual ~Player() = default;
-    virtual std::pair<int, uint64_t> chooseAction(uint64_t state) = 0;
+
+    // Return tuple of (action, next state, move score)
+    virtual std::tuple<Action, uint64_t, int> chooseAction(uint64_t state) = 0;
     virtual std::string getName() const = 0;
-    
-    // Default implementation for getMove that uses chooseAction
-    virtual int getMove(uint64_t state) {
-        return chooseAction(state).first;
-    }
 };
 
 class RandomPlayer : public Player {
 public:
-    std::pair<int, uint64_t> chooseAction(uint64_t state) override;
+    std::tuple<Action, uint64_t, int> chooseAction(uint64_t state) override;
     std::string getName() const override;
 
 private:
@@ -31,38 +29,34 @@ private:
 class HeuristicPlayer : public Player {
 public:
     struct Weights {
-        double emptyTiles;    
-        double monotonicity;   
-        double smoothness;     
-        double cornerPlacement;
-        
-        Weights() : emptyTiles(0.05), monotonicity(0.24), 
-                   smoothness(0.33), cornerPlacement(0.38) {}
-                   
-        // Constructor with explicit values
-        Weights(double e, double m, double s, double c)
-            : emptyTiles(e), monotonicity(m), smoothness(s), cornerPlacement(c) {}
+        uint64_t emptyTiles;
+        uint64_t monotonicity;
+        uint64_t smoothness;
+        uint64_t cornerPlacement;
+
+        Weights(uint64_t e = 250, uint64_t m = 250,
+                uint64_t s = 250, uint64_t c = 250);
     };
 
     explicit HeuristicPlayer(const Weights& w = Weights());
-    
+
     // Constructor that loads weights from a file
     explicit HeuristicPlayer(const std::string& weightsFile);
-    
-    std::pair<int, uint64_t> chooseAction(uint64_t state) override;
+
+    std::tuple<Action, uint64_t, int> chooseAction(uint64_t state) override;
     std::string getName() const override;
-    
+
     // Static method to load weights from a file
     static Weights loadWeightsFromFile(const std::string& filename);
 
 private:
     Weights weights;
     std::string customName;
-    
-    double evaluatePosition(uint64_t state) const;
-    double evaluateMonotonicity(const int tileValues[4][4]) const;
-    double evaluateSmoothness(const int tileValues[4][4]) const;
-    double evaluateCornerPlacement(const int tileValues[4][4]) const;
+
+    uint64_t evaluatePosition(uint64_t state) const;
+    uint64_t evaluateMonotonicity(const int tileValues[4][4]) const;
+    uint64_t evaluateSmoothness(const int tileValues[4][4]) const;
+    uint64_t evaluateCornerPlacement(const int tileValues[4][4]) const;
 };
 
 class MCTSNode {
@@ -75,7 +69,7 @@ public:
     bool isChanceNode;
 
     MCTSNode(uint64_t s, MCTSNode* p = nullptr, bool chance = false);
-    
+
     double UCB1(double C = 1.41) const;
 };
 
@@ -83,7 +77,7 @@ class MCTSPlayer : public Player {
 private:
     int simulations;
     std::mt19937 rng;
-    
+
     MCTSNode* select(MCTSNode* node);
     void expand(MCTSNode* node);
     double evaluate(uint64_t state) const;
@@ -93,7 +87,7 @@ private:
 
 public:
     explicit MCTSPlayer(int sims = 2000);
-    std::pair<int, uint64_t> chooseAction(uint64_t state) override;
+    std::tuple<Action, uint64_t, int> chooseAction(uint64_t state) override;
     std::string getName() const override;
 };
 
@@ -101,10 +95,10 @@ public:
 class DQNPlayer : public Player {
 public:
     explicit DQNPlayer(const std::string& model_path);
-    std::pair<int, uint64_t> chooseAction(uint64_t state) override;
+    std::tuple<Action, uint64_t, int> chooseAction(uint64_t state) override;
     std::string getName() const override { return "DQN"; }
 private:
     // This is a placeholder for the DQN model
     // You'll need to integrate with your preferred ML framework
     void* model;  // Replace with actual ML model type
-}; 
+};

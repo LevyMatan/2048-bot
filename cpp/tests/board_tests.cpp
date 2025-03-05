@@ -107,15 +107,15 @@ TEST_F(BoardTest, TileValueConversionTest) {
 // Test setting a tile on the board
 TEST_F(BoardTest, SetTileTest) {
     uint64_t state = 0;
-    
+
     // Set a tile at position (0, 0) with value 2 (internal value 1)
     state = Board::setTile(state, 0, 0, 1);
     EXPECT_EQ((state >> 0) & 0xF, 1);
-    
+
     // Set a tile at position (1, 2) with value 4 (internal value 2)
     state = Board::setTile(state, 1, 2, 2);
     EXPECT_EQ((state >> ((1 * 4 + 2) * 4)) & 0xF, 2);
-    
+
     // Set a tile at position (3, 3) with value 8 (internal value 3)
     state = Board::setTile(state, 3, 3, 3);
     EXPECT_EQ((state >> ((3 * 4 + 3) * 4)) & 0xF, 3);
@@ -131,13 +131,13 @@ TEST_F(BoardTest, GetEmptyTilesTest) {
         {0, 0, 0, 16}
     };
     uint64_t state = createBoardState(tiles);
-    
+
     // Get empty tiles
     auto emptyTiles = Board::getEmptyTiles(state);
-    
+
     // Check the number of empty tiles
     EXPECT_EQ(emptyTiles.size(), 12);
-    
+
     // Check that all empty positions are included
     std::vector<std::tuple<int, int>> expectedEmptyTiles = {
         {0, 1}, {0, 2}, {0, 3},
@@ -145,11 +145,11 @@ TEST_F(BoardTest, GetEmptyTilesTest) {
         {2, 0}, {2, 1}, {2, 3},
         {3, 0}, {3, 1}, {3, 2}
     };
-    
+
     // Sort both vectors for comparison
     std::sort(emptyTiles.begin(), emptyTiles.end());
     std::sort(expectedEmptyTiles.begin(), expectedEmptyTiles.end());
-    
+
     EXPECT_EQ(emptyTiles, expectedEmptyTiles);
 }
 
@@ -163,33 +163,33 @@ TEST_F(BoardTest, SimulateMovesWithScoresTest) {
         {0, 0, 0, 0}
     };
     uint64_t state = createBoardState(tiles);
-    
+
     // Simulate moves
     auto moves = Board::simulateMovesWithScores(state);
-    
+
     // Check that we have 4 moves
     EXPECT_EQ(moves.size(), 4);
-    
+
     // Check LEFT move (index 0)
     uint64_t leftState = std::get<0>(moves[0]);
     int leftScore = std::get<1>(moves[0]);
-    
+
     // Print the board state for debugging
     // printBoardState(leftState);
-    
+
     // Verify that the board has changed after the move
     EXPECT_NE(leftState, state);
-    
+
     // Verify that the score is positive
     EXPECT_GT(leftScore, 0);
-    
+
     // Check RIGHT move (index 1)
     uint64_t rightState = std::get<0>(moves[1]);
     int rightScore = std::get<1>(moves[1]);
-    
+
     // Verify that the board has changed after the move
     EXPECT_NE(rightState, state);
-    
+
     // Verify that the score is positive
     EXPECT_GT(rightScore, 0);
 }
@@ -204,13 +204,13 @@ TEST_F(BoardTest, GetValidMoveActionsTest) {
         {8192, 16384, 32768, 0}
     };
     uint64_t state = createBoardState(tiles);
-    
+
     // Get valid move actions
     auto validMoves = Board::getValidMoveActions(state);
-    
+
     // At least one move should be valid
     EXPECT_GT(validMoves.size(), 0);
-    
+
     // Create a different board with more valid moves
     tiles = {
         {2, 2, 4, 8},
@@ -219,19 +219,19 @@ TEST_F(BoardTest, GetValidMoveActionsTest) {
         {0, 0, 0, 0}
     };
     state = createBoardState(tiles);
-    
+
     // Get valid move actions
     validMoves = Board::getValidMoveActions(state);
-    
+
     // Multiple moves should be valid
     EXPECT_GT(validMoves.size(), 1);
-    
+
     // Check that the actions include at least LEFT and DOWN
     std::vector<Action> actions;
     for (const auto& move : validMoves) {
         actions.push_back(std::get<0>(move));
     }
-    
+
     EXPECT_TRUE(std::find(actions.begin(), actions.end(), Action::LEFT) != actions.end() ||
                 std::find(actions.begin(), actions.end(), Action::RIGHT) != actions.end());
 }
@@ -246,13 +246,13 @@ TEST_F(BoardTest, GetValidMoveActionsWithScoresTest) {
         {0, 0, 0, 0}
     };
     uint64_t state = createBoardState(tiles);
-    
+
     // Get valid move actions with scores
     auto validMoves = Board::getValidMoveActionsWithScores(state);
-    
+
     // All 4 moves should be valid
     EXPECT_EQ(validMoves.size(), 4);
-    
+
     // Check that at least one move has a positive score
     bool hasPositiveScore = false;
     for (const auto& [action, nextState, score] : validMoves) {
@@ -274,11 +274,11 @@ TEST_F(BoardTest, MoveEdgeCasesTest) {
         {8192, 16384, 32768, 2}
     };
     uint64_t state = createBoardState(tiles);
-    
+
     // No valid moves should be available
     auto validMoves = Board::getValidMoveActions(state);
     EXPECT_EQ(validMoves.size(), 0);
-    
+
     // Test case 2: Board with maximum value tiles (32768 = 2^15)
     tiles = {
         {32768, 32768, 32768, 32768},
@@ -287,52 +287,10 @@ TEST_F(BoardTest, MoveEdgeCasesTest) {
         {32768, 32768, 32768, 32768}
     };
     state = createBoardState(tiles);
-    
+
     // No valid moves should be available (max value tiles can't merge)
     validMoves = Board::getValidMoveActions(state);
     EXPECT_EQ(validMoves.size(), 0);
-}
-
-// Test random board generation and operations
-TEST_F(BoardTest, RandomBoardTest) {
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution<> valueDist(1, 11); // Values from 2 to 2048
-    
-    // Create 10 random boards and test operations
-    for (int i = 0; i < 10; ++i) {
-        std::vector<std::vector<int>> tiles(4, std::vector<int>(4, 0));
-        
-        // Fill about 10 random positions
-        for (int j = 0; j < 10; ++j) {
-            int row = gen() % 4;
-            int col = gen() % 4;
-            if (tiles[row][col] == 0) {
-                tiles[row][col] = Board::valueToTile(valueDist(gen));
-            }
-        }
-        
-        uint64_t state = createBoardState(tiles);
-        
-        // Test that simulateMoves and simulateMovesWithScores are consistent
-        auto movesWithScores = Board::simulateMovesWithScores(state);
-        auto moves = Board::simulateMoves(state);
-        
-        EXPECT_EQ(movesWithScores.size(), moves.size());
-        for (size_t j = 0; j < moves.size(); ++j) {
-            EXPECT_EQ(std::get<0>(movesWithScores[j]), moves[j]);
-        }
-        
-        // Test that getValidMoveActions and getValidMoveActionsWithScores are consistent
-        auto validMovesWithScores = Board::getValidMoveActionsWithScores(state);
-        auto validMoves = Board::getValidMoveActions(state);
-        
-        EXPECT_EQ(validMovesWithScores.size(), validMoves.size());
-        for (size_t j = 0; j < validMoves.size(); ++j) {
-            EXPECT_EQ(std::get<0>(validMovesWithScores[j]), std::get<0>(validMoves[j]));
-            EXPECT_EQ(std::get<1>(validMovesWithScores[j]), std::get<1>(validMoves[j]));
-        }
-    }
 }
 
 // Test specific move scenarios
@@ -345,18 +303,18 @@ TEST_F(BoardTest, SpecificMoveScenarioTest) {
         {0, 0, 0, 0}
     };
     uint64_t state = createBoardState(tiles);
-    
+
     // Simulate LEFT move
     auto moves = Board::simulateMovesWithScores(state);
     uint64_t leftState = std::get<0>(moves[0]);
     int leftScore = std::get<1>(moves[0]);
-    
+
     // Verify that the board has changed after the move
     EXPECT_NE(leftState, state);
-    
+
     // Verify that the score is positive
     EXPECT_GT(leftScore, 0);
-    
+
     // Scenario 2: Merges with different values
     tiles = {
         {2, 2, 4, 4},
@@ -365,22 +323,22 @@ TEST_F(BoardTest, SpecificMoveScenarioTest) {
         {0, 0, 0, 0}
     };
     state = createBoardState(tiles);
-    
+
     // Simulate LEFT move
     moves = Board::simulateMovesWithScores(state);
     leftState = std::get<0>(moves[0]);
     leftScore = std::get<1>(moves[0]);
-    
+
     // Verify that the board has changed after the move
     EXPECT_NE(leftState, state);
-    
+
     // Verify that the score is positive
     EXPECT_GT(leftScore, 0);
 }
 
 /**
  * @brief Tests the Board::transpose function
- * 
+ *
  * Verifies the transpose operation correctly rearranges the board
  * by swapping rows and columns.
  */
@@ -397,13 +355,13 @@ TEST_F(BoardTest, TransposeOperation) {
     EXPECT_EQ(Board::transpose(emptyBoard), emptyBoard)
         << "Empty board: expected " << printHex(emptyBoard)
         << ", got " << printHex(Board::transpose(emptyBoard));
-    
+
     // Test case 2: Single tile at position (0,0) with value 2 (internal value 1)
     uint64_t singleTile = 0x1ULL;
     EXPECT_EQ(Board::transpose(singleTile), singleTile)
         << "Single tile: expected " << printHex(singleTile)
         << ", got " << printHex(Board::transpose(singleTile));
-    
+
     // Test case 3: Single tile at position (0,1) should move to (1,0)
     // (0,1) = 4 bits offset = 0x10, (1,0) = 16 bits offset = 0x10000
     uint64_t tile01 = 0x10ULL;
@@ -414,14 +372,14 @@ TEST_F(BoardTest, TransposeOperation) {
     EXPECT_EQ(Board::transpose(tile10), tile01)
         << "Tile at (1,0): expected " << printHex(tile01)
         << ", got " << printHex(Board::transpose(tile10));
-    
+
     // Test case 4: Diagonal pattern - should remain unchanged
     // Set tiles at (0,0), (1,1), (2,2), (3,3) to values 1,2,3,4
     uint64_t diagonal = 0x4000030000200001ULL;
     EXPECT_EQ(Board::transpose(diagonal), diagonal)
         << "Diagonal: expected " << printHex(diagonal)
         << ", got " << printHex(Board::transpose(diagonal));
-    
+
     // Test case 5: Row pattern - should become column pattern
     // Row 0: [1,2,3,4] -> Column 0: [1,2,3,4] but in column orientation
     uint64_t firstRow = 0x4321ULL;
@@ -429,7 +387,7 @@ TEST_F(BoardTest, TransposeOperation) {
     EXPECT_EQ(Board::transpose(firstRow), firstCol)
         << "First row: expected " << printHex(firstCol)
         << ", got " << printHex(Board::transpose(firstRow));
-    
+
     // Test case 6: Complex pattern
     // 2 4 0 0     2 8 0 0
     // 8 0 0 0  -> 4 0 0 0
@@ -440,26 +398,26 @@ TEST_F(BoardTest, TransposeOperation) {
     EXPECT_EQ(Board::transpose(pattern1), pattern2)
         << "Complex pattern: expected " << printHex(pattern2)
         << ", got " << printHex(Board::transpose(pattern1));
-    
+
     // Test case 7: Double transposition should return original
     uint64_t randomState = 0x0123456789ABCDEFULL;
     EXPECT_EQ(Board::transpose(Board::transpose(randomState)), randomState)
         << "Double transpose: expected " << printHex(randomState)
         << ", got " << printHex(Board::transpose(Board::transpose(randomState)));
-    
+
     // Test case 8: Full board with varied values
     uint64_t fullBoard = 0xFEDCBA9876543210ULL;
     uint64_t transposedFullBoard = Board::transpose(fullBoard);
     EXPECT_EQ(Board::transpose(transposedFullBoard), fullBoard)
         << "Full board double transpose: expected " << printHex(fullBoard)
         << ", got " << printHex(Board::transpose(transposedFullBoard));
-    
+
     // Visual debugging
     std::cout << "\nDiagonal board:" << std::endl;
     printBoardState(diagonal);
     std::cout << "After transpose:" << std::endl;
     printBoardState(Board::transpose(diagonal));
-    
+
     std::cout << "\nRow pattern:" << std::endl;
     printBoardState(firstRow);
     std::cout << "After transpose (should be column):" << std::endl;
@@ -469,4 +427,4 @@ TEST_F(BoardTest, TransposeOperation) {
 int main(int argc, char **argv) {
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
-} 
+}

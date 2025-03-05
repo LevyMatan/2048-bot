@@ -15,35 +15,36 @@ static int getTileValue(uint64_t state, int row, int col) {
     return (state >> shift) & 0xF;
 }
 
-std::pair<int, uint64_t> HeuristicPlayer::chooseAction(uint64_t state) {
-    auto validActions = Board::getValidMoveActions(state);
+std::tuple<Action, uint64_t, int> HeuristicPlayer::chooseAction(uint64_t state) {
+    auto validActions = Board::getValidMoveActionsWithScores(state);
     if (validActions.empty()) {
-        return {-1, state};
+        return {Action::INVALID, state, 0};
     }
 
-    int bestAction = -1;
-    double bestScore = -std::numeric_limits<double>::infinity();
+    Action bestAction = Action::INVALID;
+    uint64_t bestScore = 0;
     uint64_t bestState = state;
+    int bestMoveScore = 0;
 
-    for (const auto& [action, nextState] : validActions) {
-        double score = evaluatePosition(nextState);
+    for (const auto& [action, nextState, moveScore] : validActions) {
+        uint64_t score = evaluatePosition(nextState) + moveScore;
         if (score > bestScore) {
             bestScore = score;
-            bestAction = static_cast<int>(action);
+            bestAction = action;
             bestState = nextState;
+            bestMoveScore = moveScore;
         }
     }
 
-    return {bestAction, bestState};
+    return {bestAction, bestState, bestMoveScore};
 }
 
-double HeuristicPlayer::evaluatePosition(uint64_t state) const {
+uint64_t HeuristicPlayer::evaluatePosition(uint64_t state) const {
     auto validActions = Board::getValidMoveActions(state);
     if (validActions.empty()) {
-        return -std::numeric_limits<double>::infinity();
+        return 0;
     }
 
-    // Cache tile values to avoid repeated bit operations
     int tileValues[4][4];
     for (int row = 0; row < 4; ++row) {
         for (int col = 0; col < 4; ++col) {
@@ -51,107 +52,101 @@ double HeuristicPlayer::evaluatePosition(uint64_t state) const {
         }
     }
 
-    double score = 0.0;
-    score += weights.emptyTiles * Board::getEmptyTileCount(state);
+    uint64_t score = 0;
+    score += weights.emptyTiles * Board::getEmptyTileCount(state) * 62; // Scale to [0-1000]
     score += weights.monotonicity * evaluateMonotonicity(tileValues);
     score += weights.smoothness * evaluateSmoothness(tileValues);
     score += weights.cornerPlacement * evaluateCornerPlacement(tileValues);
     return score;
 }
 
-double HeuristicPlayer::evaluateMonotonicity(const int tileValues[4][4]) const {
-    double score = 0.0;
-    
-    // Check rows
+uint64_t HeuristicPlayer::evaluateMonotonicity(const int tileValues[4][4]) const {
+    uint64_t score = 0;
+
     for (int row = 0; row < 4; ++row) {
         bool increasing = true;
         bool decreasing = true;
         int prev = tileValues[row][0];
-        
+
         for (int col = 1; col < 4; ++col) {
             int curr = tileValues[row][col];
             if (curr < prev) increasing = false;
             if (curr > prev) decreasing = false;
             prev = curr;
         }
-        score += increasing || decreasing ? 1.0 : 0.0;
+        score += (increasing || decreasing) ? 125 : 0; // 1000/8 per line
     }
-    
-    // Check columns
+
     for (int col = 0; col < 4; ++col) {
         bool increasing = true;
         bool decreasing = true;
         int prev = tileValues[0][col];
-        
+
         for (int row = 1; row < 4; ++row) {
             int curr = tileValues[row][col];
             if (curr < prev) increasing = false;
             if (curr > prev) decreasing = false;
             prev = curr;
         }
-        score += increasing || decreasing ? 1.0 : 0.0;
+        score += (increasing || decreasing) ? 125 : 0;
     }
-    
-    return score / 8.0;  // Normalize to [0, 1]
+
+    return score;
 }
 
-double HeuristicPlayer::evaluateSmoothness(const int tileValues[4][4]) const {
-    double smoothness = 0.0;
-    int totalTiles = 0;
-    
-    // Check horizontal smoothness
+uint64_t HeuristicPlayer::evaluateSmoothness(const int tileValues[4][4]) const {
+    uint64_t score = 0;
+    uint64_t totalPairs = 0;
+
     for (int row = 0; row < 4; ++row) {
         for (int col = 0; col < 3; ++col) {
             int curr = tileValues[row][col];
             int next = tileValues[row][col + 1];
             if (curr > 0 && next > 0) {
-                smoothness += 1.0 / (1.0 + std::abs(curr - next));
-                totalTiles++;
+                score += (curr == next) ? 1000 : 500 / (1 + abs(curr - next));
+                totalPairs++;
             }
         }
     }
-    
-    // Check vertical smoothness
+
     for (int col = 0; col < 4; ++col) {
         for (int row = 0; row < 3; ++row) {
             int curr = tileValues[row][col];
             int next = tileValues[row + 1][col];
             if (curr > 0 && next > 0) {
-                smoothness += 1.0 / (1.0 + std::abs(curr - next));
-                totalTiles++;
+                score += (curr == next) ? 1000 : 500 / (1 + abs(curr - next));
+                totalPairs++;
             }
         }
     }
-    
-    return totalTiles > 0 ? smoothness / totalTiles : 0.0;
+
+    return totalPairs > 0 ? score / totalPairs : 0;
 }
 
-double HeuristicPlayer::evaluateCornerPlacement(const int tileValues[4][4]) const {
-    double score = 0.0;
+uint64_t HeuristicPlayer::evaluateCornerPlacement(const int tileValues[4][4]) const {
+    uint64_t score = 0;
     int maxTile = 0;
-    
-    // Find the maximum tile
+
     for (int row = 0; row < 4; ++row) {
         for (int col = 0; col < 4; ++col) {
             maxTile = std::max(maxTile, tileValues[row][col]);
         }
     }
-    
-    // Check corners
+
     int corners[] = {
         tileValues[0][0],
         tileValues[0][3],
         tileValues[3][0],
         tileValues[3][3]
     };
-    
+
     for (int corner : corners) {
         if (corner == maxTile) {
-            score += 1.0;
+            score += 250; // 1000/4 per corner
         }
     }
-    
-    return score / 4.0;  // Normalize to [0, 1]
+
+    return score;
 }
 
 HeuristicPlayer::HeuristicPlayer(const Weights& w) : weights(w), customName("Heuristic") {}
@@ -172,17 +167,17 @@ HeuristicPlayer::Weights HeuristicPlayer::loadWeightsFromFile(const std::string&
     if (!file.is_open()) {
         throw std::runtime_error("Could not open weights file: " + filename);
     }
-    
+
     std::string line;
     // Skip header line if it exists
     std::getline(file, line);
-    
+
     // Read the first data line (best weights)
     if (std::getline(file, line)) {
         std::stringstream ss(line);
         std::string token;
         std::vector<double> values;
-        
+
         // Parse CSV values
         while (std::getline(ss, token, ',')) {
             try {
@@ -191,13 +186,13 @@ HeuristicPlayer::Weights HeuristicPlayer::loadWeightsFromFile(const std::string&
                 // Skip non-numeric values
             }
         }
-        
+
         // Check if we have enough values
         if (values.size() >= 4) {
             return Weights(values[0], values[1], values[2], values[3]);
         }
     }
-    
+
     throw std::runtime_error("Invalid format in weights file: " + filename);
 }
 
