@@ -4,7 +4,7 @@ cmake_minimum_required(VERSION 3.10)
 # Enable testing first
 enable_testing()
 
-# Find Google Test or fetch it if not found
+# Configure Google Test
 find_package(GTest QUIET)
 if(NOT GTest_FOUND)
     include(FetchContent)
@@ -14,13 +14,17 @@ if(NOT GTest_FOUND)
         GIT_TAG release-1.12.1
     )
     FetchContent_MakeAvailable(googletest)
+    include(GoogleTest)
 endif()
 
 # Board tests
-add_executable(board_tests board_tests.cpp ../src/board.cpp)
-target_include_directories(board_tests PRIVATE ../src)
+add_executable(board_tests
+    board_tests.cpp
+    ../src/board.cpp
+)
+target_include_directories(board_tests PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(board_tests PRIVATE GTest::gtest GTest::gtest_main)
-add_test(NAME board_tests COMMAND board_tests)
+gtest_discover_tests(board_tests)
 
 # Game tests
 add_executable(game_tests
@@ -28,11 +32,6 @@ add_executable(game_tests
     ../src/board.cpp
     ../src/game.cpp
 )
-target_include_directories(game_tests PRIVATE ../src)
+target_include_directories(game_tests PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(game_tests PRIVATE GTest::gtest GTest::gtest_main)
-add_test(NAME game_tests COMMAND game_tests)
-
-# Enable test discovery
-include(GoogleTest)
-gtest_discover_tests(board_tests)
 gtest_discover_tests(game_tests)

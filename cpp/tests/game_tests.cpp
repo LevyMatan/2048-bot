@@ -9,24 +9,23 @@ class MockPlayer : public Player {
 public:
     MockPlayer(int fixedAction) : fixedAction_(fixedAction) {}
 
-    std::pair<Action, uint64_t> chooseAction(uint64_t state) override {
+    std::tuple<Action, uint64_t, int> chooseAction(uint64_t state) override {
         // For testing purposes, we'll simulate a simple move
-        // In a real scenario, we would use Board::getValidMoveActions
-        auto validMoves = Board::getValidMoveActions(state);
+        auto validMoves = Board::getValidMoveActionsWithScores(state);
         if (validMoves.empty()) {
-            return {-1, state};
+            return {Action::INVALID, state, 0};
         }
 
         // Find the action that matches our fixed action, or use the first valid move
-        for (const auto& [action, nextState] : validMoves) {
-            if (static_cast<int>(action) == fixedAction_) {
-                return {fixedAction_, nextState};
+        for (const auto& [action, nextState, moveScore] : validMoves) {
+            if (action == static_cast<Action>(fixedAction_)) {
+                return {action, nextState, moveScore};
             }
         }
 
         // If our fixed action isn't valid, use the first valid move
-        auto [action, nextState] = validMoves[0];
-        return {static_cast<int>(action), nextState};
+        auto [action, nextState, moveScore] = validMoves[0];
+        return {action, nextState, moveScore};
     }
 
     std::string getName() const override {
@@ -57,8 +56,8 @@ protected:
 
     // Helper function to play a move using the mock player
     bool playMoveWithMockPlayer() {
-        auto [action, nextState] = mockPlayer->chooseAction(game->getState());
-        return game->playMove(action, nextState);
+        auto [action, nextState, moveScore] = mockPlayer->chooseAction(game->getState());
+        return game->playMove(action, nextState, moveScore);
     }
 };
 

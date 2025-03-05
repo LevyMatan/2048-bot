@@ -78,20 +78,4 @@ endif()
 # Enable testing
 include(GoogleTest)
 
-# Check if tests directory exists and include it
-if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/tests/CMakeLists.txt")
-    add_subdirectory(tests)
-else()
-    # Add test executables directly if tests/CMakeLists.txt doesn't exist
-    add_executable(board_tests tests/board_tests.cpp src/board.cpp)
-    target_include_directories(board_tests PRIVATE src)
-    target_link_libraries(board_tests GTest::gtest_main)
-
-    add_executable(game_tests tests/game_tests.cpp src/game.cpp src/board.cpp)
-    target_include_directories(game_tests PRIVATE src)
-    target_link_libraries(game_tests GTest::gtest_main)
-
-    # Discover tests
-    gtest_discover_tests(board_tests)
-    gtest_discover_tests(game_tests)
-endif()
+add_subdirectory(tests)
