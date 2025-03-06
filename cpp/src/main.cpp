@@ -83,21 +83,23 @@ void runGamesParallel(int startIdx, int endIdx, std::unique_ptr<Player>& player,
 }
 
 void printUsage(const char* programName) {
-    std::cout << "Usage: " << programName << " [player_type] [num_games] [options]\n"
-              << "Available players:\n"
-              << "  Random     - Makes random valid moves\n"
-              << "  Heuristic  - Uses heuristic evaluation\n"
+    std::cout << "Usage: " << programName << " <player_type> [options] [num_games]\n"
+              << "Player types:\n"
+              << "  Random    - Plays randomly\n"
+              << "  Heuristic - Uses a heuristic evaluation\n"
               << "              Optional: provide a weights file as third argument\n"
               << "  Expectimax - Uses expectimax search\n"
               << "              Options:\n"
               << "              -d <depth>     Search depth (default: 3)\n"
               << "              -c <coverage>  Chance coverage (default: 2)\n"
               << "              -t <time>      Time limit in ms (default: 100)\n"
-              << "              -a             Enable adaptive depth\n";
+              << "              -a             Enable adaptive depth\n"
+              << "              -e <eval>      Evaluation function (default, monotonic, corner)\n";
 }
 
 std::unique_ptr<Player> createExpectimaxPlayer(int argc, char* argv[], int& numGames) {
     ExpectimaxPlayer::Config config;
+    std::string evalType = "default"; // Default evaluation function
 
     // Start from 2 because argv[1] is the player type
     for (int i = 2; i < argc; i++) {
@@ -110,6 +112,8 @@ std::unique_ptr<Player> createExpectimaxPlayer(int argc, char* argv[], int& numG
             config.timeLimit = std::stoi(argv[++i]) / 1000.0;
         } else if (arg == "-a") {
             config.adaptiveDepth = true;
+        } else if (arg == "-e" && i + 1 < argc) {
+            evalType = argv[++i];
         } else if (std::isdigit(arg[0])) {
             // This is the number of games
             numGames = std::stoi(arg);
@@ -120,9 +124,18 @@ std::unique_ptr<Player> createExpectimaxPlayer(int argc, char* argv[], int& numG
               << "  Depth: " << config.depth << "\n"
               << "  Chance Coverage: " << config.chanceCovering << "\n"
               << "  Time Limit: " << (config.timeLimit * 1000) << "ms\n"
-              << "  Adaptive Depth: " << (config.adaptiveDepth ? "Yes" : "No") << "\n";
-
-    return std::make_unique<ExpectimaxPlayer>(config);
+              << "  Adaptive Depth: " << (config.adaptiveDepth ? "Yes" : "No") << "\n"
+              << "  Evaluation Function: " << evalType << "\n";
+    
+    // Create the player with the appropriate evaluation function
+    if (evalType == "monotonic") {
+        return std::make_unique<ExpectimaxPlayer>(config, ExpectimaxPlayer::monotonicEvaluation);
+    } else if (evalType == "corner") {
+        return std::make_unique<ExpectimaxPlayer>(config, ExpectimaxPlayer::cornerEvaluation);
+    } else {
+        // Default to the default evaluation
+        return std::make_unique<ExpectimaxPlayer>(config);
+    }
 }
 
 int main(int argc, char* argv[]) {
