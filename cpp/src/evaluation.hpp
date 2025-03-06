@@ -52,11 +52,14 @@ std::vector<std::string> getAvailableEvaluationNames();
 std::string getEvalParamsDetails(const EvalParams& params, bool formatted = true);
 
 // Component for building composite evaluations
+using Weight = uint64_t;
+using BoardValue = uint64_t;
+
 struct EvaluationComponent {
     SimpleEvalFunc function;
-    uint64_t weight;
+    Weight weight;
     std::string name;
-    
+
     EvaluationComponent(SimpleEvalFunc f, uint64_t w, std::string n)
         : function(f), weight(w), name(n) {}
 };
@@ -65,26 +68,39 @@ struct EvaluationComponent {
 class CompositeEvaluator {
 public:
     CompositeEvaluator(EvalParams params);
-    
+
     // Add a component with weight
     void addComponent(SimpleEvalFunc func, uint64_t weight, const std::string& name);
-    
+
     // Evaluate a state using all components
     uint64_t evaluate(uint64_t state) const;
-    
+
     // Get/set component weights
     void setWeight(const std::string& name, uint64_t weight);
     uint64_t getWeight(const std::string& name) const;
-    
+
     // Get parameters as a map
     EvalParams getParams() const;
-    
+
     // Set weights from a parameter map
     void setParams(const EvalParams& params);
-    
+
 private:
     std::vector<EvaluationComponent> components;
     std::unordered_map<std::string, size_t> componentIndices;
 };
 
-} // namespace Evaluation 
+static constexpr size_t BOARD_SIZE = 4;
+static constexpr uint64_t MIN_WEIGHT = 0;
+static constexpr uint64_t MAX_WEIGHT = UINT64_MAX;
+
+// Add debugging utilities:
+struct EvaluationBreakdown {
+    std::string componentName;
+    uint64_t rawScore;
+    uint64_t weightedScore;
+};
+
+std::vector<EvaluationBreakdown> getDetailedEvaluation(uint64_t state);
+
+} // namespace Evaluation
