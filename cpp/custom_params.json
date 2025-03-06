@@ -1,3 +1,4 @@
 {
-  "emptyTiles": 400
+  "emptyTiles": 400,
+  "cornerValue": 500,
 } 

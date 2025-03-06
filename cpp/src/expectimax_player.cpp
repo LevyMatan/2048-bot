@@ -1,8 +1,10 @@
 #include "expectimax_player.hpp"
+#include "board.hpp"
 #include <chrono>
 #include <algorithm>
 #include <limits>
 #include <random>
+#include <iostream>
 
 ExpectimaxPlayer::ExpectimaxPlayer(const Config& cfg)
     : config(cfg),
@@ -59,9 +61,10 @@ std::tuple<Action, uint64_t, int> ExpectimaxPlayer::chooseAction(uint64_t state)
         return {Action::INVALID, state, 0};
     }
 
-    Action bestAction = Action::INVALID;
-    uint64_t bestState = state;
-    int bestScore = 0;
+    // Initialize best move with the first valid move to ensure we always have something to return
+    Action bestAction = std::get<0>(validMoves[0]);
+    uint64_t bestState = std::get<1>(validMoves[0]);
+    int bestScore = std::get<2>(validMoves[0]);
     uint64_t bestValue = 0;
 
     for (const auto& [action, newState, score] : validMoves) {
@@ -75,6 +78,10 @@ std::tuple<Action, uint64_t, int> ExpectimaxPlayer::chooseAction(uint64_t state)
         }
         
         if (shouldTimeOut()) {
+            // Log timeout for debugging
+            std::cerr << "Expectimax search timed out after " 
+                     << std::chrono::duration<double>(std::chrono::steady_clock::now() - startTime).count() 
+                     << " seconds" << std::endl;
             break;
         }
     }
