@@ -13,6 +13,7 @@
 #include "player.hpp"
 #include "expectimax_player.hpp"
 #include "board.hpp"
+#include "evaluation.hpp"
 
 // Performance test function
 void runPerformanceTest() {
@@ -87,19 +88,39 @@ void printUsage(const char* programName) {
               << "Player types:\n"
               << "  Random    - Plays randomly\n"
               << "  Heuristic - Uses a heuristic evaluation\n"
-              << "              Optional: provide a weights file as third argument\n"
+              << "              Options:\n"
+              << "              -e <eval>      Use named evaluation function\n"
+              << "              -list-evals    List available evaluation functions\n"
               << "  Expectimax - Uses expectimax search\n"
               << "              Options:\n"
               << "              -d <depth>     Search depth (default: 3)\n"
               << "              -c <coverage>  Chance coverage (default: 2)\n"
               << "              -t <time>      Time limit in ms (default: 100)\n"
               << "              -a             Enable adaptive depth\n"
-              << "              -e <eval>      Evaluation function (default, monotonic, corner)\n";
+              << "              -e <eval>      Evaluation function (default: combined)\n"
+              << "              -list-evals    List available evaluation functions\n"
+              << "\n"
+              << "Available evaluation functions: corner, standard, merge, pattern, balanced\n"
+              << "\n"
+              << "Examples:\n"
+              << "  " << programName << " Heuristic 10\n"
+              << "  " << programName << " Heuristic -e corner 10\n" 
+              << "  " << programName << " Expectimax -d 4 -e pattern 5\n";
+}
+
+// Helper function to print available evaluation functions
+void printAvailableEvaluations() {
+    std::cout << "Available evaluation functions:\n";
+    std::cout << "  - corner\n";
+    std::cout << "  - standard\n";
+    std::cout << "  - merge\n";
+    std::cout << "  - pattern\n";
+    std::cout << "  - balanced\n";
+    std::cout << std::endl;
 }
 
 std::unique_ptr<Player> createExpectimaxPlayer(int argc, char* argv[], int& numGames) {
     ExpectimaxPlayer::Config config;
-    std::string evalType = "default"; // Default evaluation function
 
     // Start from 2 because argv[1] is the player type
     for (int i = 2; i < argc; i++) {
@@ -113,7 +134,9 @@ std::unique_ptr<Player> createExpectimaxPlayer(int argc, char* argv[], int& numG
         } else if (arg == "-a") {
             config.adaptiveDepth = true;
         } else if (arg == "-e" && i + 1 < argc) {
-            evalType = argv[++i];
+            config.evalName = argv[++i];
+        } else if (arg == "-list-evals") {
+            printAvailableEvaluations();
         } else if (std::isdigit(arg[0])) {
             // This is the number of games
             numGames = std::stoi(arg);
@@ -125,17 +148,41 @@ std::unique_ptr<Player> createExpectimaxPlayer(int argc, char* argv[], int& numG
               << "  Chance Coverage: " << config.chanceCovering << "\n"
               << "  Time Limit: " << (config.timeLimit * 1000) << "ms\n"
               << "  Adaptive Depth: " << (config.adaptiveDepth ? "Yes" : "No") << "\n"
-              << "  Evaluation Function: " << evalType << "\n";
+              << "  Evaluation Function: " << config.evalName << "\n";
     
-    // Create the player with the appropriate evaluation function
-    if (evalType == "monotonic") {
-        return std::make_unique<ExpectimaxPlayer>(config, ExpectimaxPlayer::monotonicEvaluation);
-    } else if (evalType == "corner") {
-        return std::make_unique<ExpectimaxPlayer>(config, ExpectimaxPlayer::cornerEvaluation);
-    } else {
-        // Default to the default evaluation
-        return std::make_unique<ExpectimaxPlayer>(config);
+    // Create a custom evaluation function based on the selected evaluation name
+    Evaluation::EvaluationFunction evalFn;
+    Evaluation::EvalParams params = Evaluation::getPresetParams(config.evalName);
+
+    Evaluation::CompositeEvaluator evaluator(params);
+    evalFn = [evaluator](uint64_t state) {
+        return evaluator.evaluate(state);
+    };
+    
+    // Create the player with the configured evaluation function
+    return std::make_unique<ExpectimaxPlayer>(config, evalFn);
+}
+
+std::unique_ptr<Player> createHeuristicPlayer(int argc, char* argv[], int& numGames) {
+    std::string evalName = "standard"; // Default evaluation function
+    Evaluation::EvalParams params;
+
+    // Start from 2 because argv[1] is the player type
+    for (int i = 2; i < argc; i++) {
+        std::string arg = argv[i];
+        if (arg == "-e" && i + 1 < argc) {
+            evalName = argv[++i];
+            params = Evaluation::getPresetParams(evalName);
+        } else if (arg == "-list-evals") {
+            printAvailableEvaluations();
+        } else if (std::isdigit(arg[0])) {
+            // This is the number of games
+            numGames = std::stoi(arg);
+        }
     }
+
+    std::cout << "Heuristic Player using evaluation function: " << evalName << std::endl;
+    return std::make_unique<HeuristicPlayer>(params);
 }
 
 int main(int argc, char* argv[]) {
@@ -153,12 +200,7 @@ int main(int argc, char* argv[]) {
             player = std::make_unique<RandomPlayer>();
             if (argc >= 3) numGames = std::stoi(argv[2]);
         } else if (playerType == "Heuristic") {
-            if (argc >= 4 && argv[3][0] != '-') {
-                player = std::make_unique<HeuristicPlayer>(argv[3]);
-            } else {
-                player = std::make_unique<HeuristicPlayer>();
-            }
-            if (argc >= 3) numGames = std::stoi(argv[2]);
+            player = createHeuristicPlayer(argc, argv, numGames);
         } else if (playerType == "Expectimax") {
             player = createExpectimaxPlayer(argc, argv, numGames);
         } else {
@@ -166,8 +208,7 @@ int main(int argc, char* argv[]) {
             return 1;
         }
     } catch (const std::exception& e) {
-        std::cerr << "Error: " << e.what() << "\n";
-        printUsage(argv[0]);
+        std::cerr << "Error: " << e.what() << std::endl;
         return 1;
     }
 

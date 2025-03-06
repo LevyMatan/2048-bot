@@ -1,13 +1,13 @@
 // board.cpp
 #include "board.hpp"
 #include <algorithm>
+#include <array>
 
 bool Board::lookupInitialized = false;
-uint16_t Board::leftMoves[1 << 16];
-uint16_t Board::rightMoves[1 << 16];
-int Board::leftScores[1 << 16];
-int Board::rightScores[1 << 16];
-int Board::emptyTileCounts[1 << 16];
+std::array<uint16_t, 1 << 16> Board::leftMoves;
+std::array<uint16_t, 1 << 16> Board::rightMoves;
+std::array<int, 1 << 16> Board::leftScores;
+std::array<int, 1 << 16> Board::rightScores;
 
 uint16_t Board::moveLeft(uint16_t row, int& score) {
     int values[4] = {
@@ -75,18 +75,7 @@ void Board::initLookupTables() {
         rightMoves[i] = static_cast<uint16_t>(moveRight(static_cast<uint16_t>(i), rightScore));
         leftScores[i] = leftScore;
         rightScores[i] = rightScore;
-        emptyTileCounts[i] = countEmptyTiles(static_cast<uint16_t>(i));
     }
-}
-
-int Board::getEmptyTileCount(uint64_t state) {
-    // Use the lookup table to count empty tiles in each row
-    int count = 0;
-    for (int i = 0; i < 4; ++i) {
-        uint16_t row = (state >> (16 * i)) & 0xFFFF;
-        count += emptyTileCounts[row];
-    }
-    return count;
 }
 
 std::vector<std::tuple<int, int>> Board::getEmptyTiles(uint64_t state) {
@@ -96,11 +85,7 @@ std::vector<std::tuple<int, int>> Board::getEmptyTiles(uint64_t state) {
     // Use 16-bit word processing
     for (int row = 0; row < 4; ++row) {
         uint16_t rowVal = (state >> (row * 16)) & 0xFFFF;
-        // Process 4 tiles at once using lookup table
-        int emptyCount = emptyTileCounts[rowVal];
-        if (emptyCount == 0) continue;
 
-        // Check individual tiles only if there are empty ones
         for (int col = 0; col < 4; ++col) {
             if (((rowVal >> (col * 4)) & 0xF) == 0) {
                 empty.emplace_back(row, col);

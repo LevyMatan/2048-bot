@@ -1,0 +1,11 @@
+# Best Evaluation Weights
+cornerValue:67
+emptyTiles:427
+mergeability:279
+monotonicity:12
+patternMatching:186
+smoothness:29
+# Performance
+avgScore:14045.4
+maxScore:33672
+gamesPlayed:100

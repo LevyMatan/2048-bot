@@ -3,6 +3,7 @@
 #include <stdint.h>
 #include <vector>
 #include <tuple>
+#include <array>
 
 /**
  * @brief Represents the four possible move directions in the 2048 game
@@ -19,11 +20,10 @@ class Board {
 private:
     uint64_t state;
     static bool lookupInitialized;
-    static uint16_t leftMoves[1 << 16];
-    static uint16_t rightMoves[1 << 16];
-    static int leftScores[1 << 16];
-    static int rightScores[1 << 16];
-    static int emptyTileCounts[1 << 16]; // Lookup table for empty tile counts
+    static std::array<uint16_t, 1 << 16> leftMoves;
+    static std::array<uint16_t, 1 << 16> rightMoves;
+    static std::array<int, 1 << 16> leftScores;
+    static std::array<int, 1 << 16> rightScores;
 
     /**
      * @brief Initializes lookup tables for efficient move calculations
@@ -51,14 +51,7 @@ private:
      */
     static uint16_t moveRight(uint16_t row, int& score);
 
-    /**
-     * @brief Counts the number of empty tiles in a row
-     *
-     * @param row 16-bit row representation
-     * @return int Number of empty (zero) tiles in the row
-     */
     static int countEmptyTiles(uint16_t row);
-
 
 public:
     /**
@@ -105,14 +98,6 @@ public:
      * @return std::vector<std::tuple<int, int>> Vector of (row, column) coordinates of empty tiles
      */
     static std::vector<std::tuple<int, int>> getEmptyTiles(uint64_t state);
-
-    /**
-     * @brief Counts the number of empty tiles on the board
-     *
-     * @param state 64-bit board state
-     * @return int Number of empty tiles
-     */
-    static int getEmptyTileCount(uint64_t state);
 
     /**
      * @brief Gets all valid moves with their resulting states and scores
@@ -191,6 +176,29 @@ public:
     static int getTileAt(uint64_t state, int row, int col) {
         int pos = (row * 4 + col) * 4;
         return (state >> pos) & 0xF;
+    }
+
+    /**
+     * @brief Calculates the score for a given board state
+     * 
+     * @param state 64-bit board state
+     * @return uint64_t Score calculated from the board state
+     */
+    static uint64_t getScore(uint64_t state) {
+        uint64_t score = 0;
+        
+        // Sum the values of all tiles
+        for (int row = 0; row < 4; row++) {
+            for (int col = 0; col < 4; col++) {
+                int tileValue = getTileAt(state, row, col);
+                if (tileValue > 1) {
+                    // Score is 2^tile, but only for tiles > 2 (value > 1)
+                    score += (1ULL << tileValue);
+                }
+            }
+        }
+        
+        return score;
     }
 };
 
