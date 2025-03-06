@@ -1,5 +1,4 @@
 {
-    "C_Cpp.default.compilerPath": "C:/msys64/ucrt64/bin/g++.exe",
     "files.associations": {
         "*.e": "fsharp",
         "array": "cpp",
@@ -89,5 +88,5 @@
         "stop_token": "cpp",
         "thread": "cpp"
     },
-    "cmake.sourceDirectory": "C:/Users/matanl/2048-bot/cpp"
+    "cmake.sourceDirectory": "/Users/matanlevy/2048/2048-bot/cpp"
 }
