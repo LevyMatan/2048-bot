@@ -16,6 +16,7 @@
 #include <future>
 #include <unordered_map>
 #include <set>
+#include "heuristic_player.hpp"
 
 // Structure to hold a set of evaluation weights and its performance
 struct EvalWeightSet {

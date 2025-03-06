@@ -1,4 +1,4 @@
-#include "player.hpp"
+#include "heuristic_player.hpp"
 #include "board.hpp"
 #include "evaluation.hpp"
 #include <algorithm>
@@ -12,13 +12,19 @@
 
 // Constructor that uses a named evaluation function
 HeuristicPlayer::HeuristicPlayer(const Evaluation::EvalParams& params) {
-    customName = "Heuristic-";
+    customName = "Heuristic";
+    // Set up the evaluation function
     Evaluation::CompositeEvaluator evaluator(params);
     evalFn = [evaluator](uint64_t state) {
         return evaluator.evaluate(state);
     };
 }
 
+// Constructor with pre-configured evaluation function
+HeuristicPlayer::HeuristicPlayer(const Evaluation::EvaluationFunction& fn) {
+    customName = "Heuristic";
+    evalFn = fn;
+}
 
 std::string HeuristicPlayer::getName() const {
     return customName;

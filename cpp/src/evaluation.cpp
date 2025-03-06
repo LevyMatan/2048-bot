@@ -4,6 +4,8 @@
 #include <cmath>
 #include <array>
 #include <unordered_map>
+#include <iomanip>
+#include <sstream>
 
 namespace Evaluation {
 
@@ -259,44 +261,91 @@ SimpleEvalFunc getNamedEvaluation(const std::string& name) {
     return nullptr;
 }
 
+// Dictionary of preset evaluation parameters
+static const std::unordered_map<std::string, EvalParams> PRESET_PARAMS = {
+    {"standard", {{"emptyTiles", 250}, {"monotonicity", 250}, {"smoothness", 250}, {"cornerValue", 250}}},
+    {"combined", {{"emptyTiles", 250}, {"monotonicity", 250}, {"smoothness", 250}, {"cornerValue", 250}}},
+    {"corner", {{"cornerValue", 1000}}},
+    {"merge", {{"mergeability", 1000}}},
+    {"pattern", {{"patternMatching", 1000}}},
+    {"balanced", {{"emptyTiles", 200}, {"monotonicity", 200}, {"smoothness", 200}, {"cornerValue", 200}, {"patternMatching", 200}}},
+    {"empty", {{"emptyTiles", 1000}}},
+    {"best", {{"emptyTiles", 427}, {"monotonicity", 12}, {"smoothness", 29}, {"cornerValue", 67}, {"patternMatching", 186}}},
+};
+
 // Function to get preset parameter configurations
 EvalParams getPresetParams(const std::string& name) {
-    EvalParams params;
-    
-    if (name == "standard" || name == "combined") {
-        params["emptyTiles"] = 250;
-        params["monotonicity"] = 250;
-        params["smoothness"] = 250;
-        params["cornerValue"] = 250;
-        return params;
-    }
-    else if (name == "corner") {
-        params["cornerValue"] = 1000;
-        return params;
-    }
-    else if (name == "merge") {
-        params["mergeability"] = 1000;
-        return params;
-    }
-    else if (name == "pattern") {
-        params["patternMatching"] = 1000;
-        return params;
-    }
-    else if (name == "balanced") {
-        params["emptyTiles"] = 200;
-        params["monotonicity"] = 200;
-        params["smoothness"] = 200;
-        params["cornerValue"] = 200;
-        params["patternMatching"] = 200;
-        return params;
+    auto it = PRESET_PARAMS.find(name);
+    if (it != PRESET_PARAMS.end()) {
+        return it->second;
     }
     
-    // If no match, return standard parameters
-    params["emptyTiles"] = 250;
-    params["monotonicity"] = 250;
-    params["smoothness"] = 250;
-    params["cornerValue"] = 250;
-    return params;
+    // Default to standard parameters if not found
+    return PRESET_PARAMS.at("standard");
+}
+
+// Get all available evaluation function names
+std::vector<std::string> getAvailableEvaluationNames() {
+    std::vector<std::string> names;
+    names.reserve(PRESET_PARAMS.size());
+    
+    for (const auto& [name, _] : PRESET_PARAMS) {
+        names.push_back(name);
+    }
+    
+    return names;
+}
+
+// Display details of EvalParams with formatted output
+std::string getEvalParamsDetails(const EvalParams& params, bool formatted) {
+    std::stringstream ss;
+    uint64_t totalWeight = 0;
+    
+    if (formatted) {
+        ss << "Evaluation Parameters:\n";
+        ss << "------------------------------------------\n";
+        ss << "| Component        | Weight  | Percentage |\n";
+        ss << "------------------------------------------\n";
+    }
+    
+    // Calculate total weight first
+    for (const auto& [name, weight] : params) {
+        totalWeight += weight;
+    }
+    
+    // Sort components by weight (descending) for better readability
+    std::vector<std::pair<std::string, uint64_t>> sortedParams(params.begin(), params.end());
+    std::sort(sortedParams.begin(), sortedParams.end(), 
+              [](const auto& a, const auto& b) { return a.second > b.second; });
+    
+    for (const auto& [name, weight] : sortedParams) {
+        double percentage = totalWeight > 0 ? (weight * 100.0 / totalWeight) : 0.0;
+        
+        if (formatted) {
+            ss << "| " << std::left << std::setw(16) << name 
+               << " | " << std::right << std::setw(6) << weight 
+               << " | " << std::fixed << std::setprecision(1) << std::setw(9) << percentage << "% |\n";
+        } else {
+            ss << name << ": " << weight;
+            if (totalWeight > 0) {
+                ss << " (" << std::fixed << std::setprecision(1) << percentage << "%)";
+            }
+            ss << ", ";
+        }
+    }
+    
+    if (formatted) {
+        ss << "------------------------------------------\n";
+        ss << "| Total           | " << std::setw(6) << totalWeight << " | 100.0%     |\n";
+        ss << "------------------------------------------\n";
+    } else if (!params.empty()) {
+        // Remove trailing comma and space
+        std::string result = ss.str();
+        result = result.substr(0, result.length() - 2);
+        return result;
+    }
+    
+    return ss.str();
 }
 
 //------------------------------------------------------
@@ -360,7 +409,5 @@ void CompositeEvaluator::setParams(const EvalParams& params) {
         setWeight(name, weight);
     }
 }
-
-
 
 } // namespace Evaluation 

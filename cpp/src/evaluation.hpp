@@ -40,6 +40,9 @@ EvalParams getPresetParams(const std::string& name);
 // Get all available evaluation function names
 std::vector<std::string> getAvailableEvaluationNames();
 
+// Display details of EvalParams with formatted output
+std::string getEvalParamsDetails(const EvalParams& params, bool formatted = true);
+
 // Component for building composite evaluations
 struct EvaluationComponent {
     SimpleEvalFunc function;

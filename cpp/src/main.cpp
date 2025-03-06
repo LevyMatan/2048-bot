@@ -12,6 +12,7 @@
 #include "game.hpp"
 #include "player.hpp"
 #include "expectimax_player.hpp"
+#include "heuristic_player.hpp"
 #include "board.hpp"
 #include "evaluation.hpp"
 
@@ -111,11 +112,15 @@ void printUsage(const char* programName) {
 // Helper function to print available evaluation functions
 void printAvailableEvaluations() {
     std::cout << "Available evaluation functions:\n";
-    std::cout << "  - corner\n";
-    std::cout << "  - standard\n";
-    std::cout << "  - merge\n";
-    std::cout << "  - pattern\n";
-    std::cout << "  - balanced\n";
+    
+    auto evalNames = Evaluation::getAvailableEvaluationNames();
+    for (const auto& name : evalNames) {
+        std::cout << "  - " << name << ":\n";
+        auto params = Evaluation::getPresetParams(name);
+        // Display a non-formatted version for the list
+        std::cout << "    " << Evaluation::getEvalParamsDetails(params, false) << "\n";
+    }
+    
     std::cout << std::endl;
 }
 
@@ -148,14 +153,13 @@ std::unique_ptr<Player> createExpectimaxPlayer(int argc, char* argv[], int& numG
               << "  Chance Coverage: " << config.chanceCovering << "\n"
               << "  Time Limit: " << (config.timeLimit * 1000) << "ms\n"
               << "  Adaptive Depth: " << (config.adaptiveDepth ? "Yes" : "No") << "\n"
-              << "  Evaluation Function: " << config.evalName << "\n";
+              << "  Evaluation Function: " << config.evalName << "\n\n";
     
-    // Create a custom evaluation function based on the selected evaluation name
-    Evaluation::EvaluationFunction evalFn;
-    Evaluation::EvalParams params = Evaluation::getPresetParams(config.evalName);
+    // Display evaluation parameters details
+    std::cout << Evaluation::getEvalParamsDetails(Evaluation::getPresetParams(config.evalName)) << std::endl;
 
-    Evaluation::CompositeEvaluator evaluator(params);
-    evalFn = [evaluator](uint64_t state) {
+    Evaluation::CompositeEvaluator evaluator(Evaluation::getPresetParams(config.evalName));
+    Evaluation::EvaluationFunction evalFn = [evaluator](uint64_t state) {
         return evaluator.evaluate(state);
     };
     
@@ -182,6 +186,10 @@ std::unique_ptr<Player> createHeuristicPlayer(int argc, char* argv[], int& numGa
     }
 
     std::cout << "Heuristic Player using evaluation function: " << evalName << std::endl;
+    // Display evaluation parameters details
+    std::cout << Evaluation::getEvalParamsDetails(params) << std::endl;
+    
+    // We'll use the params directly instead of creating a function
     return std::make_unique<HeuristicPlayer>(params);
 }
 
