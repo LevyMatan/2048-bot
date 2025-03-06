@@ -22,6 +22,8 @@ EvalParams getPresetParams(const std::string& name);
 // Helper function to unpack state into a 2D board
 void unpackState(uint64_t state, uint8_t board[4][4]);
 
+uint8_t findMaxTile(const uint8_t board[4][4]);
+
 // Core simple evaluation functions
 uint64_t monotonicity(const uint8_t board[4][4]);
 uint64_t emptyTiles(const uint8_t board[4][4]);

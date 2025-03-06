@@ -20,7 +20,7 @@ public:
         std::string evalName;   // Name of the evaluation function to use
         std::string jsonFile;   // Path to a JSON file containing custom evaluation parameters
 
-        Config(int d = 3, int c = 2, double t = 0.1, bool a = true, std::string e = "combined", std::string j = "")
+        Config(int d = 4, int c = 3, double t = 0.2, bool a = true, std::string e = "combined", std::string j = "")
             : depth(d), chanceCovering(c), timeLimit(t), adaptiveDepth(a), evalName(e), jsonFile(j) {}
     };
 
