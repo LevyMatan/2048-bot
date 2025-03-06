@@ -91,6 +91,7 @@ void printUsage(const char* programName) {
               << "  Heuristic - Uses a heuristic evaluation\n"
               << "              Options:\n"
               << "              -e <eval>      Use named evaluation function\n"
+              << "              -json <file>   Load parameters from JSON file\n"
               << "              -list-evals    List available evaluation functions\n"
               << "  Expectimax - Uses expectimax search\n"
               << "              Options:\n"
@@ -99,6 +100,7 @@ void printUsage(const char* programName) {
               << "              -t <time>      Time limit in ms (default: 100)\n"
               << "              -a             Enable adaptive depth\n"
               << "              -e <eval>      Evaluation function (default: combined)\n"
+              << "              -json <file>   Load parameters from JSON file\n"
               << "              -list-evals    List available evaluation functions\n"
               << "\n"
               << "Available evaluation functions: corner, standard, merge, pattern, balanced\n"
@@ -106,7 +108,9 @@ void printUsage(const char* programName) {
               << "Examples:\n"
               << "  " << programName << " Heuristic 10\n"
               << "  " << programName << " Heuristic -e corner 10\n" 
-              << "  " << programName << " Expectimax -d 4 -e pattern 5\n";
+              << "  " << programName << " Heuristic -json params.json 10\n"
+              << "  " << programName << " Expectimax -d 4 -e pattern 5\n"
+              << "  " << programName << " Expectimax -json custom_params.json 5\n";
 }
 
 // Helper function to print available evaluation functions
@@ -140,6 +144,11 @@ std::unique_ptr<Player> createExpectimaxPlayer(int argc, char* argv[], int& numG
             config.adaptiveDepth = true;
         } else if (arg == "-e" && i + 1 < argc) {
             config.evalName = argv[++i];
+        } else if (arg == "-json" && i + 1 < argc) {
+            // Load parameters from a JSON file
+            config.jsonFile = argv[++i];
+            std::cout << "Loading evaluation parameters from " << config.jsonFile << std::endl;
+            config.evalName = "custom";
         } else if (arg == "-list-evals") {
             printAvailableEvaluations();
         } else if (std::isdigit(arg[0])) {
@@ -155,10 +164,18 @@ std::unique_ptr<Player> createExpectimaxPlayer(int argc, char* argv[], int& numG
               << "  Adaptive Depth: " << (config.adaptiveDepth ? "Yes" : "No") << "\n"
               << "  Evaluation Function: " << config.evalName << "\n\n";
     
+    // Get parameters based on the evaluation name or from JSON file
+    Evaluation::EvalParams params;
+    if (config.evalName == "custom" && !config.jsonFile.empty()) {
+        params = Evaluation::loadParamsFromJsonFile(config.jsonFile);
+    } else {
+        params = Evaluation::getPresetParams(config.evalName);
+    }
+    
     // Display evaluation parameters details
-    std::cout << Evaluation::getEvalParamsDetails(Evaluation::getPresetParams(config.evalName)) << std::endl;
+    std::cout << Evaluation::getEvalParamsDetails(params) << std::endl;
 
-    Evaluation::CompositeEvaluator evaluator(Evaluation::getPresetParams(config.evalName));
+    Evaluation::CompositeEvaluator evaluator(params);
     Evaluation::EvaluationFunction evalFn = [evaluator](uint64_t state) {
         return evaluator.evaluate(state);
     };
@@ -170,6 +187,7 @@ std::unique_ptr<Player> createExpectimaxPlayer(int argc, char* argv[], int& numG
 std::unique_ptr<Player> createHeuristicPlayer(int argc, char* argv[], int& numGames) {
     std::string evalName = "standard"; // Default evaluation function
     Evaluation::EvalParams params;
+    std::string jsonFile = "";
 
     // Start from 2 because argv[1] is the player type
     for (int i = 2; i < argc; i++) {
@@ -177,6 +195,12 @@ std::unique_ptr<Player> createHeuristicPlayer(int argc, char* argv[], int& numGa
         if (arg == "-e" && i + 1 < argc) {
             evalName = argv[++i];
             params = Evaluation::getPresetParams(evalName);
+        } else if (arg == "-json" && i + 1 < argc) {
+            // Load parameters from a JSON file
+            jsonFile = argv[++i];
+            std::cout << "Loading evaluation parameters from " << jsonFile << std::endl;
+            params = Evaluation::loadParamsFromJsonFile(jsonFile);
+            evalName = "custom-json";
         } else if (arg == "-list-evals") {
             printAvailableEvaluations();
         } else if (std::isdigit(arg[0])) {

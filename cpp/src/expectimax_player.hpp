@@ -18,9 +18,10 @@ public:
         double timeLimit;       // Time limit per move in seconds
         bool adaptiveDepth;     // Whether to use dynamic depth adjustment
         std::string evalName;   // Name of the evaluation function to use
+        std::string jsonFile;   // Path to a JSON file containing custom evaluation parameters
 
-        Config(int d = 3, int c = 2, double t = 0.1, bool a = true, std::string e = "combined")
-            : depth(d), chanceCovering(c), timeLimit(t), adaptiveDepth(a), evalName(e) {}
+        Config(int d = 3, int c = 2, double t = 0.1, bool a = true, std::string e = "combined", std::string j = "")
+            : depth(d), chanceCovering(c), timeLimit(t), adaptiveDepth(a), evalName(e), jsonFile(j) {}
     };
 
     // Constructors

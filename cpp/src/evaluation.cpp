@@ -6,6 +6,8 @@
 #include <unordered_map>
 #include <iomanip>
 #include <sstream>
+#include <fstream>
+#include <iostream>
 
 namespace Evaluation {
 
@@ -294,6 +296,79 @@ std::vector<std::string> getAvailableEvaluationNames() {
     }
     
     return names;
+}
+
+// Load evaluation parameters from a JSON file
+EvalParams loadParamsFromJsonFile(const std::string& filename) {
+    EvalParams params;
+    std::ifstream file(filename);
+    
+    if (!file.is_open()) {
+        std::cerr << "Error: Could not open file " << filename << std::endl;
+        return getPresetParams("standard"); // Return default parameters if file can't be opened
+    }
+    
+    std::string line;
+    while (std::getline(file, line)) {
+        // Skip comments and empty lines
+        if (line.empty() || line[0] == '#' || line[0] == '/') {
+            continue;
+        }
+        
+        // Find key-value pairs in format: "key": value or key: value
+        size_t colonPos = line.find(':');
+        if (colonPos != std::string::npos) {
+            std::string key = line.substr(0, colonPos);
+            std::string valueStr = line.substr(colonPos + 1);
+            
+            // Remove quotes, commas, and whitespace
+            key.erase(std::remove_if(key.begin(), key.end(), 
+                [](char c) { return c == '"' || c == ' ' || c == '\t'; }), key.end());
+            valueStr.erase(std::remove_if(valueStr.begin(), valueStr.end(), 
+                [](char c) { return c == '"' || c == ',' || c == ' ' || c == '\t'; }), valueStr.end());
+            
+            // Convert value to integer
+            try {
+                uint64_t value = std::stoull(valueStr);
+                params[key] = value;
+            } catch (const std::exception& e) {
+                std::cerr << "Error parsing value for key '" << key << "': " << e.what() << std::endl;
+            }
+        }
+    }
+    
+    // If no valid parameters were found, return default parameters
+    if (params.empty()) {
+        std::cerr << "Warning: No valid parameters found in " << filename << ". Using standard parameters." << std::endl;
+        return getPresetParams("standard");
+    }
+    
+    return params;
+}
+
+// Save evaluation parameters to a JSON file
+bool saveParamsToJsonFile(const EvalParams& params, const std::string& filename) {
+    std::ofstream file(filename);
+    
+    if (!file.is_open()) {
+        std::cerr << "Error: Could not open file " << filename << " for writing" << std::endl;
+        return false;
+    }
+    
+    file << "{\n";
+    
+    bool first = true;
+    for (const auto& [name, weight] : params) {
+        if (!first) {
+            file << ",\n";
+        }
+        file << "  \"" << name << "\": " << weight;
+        first = false;
+    }
+    
+    file << "\n}\n";
+    
+    return true;
 }
 
 // Display details of EvalParams with formatted output

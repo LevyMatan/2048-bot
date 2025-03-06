@@ -37,6 +37,12 @@ SimpleEvalFunc getNamedEvaluation(const std::string& name);
 // Get preset parameter configurations
 EvalParams getPresetParams(const std::string& name);
 
+// Load evaluation parameters from a JSON file
+EvalParams loadParamsFromJsonFile(const std::string& filename);
+
+// Save evaluation parameters to a JSON file
+bool saveParamsToJsonFile(const EvalParams& params, const std::string& filename);
+
 // Get all available evaluation function names
 std::vector<std::string> getAvailableEvaluationNames();
 
