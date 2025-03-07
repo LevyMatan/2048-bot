@@ -478,11 +478,25 @@ void evaluateWeightsInParallel(std::vector<EvalWeightSet>& weightSets, int numGa
     }
 }
 
+// Add new function
+EvalWeightSet tournamentSelect(const std::vector<EvalWeightSet>& population, std::mt19937& rng, int tournamentSize = 3) {
+    std::uniform_int_distribution<int> dist(0, population.size() - 1);
+    EvalWeightSet best = population[dist(rng)];
+
+    for (int i = 1; i < tournamentSize; i++) {
+        EvalWeightSet candidate = population[dist(rng)];
+        if (candidate.avgScore > best.avgScore) {
+            best = candidate;
+        }
+    }
+    return best;
+}
+
 int main(int argc, char* argv[]) {
     // Default parameters
-    int populationSize = 20;
-    int generations = 10;
-    int gamesPerEvaluation = 20;
+    int populationSize = 50;        // Increased from 20
+    int generations = 20;           // Increased from 10
+    int gamesPerEvaluation = 100;   // Increased from 20
     double mutationRate = 0.15;
     double elitePercentage = 0.2;
     std::string outputFile = "eval_weights.csv";
@@ -490,6 +504,14 @@ int main(int argc, char* argv[]) {
     std::string jsonOutputFile = "best_eval_weights.json"; // New JSON output file
     bool continueFromFile = false;
     int numThreads = std::thread::hardware_concurrency();  // Default to available CPU cores
+
+    // Add before the main loop
+    double initialMutationRate = mutationRate;
+
+    // Add before main loop
+    int generationsWithoutImprovement = 0;
+    double bestScore = 0;
+    const int MAX_GENERATIONS_WITHOUT_IMPROVEMENT = 5;
 
     // Parse command line arguments
     for (int i = 1; i < argc; ++i) {
@@ -577,6 +599,9 @@ int main(int argc, char* argv[]) {
     for (int gen = 0; gen < generations; ++gen) {
         std::cout << "\n===== Generation " << gen + 1 << " =====\n";
 
+        // In the generation loop
+        mutationRate = initialMutationRate * (1.0 - static_cast<double>(gen) / generations);
+
         // Evaluate all weight sets
         evaluateWeightsInParallel(population, gamesPerEvaluation, numThreads);
 
@@ -613,6 +638,25 @@ int main(int argc, char* argv[]) {
             std::cerr << "Error: Could not save best weights to JSON file." << std::endl;
         }
 
+        // Add in the generation loop, e.g., every 5 generations
+        if (gen % 5 == 0) {
+            std::string checkpointFile = "checkpoint_gen_" + std::to_string(gen) + ".csv";
+            saveWeightsToFile(population, checkpointFile);
+        }
+
+        // In the generation loop after evaluation
+        if (population[0].avgScore > bestScore) {
+            bestScore = population[0].avgScore;
+            generationsWithoutImprovement = 0;
+        } else {
+            generationsWithoutImprovement++;
+            if (generationsWithoutImprovement >= MAX_GENERATIONS_WITHOUT_IMPROVEMENT) {
+                std::cout << "Stopping early due to no improvement in "
+                          << MAX_GENERATIONS_WITHOUT_IMPROVEMENT << " generations\n";
+                break;
+            }
+        }
+
         // If this is the last generation, we're done
         if (gen == generations - 1) {
             break;
@@ -631,13 +675,8 @@ int main(int argc, char* argv[]) {
         std::uniform_int_distribution<int> parentDist(0, std::min(populationSize - 1, static_cast<int>(populationSize * 0.5)));
 
         while (nextGeneration.size() < static_cast<size_t>(populationSize)) {
-            // Select a parent from the top half of the current generation
-            int parentIdx = parentDist(rng);
-
-            // Create a child through mutation
-            EvalWeightSet child = mutateWeights(population[parentIdx], rng, mutationRate);
-
-            // Add to next generation
+            EvalWeightSet parent = tournamentSelect(population, rng);
+            EvalWeightSet child = mutateWeights(parent, rng, mutationRate);
             nextGeneration.push_back(child);
         }
 
