@@ -6,31 +6,32 @@
 #include <map>
 #include <vector>
 #include <unordered_map>
+#include "board.hpp"
 
 namespace Evaluation {
 
 // Primary evaluation function type
-using EvaluationFunction = std::function<uint64_t(uint64_t)>;
+using EvaluationFunction = std::function<double(BoardState)>;
 
 // Simple evaluation function that works on unpacked board
-using SimpleEvalFunc = std::function<uint64_t(const uint8_t[4][4])>;
+using SimpleEvalFunc = std::function<double(const uint8_t[4][4])>;
 
 // Parameters for weighted evaluations
 using EvalParams = std::unordered_map<std::string, uint64_t>;
 
 EvalParams getPresetParams(const std::string& name);
 // Helper function to unpack state into a 2D board
-void unpackState(uint64_t state, uint8_t board[4][4]);
+void unpackState(BoardState state, uint8_t board[4][4]);
 
 uint8_t findMaxTile(const uint8_t board[4][4]);
 
 // Core simple evaluation functions
-uint64_t monotonicity(const uint8_t board[4][4]);
-uint64_t emptyTiles(const uint8_t board[4][4]);
-uint64_t mergeability(const uint8_t board[4][4]);
-uint64_t smoothness(const uint8_t board[4][4]);
-uint64_t cornerValue(const uint8_t board[4][4]);
-uint64_t patternMatching(const uint8_t board[4][4]);
+double monotonicity(const uint8_t board[4][4]);
+double emptyTiles(const uint8_t board[4][4]);
+double mergeability(const uint8_t board[4][4]);
+double smoothness(const uint8_t board[4][4]);
+double cornerValue(const uint8_t board[4][4]);
+double patternMatching(const uint8_t board[4][4]);
 
 
 // Get a named evaluation function
@@ -73,7 +74,7 @@ public:
     void addComponent(SimpleEvalFunc func, uint64_t weight, const std::string& name);
 
     // Evaluate a state using all components
-    uint64_t evaluate(uint64_t state) const;
+    double evaluate(BoardState state) const;
 
     // Get/set component weights
     void setWeight(const std::string& name, uint64_t weight);
@@ -101,6 +102,6 @@ struct EvaluationBreakdown {
     uint64_t weightedScore;
 };
 
-std::vector<EvaluationBreakdown> getDetailedEvaluation(uint64_t state);
+std::vector<EvaluationBreakdown> getDetailedEvaluation(BoardState state);
 
 } // namespace Evaluation
