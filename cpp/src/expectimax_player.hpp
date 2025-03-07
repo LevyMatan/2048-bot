@@ -6,6 +6,16 @@
 #include <functional>
 #include <string>
 #include <random>
+#include <unordered_map>
+
+typedef uint64_t BoardState;
+
+typedef struct {
+    uint8_t depth;
+    double heuristic;
+} trans_table_entry_t;
+
+typedef std::unordered_map<BoardState, trans_table_entry_t> trans_table_t;
 
 class ExpectimaxPlayer : public Player {
 public:
@@ -29,21 +39,25 @@ public:
     ExpectimaxPlayer(const Config& config, EvaluationFunction evalFn);
 
     // Implement Player interface
-    std::tuple<Action, uint64_t, int> chooseAction(uint64_t state) override;
-    std::string getName() const override { 
-        return "Expectimax-" + config.evalName; 
+    std::tuple<Action, BoardState, int> chooseAction(BoardState state) override;
+    std::string getName() const override {
+        return "Expectimax-" + config.evalName;
     }
 
 private:
     Config config;
     EvaluationFunction evalFn;
+    trans_table_t trans_table;
+    int cacheHits;
+    int depthLimit;
     std::chrono::steady_clock::time_point startTime;
     std::random_device rd;
     std::mt19937 rng;
 
-    uint64_t expectimax(uint64_t state, int depth, bool isMax);
-    uint64_t chanceNode(uint64_t state, int depth);
-    uint64_t maxNode(uint64_t state, int depth);
+    double expectimax(BoardState state, int depth, bool isMax);
+    double chanceNode(BoardState state, int depth, double prob);
+    double maxNode(BoardState state, int depth, double prob);
+
     bool shouldTimeOut() const;
-    int getAdaptiveDepth(uint64_t state) const;
-}; 
+    int getAdaptiveDepth(BoardState state) const;
+};
