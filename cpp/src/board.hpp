@@ -16,9 +16,10 @@ enum class Action {
     INVALID = 4
 };
 
+using BoardState = uint64_t;
 class Board {
 private:
-    uint64_t state;
+    BoardState state;
     static bool lookupInitialized;
     static std::array<uint16_t, 1 << 16> leftMoves;
     static std::array<uint16_t, 1 << 16> rightMoves;
@@ -180,13 +181,13 @@ public:
 
     /**
      * @brief Calculates the score for a given board state
-     * 
+     *
      * @param state 64-bit board state
      * @return uint64_t Score calculated from the board state
      */
     static uint64_t getScore(uint64_t state) {
         uint64_t score = 0;
-        
+
         // Sum the values of all tiles
         for (int row = 0; row < 4; row++) {
             for (int col = 0; col < 4; col++) {
@@ -197,7 +198,7 @@ public:
                 }
             }
         }
-        
+
         return score;
     }
 };
