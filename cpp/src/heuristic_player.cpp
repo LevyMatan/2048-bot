@@ -30,22 +30,22 @@ std::string HeuristicPlayer::getName() const {
     return customName;
 }
 
-std::tuple<Action, uint64_t, int> HeuristicPlayer::chooseAction(uint64_t state) {
+std::tuple<Action, BoardState, int> HeuristicPlayer::chooseAction(BoardState state) {
     auto validActions = Board::getValidMoveActionsWithScores(state);
     if (validActions.empty()) {
         return {Action::INVALID, state, 0};
     }
 
     Action bestAction = Action::INVALID;
-    uint64_t bestScore = 0;
-    uint64_t bestState = state;
+    double bestEval = 0;
+    BoardState bestState = state;
     int bestMoveScore = 0;
 
     for (const auto& [action, nextState, moveScore] : validActions) {
-        uint64_t score = evalFn(nextState) + moveScore;
+        double eval = evalFn(nextState);
 
-        if (score > bestScore) {
-            bestScore = score;
+        if (eval > bestEval) {
+            bestEval = eval;
             bestAction = action;
             bestState = nextState;
             bestMoveScore = moveScore;
