@@ -1,5 +1,6 @@
 #include "expectimax_player.hpp"
 #include "board.hpp"
+#include "debug_config.hpp"
 #include <chrono>
 #include <algorithm>
 #include <limits>
@@ -7,13 +8,15 @@
 #include <iostream>
 #include <unordered_map>
 
-ExpectimaxPlayer::ExpectimaxPlayer(const Config& cfg)
-    : config(cfg),
+ExpectimaxPlayer::ExpectimaxPlayer(const Config& cfg, const DebugConfig& debugCfg)
+    : Player(debugCfg), // Initialize the base class with debugConfig
+      config(cfg),
       trans_table(),
       cacheHits(0),
       depthLimit(15),
       startTime(std::chrono::steady_clock::now()),
-      rng(rd()) {
+      rng(rd())
+{
     // Create a custom evaluation function based on the selected evaluation name
     Evaluation::EvalParams params;
 
@@ -25,14 +28,17 @@ ExpectimaxPlayer::ExpectimaxPlayer(const Config& cfg)
     };
 }
 
-ExpectimaxPlayer::ExpectimaxPlayer(const Config& cfg, EvaluationFunction fn)
-    : config(cfg),
+ExpectimaxPlayer::ExpectimaxPlayer(const Config& cfg, EvaluationFunction fn, const DebugConfig& debugCfg)
+    : Player(debugCfg), // Initialize the base class with debugConfig
+      config(cfg),
       evalFn(fn),
       trans_table(),
       cacheHits(0),
       depthLimit(15),
       startTime(std::chrono::steady_clock::now()),
-      rng(rd()) {}
+      rng(rd())
+{
+}
 
 std::tuple<Action, uint64_t, int> ExpectimaxPlayer::chooseAction(uint64_t state) {
     startTime = std::chrono::steady_clock::now();
@@ -54,11 +60,27 @@ std::tuple<Action, uint64_t, int> ExpectimaxPlayer::chooseAction(uint64_t state)
     for (const auto& [action, newState, score] : validMoves) {
         double value = chanceNode(newState, searchDepth, 1.0);
 
+        if (debugConfig.debug) {
+            std::cout << "Action: " << actionToString(action)
+                      << ", Score: " << score
+                      << ", Value: " << value << std::endl;
+            if (debugConfig.printBoard) {
+                uint8_t board_tmp[4][4];
+                Evaluation::unpackState(newState, board_tmp);
+                Board::printBoard(board_tmp);
+            }
+        }
+
         if (value > bestValue) {
             bestValue = value;
             bestAction = action;
             bestState = newState;
             bestScore = score;
+        }
+
+        if (debugConfig.stepByStep) {
+            std::cout << "Press Enter to continue...";
+            std::cin.get();
         }
 
         if (shouldTimeOut()) {
@@ -68,6 +90,10 @@ std::tuple<Action, uint64_t, int> ExpectimaxPlayer::chooseAction(uint64_t state)
                      << " seconds" << std::endl;
             break;
         }
+    }
+
+    if (debugConfig.debug) {
+        std::cout << "Cache hits: " << cacheHits << std::endl;
     }
 
     return {bestAction, bestState, bestScore};
@@ -101,11 +127,17 @@ double ExpectimaxPlayer::chanceNode(BoardState state, int depth, double prob) {
     double res = 0.0;
     BoardState tmp = state;
     BoardState tile_2 = 1;
-    BoardState tile_4 = 2;
     while (tile_2) {
         if ((tmp & 0xf) == 0) {
-            res += maxNode(state | tile_2, depth - 1, prob * 0.9) * 0.9;
-            res += maxNode(state | tile_4, depth - 1, prob * 0.1) * 0.1;
+            double value2 = maxNode(state | tile_2, depth - 1, prob * 0.9) * 0.9;
+            double value4 = maxNode(state | (tile_2 << 1U), depth - 1, prob * 0.1) * 0.1;
+            res += value2;
+            res += value4;
+
+            if (debugConfig.debug) {
+                std::cout << "Chance Node - Depth: " << depth << ", Tile 2 Value: " << value2
+                          << ", Tile 4 Value: " << value4 << std::endl;
+            }
         }
         tmp >>= 4;
         tile_2 <<= 4;
@@ -133,6 +165,9 @@ double ExpectimaxPlayer::maxNode(BoardState state, int depth, double prob) {
     double bestValue = std::numeric_limits<double>::lowest();
     for (const auto& [action, newState, score] : validMoves) {
         double value = chanceNode(newState, depth - 1, prob);
+        if (debugConfig.debug) {
+            std::cout << "Max Node - Depth: " << depth << ", Action: " << static_cast<int>(action) << ", Value: " << value << std::endl;
+        }
         bestValue = std::max(bestValue, value);
     }
     return bestValue;

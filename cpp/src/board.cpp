@@ -2,12 +2,28 @@
 #include "board.hpp"
 #include <algorithm>
 #include <array>
+#include <iostream>
 
 bool Board::lookupInitialized = false;
 std::array<uint16_t, 1 << 16> Board::leftMoves;
 std::array<uint16_t, 1 << 16> Board::rightMoves;
 std::array<int, 1 << 16> Board::leftScores;
 std::array<int, 1 << 16> Board::rightScores;
+
+std::string actionToString(Action action) {
+    switch (action) {
+        case Action::LEFT:
+            return "LEFT";
+        case Action::RIGHT:
+            return "RIGHT";
+        case Action::UP:
+            return "UP";
+        case Action::DOWN:
+            return "DOWN";
+        default:
+            return "INVALID";
+    }
+}
 
 uint16_t Board::moveLeft(uint16_t row, int& score) {
     int values[4] = {
@@ -177,4 +193,13 @@ uint64_t Board::transpose(uint64_t state) {
     uint64_t b2 = a & 0x00FF00FF00000000ULL;
     uint64_t b3 = a & 0x00000000FF00FF00ULL;
     return b1 | (b2 >> 24) | (b3 << 24);
+}
+
+void Board::printBoard(uint8_t board[4][4]) {
+    for (int i = 0; i < 4; ++i) {
+        for (int j = 0; j < 4; ++j) {
+            std::cout << (int)board[i][j] << "\t";
+        }
+        std::cout << std::endl;
+    }
 }

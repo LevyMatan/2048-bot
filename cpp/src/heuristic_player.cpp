@@ -10,47 +10,35 @@
 #include <string>
 #include <vector>
 
-// Constructor that uses a named evaluation function
-HeuristicPlayer::HeuristicPlayer(const Evaluation::EvalParams& params) {
+HeuristicPlayer::HeuristicPlayer(const Evaluation::EvalParams& params, const DebugConfig& debugCfg)
+    : Player(debugCfg) // Initialize the base class with debugConfig
+{
     customName = "Heuristic";
-    // Set up the evaluation function
     Evaluation::CompositeEvaluator evaluator(params);
     evalFn = [evaluator](uint64_t state) {
         return evaluator.evaluate(state);
     };
 }
 
-// Constructor with pre-configured evaluation function
-HeuristicPlayer::HeuristicPlayer(const Evaluation::EvaluationFunction& fn) {
+HeuristicPlayer::HeuristicPlayer(const Evaluation::EvaluationFunction& fn) : Player(), evalFn(fn) {
     customName = "Heuristic";
-    evalFn = fn;
 }
 
 std::string HeuristicPlayer::getName() const {
     return customName;
 }
 
-std::tuple<Action, BoardState, int> HeuristicPlayer::chooseAction(BoardState state) {
-    auto validActions = Board::getValidMoveActionsWithScores(state);
-    if (validActions.empty()) {
+std::tuple<Action, uint64_t, int> HeuristicPlayer::chooseAction(uint64_t state) {
+    auto validMoves = Board::getValidMoveActionsWithScores(state);
+    if (validMoves.empty()) {
         return {Action::INVALID, state, 0};
     }
 
-    Action bestAction = Action::INVALID;
-    double bestEval = 0;
-    BoardState bestState = state;
-    int bestMoveScore = 0;
+    // Find the move with the highest score
+    auto bestMove = std::max_element(validMoves.begin(), validMoves.end(),
+        [this](const auto& a, const auto& b) {
+            return evalFn(std::get<1>(a)) < evalFn(std::get<1>(b));
+        });
 
-    for (const auto& [action, nextState, moveScore] : validActions) {
-        double eval = evalFn(nextState);
-
-        if (eval > bestEval) {
-            bestEval = eval;
-            bestAction = action;
-            bestState = nextState;
-            bestMoveScore = moveScore;
-        }
-    }
-
-    return {bestAction, bestState, bestMoveScore};
+    return {std::get<0>(*bestMove), std::get<1>(*bestMove), std::get<2>(*bestMove)};
 }

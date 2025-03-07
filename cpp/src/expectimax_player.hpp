@@ -2,14 +2,13 @@
 
 #include "player.hpp"
 #include "evaluation.hpp"
+#include "debug_config.hpp"
+#include "board.hpp"
 #include <chrono>
 #include <functional>
 #include <string>
 #include <random>
 #include <unordered_map>
-
-typedef uint64_t BoardState;
-
 typedef struct {
     uint8_t depth;
     double heuristic;
@@ -23,20 +22,26 @@ public:
     using EvaluationFunction = Evaluation::EvaluationFunction;
 
     struct Config {
-        int depth;              // Search depth
-        int chanceCovering;     // Number of random tile possibilities to consider
-        double timeLimit;       // Time limit per move in seconds
-        bool adaptiveDepth;     // Whether to use dynamic depth adjustment
-        std::string evalName;   // Name of the evaluation function to use
-        std::string jsonFile;   // Path to a JSON file containing custom evaluation parameters
+        int depth;
+        int chanceCovering;
+        double timeLimit;
+        bool adaptiveDepth;
+        std::string evalName;
+        std::string jsonFile;
 
-        Config(int d = 4, int c = 3, double t = 0.2, bool a = true, std::string e = "combined", std::string j = "")
-            : depth(d), chanceCovering(c), timeLimit(t), adaptiveDepth(a), evalName(e), jsonFile(j) {}
+        Config() :
+            depth(3),
+            chanceCovering(3),
+            timeLimit(0.2),
+            adaptiveDepth(false),
+            evalName("combined"),
+            jsonFile("")
+        {}
     };
 
     // Constructors
-    ExpectimaxPlayer(const Config& config = Config());
-    ExpectimaxPlayer(const Config& config, EvaluationFunction evalFn);
+    ExpectimaxPlayer(const Config& config = Config(), const DebugConfig& debugCfg = DebugConfig());
+    ExpectimaxPlayer(const Config& config, EvaluationFunction evalFn, const DebugConfig& debugCfg);
 
     // Implement Player interface
     std::tuple<Action, BoardState, int> chooseAction(BoardState state) override;

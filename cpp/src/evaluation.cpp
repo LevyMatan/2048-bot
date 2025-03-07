@@ -65,18 +65,18 @@ double coreScore(const uint8_t board[4][4]) {
 
 // Count empty tiles in the board (normalized to 0-1000)
 double emptyTiles(const uint8_t board[4][4]) {
-    uint64_t count = 0;
+    uint64_t emptyCount = 0;
 
     for (int row = 0; row < 4; row++) {
         for (int col = 0; col < 4; col++) {
             if (board[row][col] == 0) {
-                count++;
+                emptyCount++;
             }
         }
     }
 
     // Normalize: Max empty tiles is 16, so multiply by 1000/16 = 62.5
-    return count * 1000 / 16;
+    return std::pow(2, emptyCount);
 }
 
 // MONOTONICITY: Evaluates how well the tiles are arranged in increasing/decreasing order
@@ -452,11 +452,22 @@ double CompositeEvaluator::evaluate(BoardState state) const {
     uint8_t board[4][4];
     unpackState(state, board);
 
+    // Print the board
+    // std::cout << "Board State:" << std::endl;
+    // for (int row = 0; row < 4; ++row) {
+    //     for (int col = 0; col < 4; ++col) {
+    //         std::cout << static_cast<int>(board[row][col]) << " ";
+    //     }
+    //     std::cout << std::endl;
+    // }
+
     // Apply each component
     double totalScore = 0;
 
     for (const auto& component : components) {
-        totalScore += component.function(board) * component.weight;
+        double componentScore = component.function(board);
+        totalScore += componentScore * component.weight;
+        // std::cout << "Component: " << component.name << ", Score: " << componentScore << ", Weight: " << component.weight << ", Weighted Score: " << componentScore * component.weight << std::endl;
     }
 
     return totalScore;

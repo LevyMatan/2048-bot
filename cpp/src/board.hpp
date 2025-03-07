@@ -16,6 +16,8 @@ enum class Action {
     INVALID = 4
 };
 
+std::string actionToString(Action action);
+
 using BoardState = uint64_t;
 class Board {
 private:
@@ -201,6 +203,13 @@ public:
 
         return score;
     }
+
+    /**
+     * @brief Prints the board to the console
+     *
+     * @param board 4x4 array representing the board
+     */
+    static void printBoard(uint8_t board[4][4]);
 };
 
 /**

@@ -7,14 +7,16 @@
 #include <random>
 #include "board.hpp"
 #include "evaluation.hpp"
+#include "debug_config.hpp"
 
 class Player {
 public:
-    virtual ~Player() = default;
 
-    // Return tuple of (action, next state, move score)
+    virtual ~Player() = default; // Add a virtual destructor
+    Player(const DebugConfig& debugCfg = DebugConfig()) : debugConfig(debugCfg) {}
     virtual std::tuple<Action, uint64_t, int> chooseAction(uint64_t state) = 0;
     virtual std::string getName() const = 0;
+    DebugConfig debugConfig;
 };
 
 class RandomPlayer : public Player {

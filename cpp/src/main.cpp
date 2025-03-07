@@ -102,21 +102,25 @@ void printUsage(const char* programName) {
               << "              -e <eval>      Evaluation function (default: combined)\n"
               << "              -json <file>   Load parameters from JSON file\n"
               << "              -list-evals    List available evaluation functions\n"
+              << "              -debug        Enable debug output\n"
+              << "              -stepByStep   Enable step-by-step execution\n"
+              << "              -printBoard   Print the board for each action\n"
               << "\n"
               << "Available evaluation functions: corner, standard, merge, pattern, balanced\n"
               << "\n"
               << "Examples:\n"
               << "  " << programName << " Heuristic 10\n"
-              << "  " << programName << " Heuristic -e corner 10\n" 
+              << "  " << programName << " Heuristic -e corner 10\n"
               << "  " << programName << " Heuristic -json params.json 10\n"
               << "  " << programName << " Expectimax -d 4 -e pattern 5\n"
-              << "  " << programName << " Expectimax -json custom_params.json 5\n";
+              << "  " << programName << " Expectimax -json custom_params.json 5\n"
+              << "  " << programName << " Expectimax -debug -stepByStep 1\n";
 }
 
 // Helper function to print available evaluation functions
 void printAvailableEvaluations() {
     std::cout << "Available evaluation functions:\n";
-    
+
     auto evalNames = Evaluation::getAvailableEvaluationNames();
     for (const auto& name : evalNames) {
         std::cout << "  - " << name << ":\n";
@@ -124,12 +128,13 @@ void printAvailableEvaluations() {
         // Display a non-formatted version for the list
         std::cout << "    " << Evaluation::getEvalParamsDetails(params, false) << "\n";
     }
-    
+
     std::cout << std::endl;
 }
 
 std::unique_ptr<Player> createExpectimaxPlayer(int argc, char* argv[], int& numGames) {
     ExpectimaxPlayer::Config config;
+    DebugConfig debugConfig;
 
     // Start from 2 because argv[1] is the player type
     for (int i = 2; i < argc; i++) {
@@ -151,9 +156,15 @@ std::unique_ptr<Player> createExpectimaxPlayer(int argc, char* argv[], int& numG
             config.evalName = "custom";
         } else if (arg == "-list-evals") {
             printAvailableEvaluations();
+        } else if (arg == "-debug") {
+            debugConfig.debug = true;
+        } else if (arg == "-stepByStep") {
+            debugConfig.stepByStep = true;
+        } else if (arg == "-printBoard") {
+            debugConfig.printBoard = true;
         } else if (std::isdigit(arg[0])) {
             // This is the number of games
-            numGames = std::stoi(arg);
+            numGames = std::stoi(argv[i]);
         }
     }
 
@@ -162,8 +173,11 @@ std::unique_ptr<Player> createExpectimaxPlayer(int argc, char* argv[], int& numG
               << "  Chance Coverage: " << config.chanceCovering << "\n"
               << "  Time Limit: " << (config.timeLimit * 1000) << "ms\n"
               << "  Adaptive Depth: " << (config.adaptiveDepth ? "Yes" : "No") << "\n"
-              << "  Evaluation Function: " << config.evalName << "\n\n";
-    
+              << "  Evaluation Function: " << config.evalName << "\n"
+              << "  Debug: " << (debugConfig.debug ? "Yes" : "No") << "\n"
+              << "  Step By Step: " << (debugConfig.stepByStep ? "Yes" : "No") << "\n"
+              << "  Print Board: " << (debugConfig.printBoard ? "Yes" : "No") << "\n\n";
+
     // Get parameters based on the evaluation name or from JSON file
     Evaluation::EvalParams params;
     if (config.evalName == "custom" && !config.jsonFile.empty()) {
@@ -171,7 +185,7 @@ std::unique_ptr<Player> createExpectimaxPlayer(int argc, char* argv[], int& numG
     } else {
         params = Evaluation::getPresetParams(config.evalName);
     }
-    
+
     // Display evaluation parameters details
     std::cout << Evaluation::getEvalParamsDetails(params) << std::endl;
 
@@ -179,15 +193,16 @@ std::unique_ptr<Player> createExpectimaxPlayer(int argc, char* argv[], int& numG
     Evaluation::EvaluationFunction evalFn = [evaluator](uint64_t state) {
         return evaluator.evaluate(state);
     };
-    
+
     // Create the player with the configured evaluation function
-    return std::make_unique<ExpectimaxPlayer>(config, evalFn);
+    return std::make_unique<ExpectimaxPlayer>(config, evalFn, debugConfig);
 }
 
 std::unique_ptr<Player> createHeuristicPlayer(int argc, char* argv[], int& numGames) {
     std::string evalName = "standard"; // Default evaluation function
     Evaluation::EvalParams params;
     std::string jsonFile = "";
+    DebugConfig debugConfig;
 
     // Start from 2 because argv[1] is the player type
     for (int i = 2; i < argc; i++) {
@@ -203,18 +218,24 @@ std::unique_ptr<Player> createHeuristicPlayer(int argc, char* argv[], int& numGa
             evalName = "custom-json";
         } else if (arg == "-list-evals") {
             printAvailableEvaluations();
-        } else if (std::isdigit(arg[0])) {
+        } else if (arg == "-debug") {
+            debugConfig.debug = true;
+        } else if (arg == "-stepByStep") {
+            debugConfig.stepByStep = true;
+        } else if (arg == "-printBoard") {
+            debugConfig.printBoard = true;
+        }else if (std::isdigit(arg[0])) {
             // This is the number of games
-            numGames = std::stoi(arg);
+            numGames = std::stoi(argv[i]);
         }
     }
 
     std::cout << "Heuristic Player using evaluation function: " << evalName << std::endl;
     // Display evaluation parameters details
     std::cout << Evaluation::getEvalParamsDetails(params) << std::endl;
-    
+
     // We'll use the params directly instead of creating a function
-    return std::make_unique<HeuristicPlayer>(params);
+    return std::make_unique<HeuristicPlayer>(params, debugConfig);
 }
 
 int main(int argc, char* argv[]) {
