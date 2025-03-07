@@ -59,6 +59,10 @@ uint8_t findMaxTile(const uint8_t board[4][4]) {
 // Core evaluation functions
 //------------------------------------------------------
 
+double coreScore(const uint8_t board[4][4]) {
+    return calculateScore(board);
+}
+
 // Count empty tiles in the board (normalized to 0-1000)
 double emptyTiles(const uint8_t board[4][4]) {
     uint64_t count = 0;
@@ -77,34 +81,26 @@ double emptyTiles(const uint8_t board[4][4]) {
 
 // MONOTONICITY: Evaluates how well the tiles are arranged in increasing/decreasing order
 double monotonicity(const uint8_t board[4][4]) {
-    uint64_t score = 0;
+    double score = 0.0;
 
-    for (int row = 0; row < 4; ++row) {
-        bool increasing = true;
-        bool decreasing = true;
-        int prev = board[row][0];
+    // Check rows and columns for monotonicity
+    for (int i = 0; i < 4; ++i) {
+        double rowScore = 0.0;
+        double colScore = 0.0;
 
-        for (int col = 1; col < 4; ++col) {
-            int curr = board[row][col];
-            if (curr < prev) increasing = false;
-            if (curr > prev) decreasing = false;
-            prev = curr;
+        // Check increasing and decreasing patterns
+        for (int j = 0; j < 3; ++j) {
+            // Row check
+            int rowDiff = board[i][j+1] - board[i][j];
+            if (rowDiff >= 0) rowScore += 1.0 / (1.0 + std::abs(rowDiff));
+
+            // Column check
+            int colDiff = board[j+1][i] - board[j][i];
+            if (colDiff >= 0) colScore += 1.0 / (1.0 + std::abs(colDiff));
         }
-        score += (increasing || decreasing) ? 125 : 0; // 1000/8 per line
-    }
 
-    for (int col = 0; col < 4; ++col) {
-        bool increasing = true;
-        bool decreasing = true;
-        int prev = board[0][col];
-
-        for (int row = 1; row < 4; ++row) {
-            int curr = board[row][col];
-            if (curr < prev) increasing = false;
-            if (curr > prev) decreasing = false;
-            prev = curr;
-        }
-        score += (increasing || decreasing) ? 125 : 0;
+        score += std::max(rowScore, 3.0 - rowScore) * 125.0;  // Normalize to 0-125 per line
+        score += std::max(colScore, 3.0 - colScore) * 125.0;
     }
 
     return score;
@@ -154,53 +150,63 @@ double mergeability(const uint8_t board[4][4]) {
 
 // SMOOTHNESS: Evaluates how smooth/gradual the transitions between adjacent tiles are
 double smoothness(const uint8_t board[4][4]) {
-    uint64_t score = 0;
-    uint64_t totalPairs = 0;
+    double score = 0.0;
+    double totalWeight = 0.0;
 
     for (int row = 0; row < 4; ++row) {
-        for (int col = 0; col < 3; ++col) {
-            int curr = board[row][col];
-            int next = board[row][col + 1];
-            if (curr > 0 && next > 0) {
-                score += (curr == next) ? 1000 : 500 / (1 + abs(curr - next));
-                totalPairs++;
+        for (int col = 0; col < 4; ++col) {
+            if (board[row][col] == 0) continue;
+
+            // Check right neighbor
+            if (col < 3 && board[row][col+1] > 0) {
+                int diff = std::abs(board[row][col] - board[row][col+1]);
+                double weight = std::pow(2.0, std::max(board[row][col], board[row][col+1]));
+                score += weight * (1.0 / (1.0 + diff));
+                totalWeight += weight;
+            }
+
+            // Check bottom neighbor
+            if (row < 3 && board[row+1][col] > 0) {
+                int diff = std::abs(board[row][col] - board[row+1][col]);
+                double weight = std::pow(2.0, std::max(board[row][col], board[row+1][col]));
+                score += weight * (1.0 / (1.0 + diff));
+                totalWeight += weight;
             }
         }
     }
 
-    for (int col = 0; col < 4; ++col) {
-        for (int row = 0; row < 3; ++row) {
-            int curr = board[row][col];
-            int next = board[row + 1][col];
-            if (curr > 0 && next > 0) {
-                score += (curr == next) ? 1000 : 500 / (1 + abs(curr - next));
-                totalPairs++;
-            }
-        }
-    }
-
-    return totalPairs > 0 ? score / totalPairs : 0;
+    return totalWeight > 0 ? (score / totalWeight) * 1000.0 : 0.0;
 }
 
 // CORNER VALUE: Evaluates how well the highest values are positioned in corners
 double cornerValue(const uint8_t board[4][4]) {
-    uint64_t score = 0;
+    double score = 0.0;
     uint8_t maxTile = findMaxTile(board);
 
-    uint8_t corners[] = {
-        board[0][0],
-        board[0][3],
-        board[3][0],
-        board[3][3]
-    };
+    // Corner positions and their weights
+    const std::pair<int, int> corners[4] = {{0,0}, {0,3}, {3,0}, {3,3}};
 
-    for (uint8_t corner : corners) {
-        if (corner == maxTile) {
-            score += 250; // 1000/4 per corner
+    for (int row = 0; row < 4; row++) {
+        for (int col = 0; col < 4; col++) {
+            if (board[row][col] == 0) continue;
+
+            // Calculate minimum distance to any corner
+            double minDistance = 6.0; // Max possible distance is 6 (3+3)
+            for (const auto& [crow, ccol] : corners) {
+                double distance = std::abs(row - crow) + std::abs(col - ccol);
+                minDistance = std::min(minDistance, distance);
+            }
+
+            // Higher value tiles should be closer to corners
+            double tileWeight = std::pow(2.0, board[row][col]);
+            double distanceScore = (6.0 - minDistance) / 6.0; // Normalize to 0-1
+            score += tileWeight * distanceScore;
         }
     }
 
-    return score;
+    // Normalize to 0-1000
+    double maxPossibleScore = std::pow(2.0, maxTile) * 4.0; // 4 corners
+    return std::min(1000.0, (score * 1000.0) / maxPossibleScore);
 }
 
 // PATTERN MATCHING: Evaluates how well the board matches desired patterns (normalized to 0-1000)
@@ -260,13 +266,13 @@ SimpleEvalFunc getNamedEvaluation(const std::string& name) {
     if (name == "smoothness") return smoothness;
     if (name == "cornerValue") return cornerValue;
     if (name == "patternMatching") return patternMatching;
+    if (name == "coreScore") return coreScore;
     return nullptr;
 }
 
 // Dictionary of preset evaluation parameters
 static const std::unordered_map<std::string, EvalParams> PRESET_PARAMS = {
-    {"standard", {{"emptyTiles", 250}, {"monotonicity", 250}, {"smoothness", 250}, {"cornerValue", 250}}},
-    {"combined", {{"emptyTiles", 250}, {"monotonicity", 250}, {"smoothness", 250}, {"cornerValue", 250}}},
+    {"standard", {{"emptyTiles", 250}, {"monotonicity", 250}, {"smoothness", 250}, {"cornerValue", 250}, {"coreScore", 250}}},
     {"corner", {{"cornerValue", 1000}}},
     {"merge", {{"mergeability", 1000}}},
     {"pattern", {{"patternMatching", 1000}}},
