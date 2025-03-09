@@ -27,7 +27,7 @@ protected:
         uint64_t state = 0;
         for (int row = 0; row < 4; row++) {
             for (int col = 0; col < 4; col++) {
-                if (row < tiles.size() && col < tiles[row].size()) {
+                if ((size_t)row < tiles.size() && (size_t)col < tiles[row].size()) {
                     int value = tiles[row][col];
                     if (value > 0) {
                         // Convert actual tile value to internal representation

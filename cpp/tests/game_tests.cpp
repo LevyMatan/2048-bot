@@ -8,7 +8,7 @@
 #include <memory>
 #include "test_helpers.hpp"
 
-using namespace Logger2048;
+Logger2048::Logger &logger = Logger2048::Logger::getInstance();
 
 // Mock player for testing
 class MockPlayer : public Player {
@@ -50,9 +50,8 @@ protected:
         waitDisabler = std::make_unique<TestHelpers::ScopedWaitDisabler>();
 
         // Set up logger for testing
-        auto& logger = Logger::getInstance();
         Logger2048::LoggerConfig testConfig;
-        testConfig.level = Level::Debug;
+        testConfig.level = Logger2048::Level::Debug;
         testConfig.waitEnabled = false;
         logger.configure(testConfig);
 

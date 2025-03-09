@@ -1,5 +1,6 @@
 #include "evaluation.hpp"
 #include "board.hpp"
+#include "logger.hpp"
 #include <gtest/gtest.h>
 #include <vector>
 #include <map>
@@ -10,8 +11,7 @@
 #include <cmath>
 #include "test_helpers.hpp"
 
-extern Logger2048::Logger &logger;
-
+Logger2048::Logger &logger = Logger2048::Logger::getInstance();
 using namespace Evaluation;
 
 class EvaluationTest : public ::testing::Test {
@@ -30,7 +30,7 @@ protected:
         BoardState state = 0;
         for (int row = 0; row < 4; row++) {
             for (int col = 0; col < 4; col++) {
-                if (row < tiles.size() && col < tiles[row].size()) {
+                if ((size_t)row < tiles.size() && (size_t)col < tiles[row].size()) {
                     int value = tiles[row][col];
                     if (value > 0) {
                         // Convert actual tile value to internal representation
@@ -275,7 +275,7 @@ TEST_F(EvaluationTest, CompositeEvaluatorTest) {
     };
 
     CompositeEvaluator customEvaluator(customParams);
-    double customScore = customEvaluator.evaluate(state);
+    customEvaluator.evaluate(state);
 
     // The score can be the same if these components have no effect
     // So just test that we get a number without crashing
@@ -302,13 +302,13 @@ TEST_F(EvaluationTest, SetWeightsTest) {
     BoardState state = createBoardState(tiles);
 
     // Get initial evaluation
-    double initialScore = evaluator.evaluate(state);
+    evaluator.evaluate(state);
 
     // Change weights - should not crash
     evaluator.setWeight("emptyTiles", 500);
 
     // Get new evaluation
-    double newScore = evaluator.evaluate(state);
+    evaluator.evaluate(state);
 
     // Scores might be the same if components don't behave as expected
     // Just verify we don't crash
@@ -379,8 +379,8 @@ TEST_F(EvaluationTest, NamedEvaluationTest) {
     board[0][1] = 2; // 4
 
     // Just verify the functions execute without crashing
-    double emptyScore = emptyTilesFunc(board);
-    double cornerScore = cornerFunc(board);
+    emptyTilesFunc(board);
+    cornerFunc(board);
 
     // Don't make assumptions about the actual values
     SUCCEED() << "Named evaluation functions executed successfully";
