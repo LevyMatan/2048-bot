@@ -1,6 +1,6 @@
 // tune_heuristic.cpp
 #include "game.hpp"
-#include "player.hpp"
+#include "players.hpp"
 #include "evaluation.hpp"
 #include <iostream>
 #include <vector>
@@ -16,7 +16,6 @@
 #include <future>
 #include <unordered_map>
 #include <set>
-#include "heuristic_player.hpp"
 
 // Structure to hold a set of evaluation weights and its performance
 struct EvalWeightSet {

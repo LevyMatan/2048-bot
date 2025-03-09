@@ -151,8 +151,8 @@ std::vector<std::tuple<uint64_t, int>> Board::simulateMovesWithScores(uint64_t s
     return results;
 }
 
-std::vector<std::tuple<Action, uint64_t, int>> Board::getValidMoveActionsWithScores(uint64_t state) {
-    std::vector<std::tuple<Action, uint64_t, int>> valid;
+std::vector<ChosenActionResult> Board::getValidMoveActionsWithScores(uint64_t state) {
+    std::vector<ChosenActionResult> valid;
     auto moves = simulateMovesWithScores(state);
 
     for (int i = 0; i < 4; ++i) {

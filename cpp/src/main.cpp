@@ -10,9 +10,7 @@
 #include <atomic>   // Add this for std::atomic
 #include <memory>
 #include "game.hpp"
-#include "player.hpp"
-#include "expectimax_player.hpp"
-#include "heuristic_player.hpp"
+#include "players.hpp"
 #include "board.hpp"
 #include "evaluation.hpp"
 
@@ -132,110 +130,17 @@ void printAvailableEvaluations() {
     std::cout << std::endl;
 }
 
-std::unique_ptr<Player> createExpectimaxPlayer(int argc, char* argv[], int& numGames) {
-    ExpectimaxPlayer::Config config;
-    DebugConfig debugConfig;
-
-    // Start from 2 because argv[1] is the player type
-    for (int i = 2; i < argc; i++) {
-        std::string arg = argv[i];
-        if (arg == "-d" && i + 1 < argc) {
-            config.depth = std::stoi(argv[++i]);
-        } else if (arg == "-c" && i + 1 < argc) {
-            config.chanceCovering = std::stoi(argv[++i]);
-        } else if (arg == "-t" && i + 1 < argc) {
-            config.timeLimit = std::stoi(argv[++i]) / 1000.0;
-        } else if (arg == "-a") {
-            config.adaptiveDepth = true;
-        } else if (arg == "-e" && i + 1 < argc) {
-            config.evalName = argv[++i];
-        } else if (arg == "-json" && i + 1 < argc) {
-            // Load parameters from a JSON file
-            config.jsonFile = argv[++i];
-            std::cout << "Loading evaluation parameters from " << config.jsonFile << std::endl;
-            config.evalName = "custom";
-        } else if (arg == "-list-evals") {
-            printAvailableEvaluations();
-        } else if (arg == "-debug") {
-            debugConfig.debug = true;
-        } else if (arg == "-stepByStep") {
-            debugConfig.stepByStep = true;
-        } else if (arg == "-printBoard") {
-            debugConfig.printBoard = true;
-        } else if (std::isdigit(arg[0])) {
-            // This is the number of games
-            numGames = std::stoi(argv[i]);
-        }
+std::unique_ptr<Player> createPlayer(PlayerConfigurations config) {
+    switch (config.playerType) {
+        case PlayerType::Random:
+            return std::make_unique<RandomPlayer>();
+        case PlayerType::Heuristic:
+            return std::make_unique<HeuristicPlayer>(config.evalParams);
+        case PlayerType::Expectimax:
+            return std::make_unique<ExpectimaxPlayer>(config.depth, config.chanceCovering, config.timeLimit, config.adaptiveDepth, config.evalParams);
+        default:
+            throw std::invalid_argument("Invalid player type");
     }
-
-    std::cout << "Expectimax Configuration:\n"
-              << "  Depth: " << config.depth << "\n"
-              << "  Chance Coverage: " << config.chanceCovering << "\n"
-              << "  Time Limit: " << (config.timeLimit * 1000) << "ms\n"
-              << "  Adaptive Depth: " << (config.adaptiveDepth ? "Yes" : "No") << "\n"
-              << "  Evaluation Function: " << config.evalName << "\n"
-              << "  Debug: " << (debugConfig.debug ? "Yes" : "No") << "\n"
-              << "  Step By Step: " << (debugConfig.stepByStep ? "Yes" : "No") << "\n"
-              << "  Print Board: " << (debugConfig.printBoard ? "Yes" : "No") << "\n\n";
-
-    // Get parameters based on the evaluation name or from JSON file
-    Evaluation::EvalParams params;
-    if (config.evalName == "custom" && !config.jsonFile.empty()) {
-        params = Evaluation::loadParamsFromJsonFile(config.jsonFile);
-    } else {
-        params = Evaluation::getPresetParams(config.evalName);
-    }
-
-    // Display evaluation parameters details
-    std::cout << Evaluation::getEvalParamsDetails(params) << std::endl;
-
-    Evaluation::CompositeEvaluator evaluator(params);
-    Evaluation::EvaluationFunction evalFn = [evaluator](uint64_t state) {
-        return evaluator.evaluate(state);
-    };
-
-    // Create the player with the configured evaluation function
-    return std::make_unique<ExpectimaxPlayer>(config, evalFn, debugConfig);
-}
-
-std::unique_ptr<Player> createHeuristicPlayer(int argc, char* argv[], int& numGames) {
-    std::string evalName = "standard"; // Default evaluation function
-    Evaluation::EvalParams params;
-    std::string jsonFile = "";
-    DebugConfig debugConfig;
-
-    // Start from 2 because argv[1] is the player type
-    for (int i = 2; i < argc; i++) {
-        std::string arg = argv[i];
-        if (arg == "-e" && i + 1 < argc) {
-            evalName = argv[++i];
-            params = Evaluation::getPresetParams(evalName);
-        } else if (arg == "-json" && i + 1 < argc) {
-            // Load parameters from a JSON file
-            jsonFile = argv[++i];
-            std::cout << "Loading evaluation parameters from " << jsonFile << std::endl;
-            params = Evaluation::loadParamsFromJsonFile(jsonFile);
-            evalName = "custom-json";
-        } else if (arg == "-list-evals") {
-            printAvailableEvaluations();
-        } else if (arg == "-debug") {
-            debugConfig.debug = true;
-        } else if (arg == "-stepByStep") {
-            debugConfig.stepByStep = true;
-        } else if (arg == "-printBoard") {
-            debugConfig.printBoard = true;
-        }else if (std::isdigit(arg[0])) {
-            // This is the number of games
-            numGames = std::stoi(argv[i]);
-        }
-    }
-
-    std::cout << "Heuristic Player using evaluation function: " << evalName << std::endl;
-    // Display evaluation parameters details
-    std::cout << Evaluation::getEvalParamsDetails(params) << std::endl;
-
-    // We'll use the params directly instead of creating a function
-    return std::make_unique<HeuristicPlayer>(params, debugConfig);
 }
 
 int main(int argc, char* argv[]) {
@@ -244,26 +149,9 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    std::string playerType = argv[1];
-    int numGames = 1;  // Default value
-
-    std::unique_ptr<Player> player;
-    try {
-        if (playerType == "Random") {
-            player = std::make_unique<RandomPlayer>();
-            if (argc >= 3) numGames = std::stoi(argv[2]);
-        } else if (playerType == "Heuristic") {
-            player = createHeuristicPlayer(argc, argv, numGames);
-        } else if (playerType == "Expectimax") {
-            player = createExpectimaxPlayer(argc, argv, numGames);
-        } else {
-            printUsage(argv[0]);
-            return 1;
-        }
-    } catch (const std::exception& e) {
-        std::cerr << "Error: " << e.what() << std::endl;
-        return 1;
-    }
+    int numGames = atoi(argv[1]);  // Default value
+    PlayerConfigurations rand(PlayerType::Heuristic, Evaluation::EvalParams(), 0, 0, 0, false);
+    std::unique_ptr<Player> player = createPlayer(rand);
 
     // Set progress interval to 10% of total games, with a minimum of 1
     const int PROGRESS_INTERVAL = std::max(1, numGames / 10);
@@ -280,7 +168,6 @@ int main(int argc, char* argv[]) {
 
     // Determine number of threads based on hardware
     unsigned int numThreads = std::thread::hardware_concurrency();
-    // Ensure at least 2 threads and not more than 8 (to avoid excessive thread creation)
     numThreads = std::max(2u, std::min(8u, numThreads));
 
     // For small number of games, use fewer threads

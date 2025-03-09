@@ -1,6 +1,6 @@
-#include "expectimax_player.hpp"
+#include "players.hpp"
 #include "board.hpp"
-#include "debug_config.hpp"
+#include "evaluation.hpp"
 #include <chrono>
 #include <algorithm>
 #include <limits>
@@ -8,43 +8,26 @@
 #include <iostream>
 #include <unordered_map>
 
-ExpectimaxPlayer::ExpectimaxPlayer(const Config& cfg, const DebugConfig& debugCfg)
-    : Player(debugCfg), // Initialize the base class with debugConfig
-      config(cfg),
-      trans_table(),
-      cacheHits(0),
-      depthLimit(15),
-      startTime(std::chrono::steady_clock::now()),
-      rng(rd())
-{
-    // Create a custom evaluation function based on the selected evaluation name
-    Evaluation::EvalParams params;
+ExpectimaxPlayer::ExpectimaxPlayer(const int depth, const int chanceCovering,
+    const int timeLimit, const bool adaptive_depth, const Evaluation::EvalParams& params)
+    : depthLimit(depth),
+      chanceCovering(chanceCovering),
+      timeLimit(timeLimit),
+      adaptiveDepth(adaptive_depth),
+      evalParams(params),
+      evaluator(params){
 
-    params = Evaluation::getPresetParams(cfg.evalName);
-
-    Evaluation::CompositeEvaluator evaluator(params);
-    evalFn = [evaluator](uint64_t state) {
-        return evaluator.evaluate(state);
+    evaluator = Evaluation::CompositeEvaluator(params);
+    evalFn = [this](BoardState state) -> double {
+        return this->evaluator.evaluate(state);
     };
 }
 
-ExpectimaxPlayer::ExpectimaxPlayer(const Config& cfg, EvaluationFunction fn, const DebugConfig& debugCfg)
-    : Player(debugCfg), // Initialize the base class with debugConfig
-      config(cfg),
-      evalFn(fn),
-      trans_table(),
-      cacheHits(0),
-      depthLimit(15),
-      startTime(std::chrono::steady_clock::now()),
-      rng(rd())
-{
-}
-
-std::tuple<Action, uint64_t, int> ExpectimaxPlayer::chooseAction(uint64_t state) {
+ChosenActionResult ExpectimaxPlayer::chooseAction(uint64_t state) {
     startTime = std::chrono::steady_clock::now();
 
-    int searchDepth = config.adaptiveDepth ?
-                     getAdaptiveDepth(state) : config.depth;
+    int searchDepth = adaptiveDepth ?
+                     getAdaptiveDepth(state) : depthLimit;
 
     auto validMoves = Board::getValidMoveActionsWithScores(state);
     if (validMoves.empty()) {
@@ -52,36 +35,18 @@ std::tuple<Action, uint64_t, int> ExpectimaxPlayer::chooseAction(uint64_t state)
     }
 
     // Initialize best move with the first valid move to ensure we always have something to return
-    Action bestAction = std::get<0>(validMoves[0]);
-    BoardState bestState = std::get<1>(validMoves[0]);
-    int bestScore = std::get<2>(validMoves[0]);
-    uint64_t bestValue = 0;
+    ChosenActionResult bestAction = validMoves[0];
 
-    for (const auto& [action, newState, score] : validMoves) {
-        double value = chanceNode(newState, searchDepth, 1.0);
+    double bestValue = 0.0;
 
-        if (debugConfig.debug) {
-            std::cout << "Action: " << actionToString(action)
-                      << ", Score: " << score
-                      << ", Value: " << value << std::endl;
-            if (debugConfig.printBoard) {
-                uint8_t board_tmp[4][4];
-                Evaluation::unpackState(newState, board_tmp);
-                Board::printBoard(board_tmp);
-            }
-        }
+    for (const ChosenActionResult& actionResult : validMoves) {
+        double value = chanceNode(actionResult.state, searchDepth, 1.0);
 
         if (value > bestValue) {
             bestValue = value;
-            bestAction = action;
-            bestState = newState;
-            bestScore = score;
+            bestAction = actionResult;
         }
 
-        if (debugConfig.stepByStep) {
-            std::cout << "Press Enter to continue...";
-            std::cin.get();
-        }
 
         if (shouldTimeOut()) {
             // Log timeout for debugging
@@ -92,28 +57,12 @@ std::tuple<Action, uint64_t, int> ExpectimaxPlayer::chooseAction(uint64_t state)
         }
     }
 
-    if (debugConfig.debug) {
-        std::cout << "Cache hits: " << cacheHits << std::endl;
-    }
-
-    return {bestAction, bestState, bestScore};
+    return bestAction;
 }
 
 double ExpectimaxPlayer::chanceNode(BoardState state, int depth, double prob) {
     if (depth <= 0 || shouldTimeOut() || prob < 0.001) {
         return evalFn(state);
-    }
-
-    if (depth < depthLimit) {
-        const auto &i = trans_table.find(state);
-        if (i != trans_table.end()) {
-            trans_table_entry_t entry = i->second;
-            if(entry.depth <= depth)
-            {
-                cacheHits++;
-                return entry.heuristic;
-            }
-        }
     }
 
     auto emptyTiles = Board::getEmptyTiles(state);
@@ -133,22 +82,11 @@ double ExpectimaxPlayer::chanceNode(BoardState state, int depth, double prob) {
             double value4 = maxNode(state | (tile_2 << 1U), depth - 1, prob * 0.1) * 0.1;
             res += value2;
             res += value4;
-
-            if (debugConfig.debug) {
-                std::cout << "Chance Node - Depth: " << depth << ", Tile 2 Value: " << value2
-                          << ", Tile 4 Value: " << value4 << std::endl;
-            }
         }
         tmp >>= 4;
         tile_2 <<= 4;
     }
     res = res / num_open;
-
-    if (depth < depthLimit) {
-        trans_table_entry_t entry = {static_cast<uint8_t>(depth), res};
-        trans_table[state] = entry;
-    }
-
     return res;
 }
 
@@ -165,9 +103,6 @@ double ExpectimaxPlayer::maxNode(BoardState state, int depth, double prob) {
     double bestValue = std::numeric_limits<double>::lowest();
     for (const auto& [action, newState, score] : validMoves) {
         double value = chanceNode(newState, depth - 1, prob);
-        if (debugConfig.debug) {
-            std::cout << "Max Node - Depth: " << depth << ", Action: " << static_cast<int>(action) << ", Value: " << value << std::endl;
-        }
         bestValue = std::max(bestValue, value);
     }
     return bestValue;
@@ -176,7 +111,7 @@ double ExpectimaxPlayer::maxNode(BoardState state, int depth, double prob) {
 bool ExpectimaxPlayer::shouldTimeOut() const {
     auto currentTime = std::chrono::steady_clock::now();
     auto elapsedTime = std::chrono::duration<double>(currentTime - startTime).count();
-    return elapsedTime >= config.timeLimit;
+    return elapsedTime >= timeLimit;
 }
 
 int ExpectimaxPlayer::getAdaptiveDepth(uint64_t state) const {
@@ -200,28 +135,28 @@ int ExpectimaxPlayer::getAdaptiveDepth(uint64_t state) const {
 
     // Super aggressive depth for critical situations
     if (maxTile >= 14) { // 16384 or higher
-        return config.depth + 4; // Maximum depth for approaching 16K
+        return depthLimit + 4; // Maximum depth for approaching 16K
     } else if (maxTile >= 13) { // 8192
-        return config.depth + 3; // Very high depth for approaching 8K
+        return depthLimit + 3; // Very high depth for approaching 8K
     } else if (maxTile >= 12) { // 4096
-        return config.depth + 2; // High depth
+        return depthLimit + 2; // High depth
     }
 
     // Depth based on empty tiles and high-value tiles
     if (emptyCount <= 2) {
-        return config.depth + 3; // Very critical, search deeper
+        return depthLimit + 3; // Very critical, search deeper
     } else if (emptyCount <= 4) {
-        return config.depth + 2;
+        return depthLimit + 2;
     } else if (emptyCount <= 6) {
-        return config.depth + 1;
+        return depthLimit + 1;
     } else if (emptyCount >= 14) {
-        return std::max(2, config.depth - 1); // Board is relatively empty, but never go below depth 2
+        return std::max(2, depthLimit - 1); // Board is relatively empty, but never go below depth 2
     }
 
     // If we have multiple high-value tiles, increase depth slightly to make better decisions
     if (highValueTiles >= 2) {
-        return config.depth + 1;
+        return depthLimit + 1;
     }
 
-    return config.depth;
+    return depthLimit;
 }

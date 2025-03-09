@@ -9,7 +9,7 @@ class MockPlayer : public Player {
 public:
     MockPlayer(int fixedAction) : fixedAction_(fixedAction) {}
 
-    std::tuple<Action, uint64_t, int> chooseAction(uint64_t state) override {
+    ChosenActionResult chooseAction(uint64_t state) override {
         // For testing purposes, we'll simulate a simple move
         auto validMoves = Board::getValidMoveActionsWithScores(state);
         if (validMoves.empty()) {

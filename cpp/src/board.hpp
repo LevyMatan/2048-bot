@@ -19,6 +19,14 @@ enum class Action {
 std::string actionToString(Action action);
 
 using BoardState = uint64_t;
+
+typedef struct ChosenActionResult {
+    Action action;
+    BoardState state;
+    int score;
+
+    ChosenActionResult(Action a, BoardState s, int sc) : action(a), state(s), score(sc) {}
+} ChosenActionResult;
 class Board {
 private:
     BoardState state;
@@ -106,9 +114,9 @@ public:
      * @brief Gets all valid moves with their resulting states and scores
      *
      * @param state 64-bit board state
-     * @return std::vector<std::tuple<Action, uint64_t, int>> Vector of (action, new state, score) tuples
+     * @return std::vector<ChosenActionResult> Vector of (action, new state, score) tuples
      */
-    static std::vector<std::tuple<Action, uint64_t, int>> getValidMoveActionsWithScores(uint64_t state);
+    static std::vector<ChosenActionResult> getValidMoveActionsWithScores(uint64_t state);
 
     /**
      * @brief Sets a specific tile to a value

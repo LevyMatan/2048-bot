@@ -1,6 +1,7 @@
 // game.hpp
 #pragma once
 #include "board.hpp"
+#include "players.hpp"
 #include <random>
 #include <tuple>
 #include <iostream>
@@ -32,7 +33,7 @@ public:
     int getMoveCount() const { return moveCount; }
     void setMoveCount(int newMoveCount) { moveCount = newMoveCount; }
     void reset();
-    std::tuple<int, uint64_t, int> playGame(std::function<std::tuple<Action, uint64_t, int>(uint64_t)> chooseActionFn);
+    std::tuple<int, uint64_t, int> playGame(std::function<ChosenActionResult(uint64_t)> chooseActionFn);
     void prettyPrint() const;
 
     void setState(uint64_t state) {
@@ -44,7 +45,7 @@ public:
     }
 
     // Get valid moves for the current state
-    std::vector<std::tuple<Action, uint64_t, int>> getValidMoves() const {
+    std::vector<ChosenActionResult> getValidMoves() const {
         return Board::getValidMoveActionsWithScores(board.getState());
     }
 };

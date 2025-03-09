@@ -1,7 +1,7 @@
-#include "player.hpp"
+#include "players.hpp"
 #include "board.hpp"
 
-std::tuple<Action, uint64_t, int> RandomPlayer::chooseAction(uint64_t state) {
+ChosenActionResult RandomPlayer::chooseAction(BoardState state) {
     auto validActions = Board::getValidMoveActionsWithScores(state);
     if (validActions.empty()) {
         return {Action::INVALID, state, 0};

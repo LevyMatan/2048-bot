@@ -1,5 +1,6 @@
 // game.cpp
 #include "game.hpp"
+#include "players.hpp"
 #include <iostream>
 #include <iomanip>
 #include <algorithm>
@@ -52,7 +53,7 @@ void Game2048::reset() {
 }
 
 std::tuple<int, uint64_t, int> Game2048::playGame(
-    std::function<std::tuple<Action, uint64_t, int>(uint64_t)> chooseActionFn) {
+    std::function<ChosenActionResult(uint64_t)> chooseActionFn) {
 
     reset();
     bool gameOver = false;
