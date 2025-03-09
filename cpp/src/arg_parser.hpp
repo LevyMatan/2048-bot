@@ -8,12 +8,13 @@ using namespace Logger2048;
 
 class SimulationConfig {
 public:
-    SimulationConfig(int numGames = 1, int numThreads = 1, int progressInterval = 100)
-        : numGames(numGames), numThreads(numThreads), progressInterval(progressInterval) {}
+    SimulationConfig(int numGames = 1, int numThreads = 1, int progressInterval = 100, BoardState initialState = 0)
+        : numGames(numGames), numThreads(numThreads), progressInterval(progressInterval), initialState(initialState) {}
 
     int numGames;
     int numThreads;
     int progressInterval;
+    BoardState initialState;
 };
 
 class ArgParser {
@@ -31,6 +32,7 @@ private:
     void parseShortFlag(const std::string& flag, const std::string& value);
     static void printHelp();
     void loadLoggerConfigIfNeeded();
+    void loadSimConfigIfNeeded();
 
     SimulationConfig simConfig;
     PlayerConfigurations playerConfig;
@@ -39,4 +41,8 @@ private:
     bool loadLoggerConfigFromFile = false;
     std::string loggerConfigPath = "";
     const std::string defaultLoggerConfigPath = "configurations/logger_config.json";
+    
+    bool loadSimConfigFromFile = false;
+    std::string simConfigPath = "";
+    const std::string defaultSimConfigPath = "configurations/sim_config.json";
 };

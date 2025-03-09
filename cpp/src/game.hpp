@@ -27,20 +27,22 @@ public:
     }
 
     void addRandomTile();
-    bool playMove(Action action, uint64_t nextState, int moveScore);
+    bool playMove(Action action, BoardState nextState, int moveScore);
     int getScore() const { return score; }
     void setScore(int newScore) { score = newScore; }
     int getMoveCount() const { return moveCount; }
     void setMoveCount(int newMoveCount) { moveCount = newMoveCount; }
     void reset();
-    std::tuple<int, uint64_t, int> playGame(std::function<ChosenActionResult(uint64_t)> chooseActionFn);
+    std::tuple<int, BoardState, int> playGame(
+        std::function<ChosenActionResult(BoardState)> chooseActionFn, 
+        BoardState initialState);
     void prettyPrint() const;
 
-    void setState(uint64_t state) {
+    void setState(BoardState state) {
         board.setState(state);
     }
 
-    uint64_t getState() const {
+    BoardState getState() const {
         return board.getState();
     }
 

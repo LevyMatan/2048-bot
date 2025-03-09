@@ -5,6 +5,7 @@
 #include <sstream>
 #include <iostream>
 #include <mutex>
+#include <iomanip>
 #include "board.hpp"
 
 namespace Logger2048 {
@@ -70,7 +71,7 @@ public:
         log(Level::Debug, group, args...);
     }
 
-    void printBoard(Group group, uint64_t board);
+    void printBoard(Group group, BoardState board);
     void wait();
 
 private:

@@ -73,9 +73,9 @@ public:
      * the 4-bit tiles within the 64-bit state.
      *
      * @param state 64-bit board state
-     * @return uint64_t Transposed board state
+     * @return BoardState Transposed board state
      */
-    static uint64_t transpose(uint64_t state);
+    static BoardState transpose(BoardState state);
     /**
      * @brief Constructs a new empty Board
      *
@@ -94,14 +94,14 @@ public:
      *
      * @param newState 64-bit integer representing the new board state
      */
-    void setState(uint64_t newState) { state = newState; }
+    void setState(BoardState newState) { state = newState; }
 
     /**
      * @brief Gets the current board state
      *
-     * @return uint64_t 64-bit integer representing the current board state
+     * @return BoardState 64-bit integer representing the current board state
      */
-    uint64_t getState() const { return state; }
+    BoardState getState() const { return state; }
 
     /**
      * @brief Finds all empty tiles on the board
@@ -109,7 +109,7 @@ public:
      * @param state 64-bit board state
      * @return std::vector<std::tuple<int, int>> Vector of (row, column) coordinates of empty tiles
      */
-    static std::vector<std::tuple<int, int>> getEmptyTiles(uint64_t state);
+    static std::vector<std::tuple<int, int>> getEmptyTiles(BoardState state);
 
     /**
      * @brief Gets all valid moves with their resulting states and scores
@@ -117,7 +117,7 @@ public:
      * @param state 64-bit board state
      * @return std::vector<ChosenActionResult> Vector of (action, new state, score) tuples
      */
-    static std::vector<ChosenActionResult> getValidMoveActionsWithScores(uint64_t state);
+    static std::vector<ChosenActionResult> getValidMoveActionsWithScores(BoardState state);
 
     /**
      * @brief Sets a specific tile to a value
@@ -126,26 +126,26 @@ public:
      * @param row Row coordinate (0-3)
      * @param col Column coordinate (0-3)
      * @param value Value to set (in internal representation)
-     * @return uint64_t New board state after setting the tile
+     * @return BoardState New board state after setting the tile
      */
-    static uint64_t setTile(uint64_t state, int row, int col, int value);
+    static BoardState setTile(BoardState state, int row, int col, int value);
 
     /**
      * @brief Simulates all possible moves and returns resulting states with scores
      *
      * @param state 64-bit board state
-     * @return std::vector<std::tuple<uint64_t, int>> Vector of (new state, score) tuples
+     * @return std::vector<std::tuple<BoardState, int>> Vector of (new state, score) tuples
      */
-    static std::vector<std::tuple<uint64_t, int>> simulateMovesWithScores(uint64_t state);
+    static std::vector<std::tuple<BoardState, int>> simulateMovesWithScores(BoardState state);
 
     /**
      * @brief Gets all valid moves with their resulting states
      *
      * @param state 64-bit board state
-     * @return std::vector<std::tuple<Action, uint64_t>> Vector of (action, new state) tuples
+     * @return std::vector<std::tuple<Action, BoardState>> Vector of (action, new state) tuples
      * @note Maintained for backward compatibility
      */
-    static std::vector<std::tuple<Action, uint64_t>> getValidMoveActions(uint64_t state);
+    static std::vector<std::tuple<Action, BoardState>> getValidMoveActions(BoardState state);
 
     /**
      * @brief Converts a tile value to its internal representation
@@ -185,7 +185,7 @@ public:
      * @param col Column coordinate (0-3)
      * @return The value at the specified position (0 if empty)
      */
-    static int getTileAt(uint64_t state, int row, int col) {
+    static int getTileAt(BoardState state, int row, int col) {
         int pos = (row * 4 + col) * 4;
         return (state >> pos) & 0xF;
     }
@@ -194,9 +194,9 @@ public:
      * @brief Calculates the score for a given board state
      *
      * @param state 64-bit board state
-     * @return uint64_t Score calculated from the board state
+     * @return BoardState Score calculated from the board state
      */
-    static uint64_t getScore(uint64_t state) {
+    static uint64_t getScore(BoardState state) {
         uint64_t score = 0;
 
         // Sum the values of all tiles
@@ -230,7 +230,7 @@ public:
  * This class represents a 2048 game board and provides functionality for game mechanics.
  *
  * ## State Representation
- * The game state is stored as a 64-bit integer (uint64_t) where:
+ * The game state is stored as a 64-bit integer (BoardState) where:
  * - Each tile uses 4 bits to store its value
  * - Values are stored as powers of 2 (e.g., 2^1=2, 2^2=4, 2^3=8, etc.)
  * - A 4x4 board requires 16 tiles * 4 bits = 64 bits total

@@ -21,7 +21,7 @@ void runPerformanceTest() {
     std::cout << "Running performance test..." << std::endl;
 
     // Create a board with a fixed state for consistent testing
-    uint64_t state = 0x0000000100020003;  // Some fixed state
+    BoardState state = 0x0000000100020003;  // Some fixed state
 
     const int iterations = 1000000;
 
@@ -45,14 +45,14 @@ void runPerformanceTest() {
 
 // Function to run games in parallel
 void runGamesParallel(int startIdx, int endIdx, std::unique_ptr<Player>& player,
-                     std::atomic<int>& bestScore, std::atomic<uint64_t>& bestState,
+                     std::atomic<int>& bestScore, std::atomic<BoardState>& bestState,
                      std::atomic<int>& bestMoveCount, std::mutex& printMutex,
-                     int numGames, int PROGRESS_INTERVAL) {
+                     int numGames, int PROGRESS_INTERVAL, BoardState initialState) {
 
     Game2048 game;
 
     // Create a lambda that captures the player and calls its chooseAction method
-    auto chooseActionFn = [&player](uint64_t state) {
+    auto chooseActionFn = [&player](BoardState state) {
         return player->chooseAction(state);
     };
 
@@ -60,7 +60,7 @@ void runGamesParallel(int startIdx, int endIdx, std::unique_ptr<Player>& player,
     static std::atomic<int> gamesCompleted(0);
 
     for (int i = startIdx; i < endIdx; ++i) {
-        auto [score, state, moveCount] = game.playGame(chooseActionFn);
+        auto [score, state, moveCount] = game.playGame(chooseActionFn, initialState);
 
         // Update best score if better (using atomic compare-exchange)
         int currentBest = bestScore.load();
@@ -159,6 +159,10 @@ int main(int argc, char* argv[]) {
         auto& logger = Logger2048::Logger::getInstance();
         logger.info(Logger2048::Group::Game, "Starting application with", simConfig.numGames, "games");
         
+        if (simConfig.initialState != 0) {
+            logger.info(Logger2048::Group::Game, "Using initial state:", std::hex, simConfig.initialState, std::dec);
+        }
+        
         std::unique_ptr<Player> player = createPlayer(playerConfig);
         logger.info(Logger2048::Group::AI, "Created player of type:", player->getName());
 
@@ -166,16 +170,18 @@ int main(int argc, char* argv[]) {
         const int numGames = simConfig.numGames;
         const int numThreads = simConfig.numThreads;
         const int PROGRESS_INTERVAL = simConfig.progressInterval;
+        const BoardState initialState = simConfig.initialState;
 
         // Use atomic variables for thread safety
         std::atomic<int> bestScore(0);
-        std::atomic<uint64_t> bestState(0);
+        std::atomic<BoardState> bestState(0);
         std::atomic<int> bestMoveCount(0);
         std::mutex printMutex;
 
         auto startTime = std::chrono::high_resolution_clock::now();
 
-        logger.info(Logger2048::Group::Game, "Starting", numGames, "games with", player->getName(), "using", numThreads, "threads");
+        logger.info(Logger2048::Group::Game, "Starting", numGames, "games with", 
+                   player->getName(), "using", numThreads, "threads");
 
         std::vector<std::thread> threads;
         int gamesPerThread = numGames / numThreads;
@@ -188,7 +194,8 @@ int main(int argc, char* argv[]) {
             threads.emplace_back(runGamesParallel, startIdx, endIdx,
                                std::ref(player), std::ref(bestScore),
                                std::ref(bestState), std::ref(bestMoveCount),
-                               std::ref(printMutex), numGames, PROGRESS_INTERVAL);
+                               std::ref(printMutex), numGames, PROGRESS_INTERVAL,
+                               initialState);
         }
 
         // Wait for all threads to complete
