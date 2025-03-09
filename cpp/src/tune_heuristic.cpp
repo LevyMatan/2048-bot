@@ -165,7 +165,7 @@ EvalWeightSet generateRandomWeights(std::mt19937& rng) {
     // Normalize weights to sum to 1000
     for (size_t i = 0; i < activeComponents.size(); ++i) {
         double normalizedWeight = (weights[i] / sum) * 1000.0;
-        weightSet.params[activeComponents[i]] = static_cast<uint64_t>(normalizedWeight);
+        weightSet.params[activeComponents[i]] = normalizedWeight;
         weightSet.activeComponents.insert(activeComponents[i]);
     }
 
@@ -224,16 +224,16 @@ EvalWeightSet mutateWeights(const EvalWeightSet& parent, std::mt19937& rng, doub
             weight = newWeightDist(rng);
         }
 
-        child.params[component] = static_cast<uint64_t>(weight);
+        child.params[component] = weight;
         totalWeight += weight;
     }
 
     // Normalize weights to sum to 1000
     double scale = 1000.0 / totalWeight;
-    uint64_t sum = 0;
+    double sum = 0;
 
     for (auto& [component, weight] : child.params) {
-        weight = static_cast<uint64_t>(weight * scale);
+        weight = weight * scale;
         sum += weight;
     }
 
@@ -317,7 +317,7 @@ std::vector<EvalWeightSet> loadWeightsFromFile(const std::string& filename) {
 
                 if (colonPos != std::string::npos) {
                     std::string component = compToken.substr(0, colonPos);
-                    uint64_t weight = std::stoull(compToken.substr(colonPos + 1));
+                    double weight = std::stod(compToken.substr(colonPos + 1));
 
                     if (weight > 0) {
                         ws.params[component] = weight;

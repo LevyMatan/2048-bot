@@ -5,11 +5,9 @@
   "timeLimit": 50.0,
   "adaptiveDepth": true,
   "evalParams": {
-    "emptyTiles": 488,
-    "cornerValue": 117,
-    "monotonicity": 150,
-    "smoothness": 80,
-    "mergeability": 395,
-    "patternMatching": 250
+    "emptyTiles": 270.0,
+    "monotonicity": -47.0,
+    "mergeability": 700.0,
+    "coreScore": -11.0
   }
-} 
+}

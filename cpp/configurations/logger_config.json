@@ -10,8 +10,8 @@
     "Main": true,
     "Tuner": true
   },
-  "outputDestination": "None",
-  "waitEnabled": false,
+  "outputDestination": "Both",
+  "waitEnabled": true,
   "shrinkBoard": true,
   "showTimestamp": false,
   "logFile": "game.log"
