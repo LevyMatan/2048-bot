@@ -25,7 +25,7 @@ std::string actionToString(Action action) {
     }
 }
 
-uint16_t Board::moveLeft(uint16_t row, int& score) {
+uint16_t Board::moveRight(uint16_t row, int& score) {
     int values[4] = {
         (row >> 12) & 0xF,
         (row >> 8) & 0xF,
@@ -65,10 +65,10 @@ uint16_t Board::moveLeft(uint16_t row, int& score) {
     return static_cast<uint16_t>((result[0] << 12) | (result[1] << 8) | (result[2] << 4) | result[3]);
 }
 
-uint16_t Board::moveRight(uint16_t row, int& score) {
+uint16_t Board::moveLeft(uint16_t row, int& score) {
     uint16_t reversed = ((row & 0xF) << 12) | ((row & 0xF0) << 4) |
                        ((row & 0xF00) >> 4) | ((row & 0xF000) >> 12);
-    uint16_t moved = moveLeft(reversed, score);
+    uint16_t moved = moveRight(reversed, score);
     return ((moved & 0xF) << 12) | ((moved & 0xF0) << 4) |
            ((moved & 0xF00) >> 4) | ((moved & 0xF000) >> 12);
 }

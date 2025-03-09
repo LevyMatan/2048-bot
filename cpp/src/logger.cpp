@@ -174,7 +174,7 @@ bool Logger::loadConfigFromJsonFile(const std::string& filename) {
 }
 
 void Logger::printBoard(Group group, BoardState board) {
-    if (!shouldLog(Level::Info, group)) return;
+    if (!shouldLog(Level::Debug, group)) return;
 
     std::lock_guard<std::mutex> lock(logMutex);
 
@@ -201,8 +201,10 @@ void Logger::printBoard(Group group, BoardState board) {
 }
 
 void Logger::wait() {
-    std::cout << "Press ENTER to continue..." << std::flush;
-    std::cin.get();
+    if (config.waitEnabled) {
+        std::cout << "Press ENTER to continue..." << std::flush;
+        std::cin.get();
+    }
 }
 
 bool Logger::shouldLog(Level level, Group group) {

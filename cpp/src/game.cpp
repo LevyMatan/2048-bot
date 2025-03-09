@@ -52,7 +52,7 @@ bool Game2048::playMove(Action action, BoardState nextState, int moveScore) {
     score += moveScore;
     moveCount++;
 
-    logger.info(Logger2048::Group::Game, 
+    logger.debug(Logger2048::Group::Game, 
         "Move #", moveCount, ": ", actionToString(action), 
         ", Score: +", moveScore, ", Total: ", score);
 
@@ -87,8 +87,11 @@ std::tuple<int, BoardState, int> Game2048::playGame(
     bool gameOver = false;
 
     while (!gameOver) {
+        logger.debug(Logger2048::Group::Game, "Need to choose action, current state:", board.getState());
+        logger.printBoard(Logger2048::Group::Game, board.getState());
+        logger.wait();
         ChosenActionResult actionResult = chooseActionFn(board.getState());
-        logger.info(Logger2048::Group::Game, "Action:", actionToString(actionResult.action), "Next State:", actionResult.state, "Move Score:", actionResult.score);
+        logger.debug(Logger2048::Group::Game, "Action:", actionToString(actionResult.action), "Next State:", actionResult.state, "Move Score:", actionResult.score);
         logger.printBoard(Logger2048::Group::Game, actionResult.state);
         logger.wait();
         gameOver = !playMove(actionResult.action, actionResult.state, actionResult.score);
