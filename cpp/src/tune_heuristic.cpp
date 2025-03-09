@@ -108,7 +108,7 @@ void evaluateWeights(EvalWeightSet& weightSet, int numGames) {
             return player->chooseAction(state);
         };
 
-        auto [score, state, moves] = game.playGame(chooseActionFn);
+        auto [score, state, moves] = game.playGame(chooseActionFn, 0);
 
         totalScore += score;
         maxScore = std::max(maxScore, score);

@@ -64,6 +64,7 @@ set(TUNE_SOURCES
     src/heuristic_player.cpp
     src/expectimax_player.cpp
     src/evaluation.cpp
+    src/logger.cpp
 )
 
 # Create tuning executable

@@ -74,6 +74,10 @@ public:
     void printBoard(Group group, BoardState board);
     void wait();
 
+    const LoggerConfig& getConfig() const {
+        return config;
+    }
+
 private:
     Logger() = default;
     ~Logger() {

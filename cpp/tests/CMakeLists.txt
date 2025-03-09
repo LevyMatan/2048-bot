@@ -21,6 +21,7 @@ endif()
 add_executable(board_tests
     board_tests.cpp
     ../src/board.cpp
+    ../src/logger.cpp
 )
 target_include_directories(board_tests PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(board_tests PRIVATE GTest::gtest GTest::gtest_main)
@@ -31,6 +32,7 @@ add_executable(game_tests
     game_tests.cpp
     ../src/board.cpp
     ../src/game.cpp
+    ../src/logger.cpp
 )
 target_include_directories(game_tests PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(game_tests PRIVATE GTest::gtest GTest::gtest_main)
