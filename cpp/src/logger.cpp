@@ -1,3 +1,5 @@
+#ifndef NDEBUG
+
 #include "logger.hpp"
 #include <iomanip>
 #include <chrono>
@@ -335,3 +337,4 @@ void Logger::printConfiguration() {
     info(Group::Logger, "- Wait Enabled:", config.waitEnabled ? "Yes" : "No");
     info(Group::Logger, "- Shrink Board:", config.shrinkBoard ? "Yes" : "No");
 }
+#endif  // NDEBUG
