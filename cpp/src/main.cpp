@@ -150,10 +150,10 @@ int main(int argc, char* argv[]) {
         ArgParser parser(argc, argv);
         auto simConfig = parser.getSimConfig();
         auto playerConfig = parser.getPlayerConfig();
-        auto loggerConfig = parser.getLoggerConfig();
-
-        // FIX: Use the singleton pattern correctly, don't create a local instance
-        Logger2048::Logger::getInstance().configure(loggerConfig);
+        
+        // The parser already loads the configuration if needed
+        // Just need to apply the configuration from command line args
+        Logger2048::Logger::getInstance().configure(parser.getLoggerConfig());
         
         // Example of using the logger
         auto& logger = Logger2048::Logger::getInstance();
@@ -218,6 +218,7 @@ int main(int argc, char* argv[]) {
         // Create a temporary game to display the best board
         Game2048 tempGame;
         tempGame.setState(bestState.load());
+        logger.printBoard(Logger2048::Group::Game, bestState.load());
         // Set the score and move count for the best game
         tempGame.setScore(bestScore.load());
         tempGame.setMoveCount(bestMoveCount.load());

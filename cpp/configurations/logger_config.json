@@ -1,0 +1,16 @@
+{
+  "level": "info",
+  "groups": {
+    "Board": true,
+    "Eval": true,
+    "AI": true,
+    "Game": true,
+    "Logger": true
+  },
+  "waitEnabled": false,
+  "shrinkBoard": true,
+  "logToFile": false,
+  "logToConsole": true,
+  "showTimestamp": false,
+  "logFile": "game.log"
+} 

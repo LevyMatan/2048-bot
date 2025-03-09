@@ -8,6 +8,7 @@ ArgParser::ArgParser(int argc, char* argv[]) :
     playerConfig(),
     loggerConfig() {
     parseArguments(argc, argv);
+    loadLoggerConfigIfNeeded();
 }
 
 void ArgParser::parseArguments(int argc, char* argv[]) {
@@ -20,11 +21,24 @@ void ArgParser::parseArguments(int argc, char* argv[]) {
         }
 
         try {
-            if (i + 1 >= argc && arg[0] == '-') {
-                throw std::runtime_error("Missing value for flag: " + arg);
-            }
-
             if (arg[0] == '-') {
+                // Special handling for -lc and --log-config which can be used without a value
+                if (arg == "-lc" || arg == "--log-config") {
+                    loadLoggerConfigFromFile = true;
+                    
+                    // Check if the next argument exists and is not a flag (doesn't start with -)
+                    if (i + 1 < argc && argv[i + 1][0] != '-') {
+                        loggerConfigPath = argv[++i];
+                    }
+                    // If not, the default path will be used
+                    continue;
+                }
+                
+                // For all other flags, require a value
+                if (i + 1 >= argc) {
+                    throw std::runtime_error("Missing value for flag: " + arg);
+                }
+
                 std::string value = argv[++i];
                 if (arg[1] == '-') { // Long format
                     if (arg == "--player") {
@@ -46,8 +60,6 @@ void ArgParser::parseArguments(int argc, char* argv[]) {
                     } else if (arg == "--log-file") {
                         loggerConfig.logFile = value;
                         loggerConfig.logToFile = true;
-                    } else if (arg == "--log-config") {
-                        Logger2048::Logger::getInstance().loadConfigFromJsonFile(value);
                     }
                 } else { // Short format
                     parseShortFlag(arg.substr(1), value);
@@ -84,13 +96,23 @@ void ArgParser::parseShortFlag(const std::string& flag, const std::string& value
         } else if (flag == "lf") {
             loggerConfig.logFile = value;
             loggerConfig.logToFile = true;
-        } else if (flag == "lc") {
-            Logger2048::Logger::getInstance().loadConfigFromJsonFile(value);
         } else {
             throw std::runtime_error("Unknown flag: -" + flag);
         }
     } catch (const std::invalid_argument&) {
         throw std::runtime_error("Invalid value for -" + flag + ": " + value);
+    }
+}
+
+void ArgParser::loadLoggerConfigIfNeeded() {
+    if (loadLoggerConfigFromFile) {
+        std::string configPath = loggerConfigPath.empty() ? defaultLoggerConfigPath : loggerConfigPath;
+        Logger2048::Logger::getInstance().loadConfigFromJsonFile(configPath);
+    } else {
+        // Configure without calling printConfiguration internally
+        Logger2048::Logger::getInstance().configure(loggerConfig);
+        // Explicitly call printConfiguration after configuring
+        Logger2048::Logger::getInstance().printConfiguration();
     }
 }
 
@@ -102,8 +124,16 @@ PlayerConfigurations ArgParser::getPlayerConfig() const {
     return playerConfig;
 }
 
-Logger2048::LoggerConfig ArgParser::getLoggerConfig() const {
+LoggerConfig ArgParser::getLoggerConfig() const {
     return loggerConfig;
+}
+
+bool ArgParser::shouldLoadLoggerConfig() const {
+    return loadLoggerConfigFromFile;
+}
+
+std::string ArgParser::getLoggerConfigPath() const {
+    return loggerConfigPath.empty() ? defaultLoggerConfigPath : loggerConfigPath;
 }
 
 void ArgParser::printHelp() {
@@ -115,14 +145,15 @@ void ArgParser::printHelp() {
               << "  --sim            Enable simulation mode\n"
               << "  -l <level>       Log level (e=Error, w=Warning, i=Info, d=Debug)\n"
               << "  -lf <file>       Log to file\n"
-              << "  -lc <file>       Load logger config from JSON file\n"
+              << "  -lc [file]       Load logger config from JSON file (default: configurations/logger_config.json)\n"
               << "  --log-level <l>  Set log level (error, warning, info, debug)\n"
               << "  --log-file <f>   Set log file\n"
-              << "  --log-config <f> Load logger config from JSON file\n"
+              << "  --log-config [f] Load logger config from JSON file (default: configurations/logger_config.json)\n"
               << "  -h, --help       Show this help\n\n"
               << "Examples:\n"
               << "  2048 -p H -n 10                 (Heuristic player, 10 games)\n"
               << "  2048 -p R -t 8                  (Random player, 8 threads)\n"
-              << "  2048 -p H -lc logger_config.json (Load logger config from JSON)\n"
+              << "  2048 -p H -lc                   (Load default logger config)\n"
+              << "  2048 -p H -lc custom_config.json (Load custom logger config)\n"
               << std::endl;
 }

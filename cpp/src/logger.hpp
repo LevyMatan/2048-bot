@@ -21,12 +21,13 @@ enum class Group {
     Evaluation,
     AI,
     Game,
+    Logger,
     COUNT  // Keep this last for array size
 };
 
 struct LoggerConfig {
     Level level = Level::Info;
-    std::array<bool, static_cast<size_t>(Group::COUNT)> groupsEnabled = {true, true, true, true};
+    std::array<bool, static_cast<size_t>(Group::COUNT)> groupsEnabled = {true, true, true, true, true};
     bool waitEnabled = false;
     bool shrinkBoard = false;
     bool logToFile = false;
@@ -45,6 +46,9 @@ public:
     void configure(const LoggerConfig& config);
     
     bool loadConfigFromJsonFile(const std::string& filename);
+    
+    // Add a method to print the current configuration
+    void printConfiguration();
 
     template<typename... Args>
     void error(Group group, Args... args) {

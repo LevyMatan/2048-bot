@@ -23,13 +23,20 @@ public:
     SimulationConfig getSimConfig() const;
     PlayerConfigurations getPlayerConfig() const;
     LoggerConfig getLoggerConfig() const;
+    bool shouldLoadLoggerConfig() const;
+    std::string getLoggerConfigPath() const;
 
 private:
     void parseArguments(int argc, char* argv[]);
     void parseShortFlag(const std::string& flag, const std::string& value);
     static void printHelp();
+    void loadLoggerConfigIfNeeded();
 
     SimulationConfig simConfig;
     PlayerConfigurations playerConfig;
     LoggerConfig loggerConfig;
+    
+    bool loadLoggerConfigFromFile = false;
+    std::string loggerConfigPath = "";
+    const std::string defaultLoggerConfigPath = "configurations/logger_config.json";
 };
