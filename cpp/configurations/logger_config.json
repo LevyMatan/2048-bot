@@ -1,16 +1,17 @@
 {
-  "level": "info",
+  "level": "Debug",
   "groups": {
     "Board": true,
     "Eval": true,
     "AI": true,
     "Game": true,
-    "Logger": true
+    "Logger": true,
+    "Parser": true,
+    "Main": true
   },
+  "outputDestination": "None",
   "waitEnabled": false,
   "shrinkBoard": true,
-  "logToFile": false,
-  "logToConsole": true,
   "showTimestamp": false,
   "logFile": "game.log"
 } 

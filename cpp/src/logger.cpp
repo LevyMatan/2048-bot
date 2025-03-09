@@ -11,7 +11,8 @@ void Logger::configure(const LoggerConfig& newConfig) {
     std::lock_guard<std::mutex> lock(logMutex);
     config = newConfig;
 
-    if (config.logToFile) {
+    // Open file if needed
+    if (config.outputDestination == LogOutput::File || config.outputDestination == LogOutput::Both) {
         if (fileStream.is_open()) {
             fileStream.close();
         }
@@ -19,16 +20,42 @@ void Logger::configure(const LoggerConfig& newConfig) {
     }
 }
 
-bool Logger::loadConfigFromJsonFile(const std::string& filename) {
+// Implementation for stringToLogOutput
+LogOutput Logger::stringToLogOutput(const std::string& outputStr) {
+    std::string upperStr = outputStr;
+    std::transform(upperStr.begin(), upperStr.end(), upperStr.begin(), 
+                  [](char c) -> char { return static_cast<char>(std::toupper(c)); });
+    
+    if (upperStr == "NONE") return LogOutput::None;
+    if (upperStr == "CONSOLE") return LogOutput::Console;
+    if (upperStr == "FILE") return LogOutput::File;
+    if (upperStr == "BOTH") return LogOutput::Both;
+    
+    return LogOutput::Console; // Default
+}
+
+// Implementation for logOutputToString
+std::string Logger::logOutputToString(LogOutput output) {
+    switch (output) {
+        case LogOutput::None: return "None";
+        case LogOutput::Console: return "Console";
+        case LogOutput::File: return "File";
+        case LogOutput::Both: return "Both";
+        default: return "Unknown";
+    }
+}
+
+LoggerConfig Logger::loadConfigFromJsonFile(const std::string& filename) {
     std::ifstream file(filename);
     if (!file.is_open()) {
         std::cerr << "Failed to open logger configuration file: " << filename << std::endl;
-        return false;
+        return config; // Return current config if file can't be opened
     }
 
     info(Group::Game, "Loading logger configuration from:", filename);
     
-    LoggerConfig newConfig;
+    LoggerConfig newConfig = config;
+    
     std::string line;
     std::string jsonContent((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
     
@@ -96,7 +123,6 @@ bool Logger::loadConfigFromJsonFile(const std::string& filename) {
     if (!groupsObject.empty()) {
         for (size_t i = 0; i < static_cast<size_t>(Group::COUNT); i++) {
             std::string groupName = groupToString(static_cast<Group>(i));
-            std::string groupEnabledStr = parseValue(groupName);
             
             // Extract directly from the groups object
             size_t pos = groupsObject.find("\"" + groupName + "\"");
@@ -122,12 +148,52 @@ bool Logger::loadConfigFromJsonFile(const std::string& filename) {
         // Fall back to the old format for backward compatibility
         for (size_t i = 0; i < static_cast<size_t>(Group::COUNT); i++) {
             std::string groupName = groupToString(static_cast<Group>(i));
-            std::transform(groupName.begin(), groupName.end(), groupName.begin(), 
+            std::string lowerGroupName = groupName;
+            std::transform(lowerGroupName.begin(), lowerGroupName.end(), lowerGroupName.begin(), 
                           [](char c) -> char { return static_cast<char>(std::tolower(c)); });
-            std::string groupEnabledStr = parseValue("enable" + groupName);
+            
+            // Check for both old and new formats
+            std::string groupEnabledStr = parseValue("enable" + lowerGroupName);
+            if (groupEnabledStr.empty()) {
+                // Try new format (groupNameEnable)
+                groupEnabledStr = parseValue(groupName + "Enable");
+            }
+            
             if (!groupEnabledStr.empty()) {
                 newConfig.groupsEnabled[i] = (groupEnabledStr == "true");
             }
+        }
+    }
+
+    // Parse the new output destination
+    std::string outputDestStr = parseValue("outputDestination");
+    if (!outputDestStr.empty()) {
+        newConfig.outputDestination = stringToLogOutput(outputDestStr);
+    } else {
+        // Backward compatibility: parse logToFile and logToConsole
+        std::string logToFileStr = parseValue("logToFile");
+        std::string logToConsoleStr = parseValue("logToConsole");
+        
+        bool logToFile = false;
+        bool logToConsole = true;
+        
+        if (!logToFileStr.empty()) {
+            logToFile = (logToFileStr == "true");
+        }
+        
+        if (!logToConsoleStr.empty()) {
+            logToConsole = (logToConsoleStr == "true");
+        }
+        
+        // Convert to the new enum
+        if (logToFile && logToConsole) {
+            newConfig.outputDestination = LogOutput::Both;
+        } else if (logToFile) {
+            newConfig.outputDestination = LogOutput::File;
+        } else if (logToConsole) {
+            newConfig.outputDestination = LogOutput::Console;
+        } else {
+            newConfig.outputDestination = LogOutput::None;
         }
     }
 
@@ -140,16 +206,6 @@ bool Logger::loadConfigFromJsonFile(const std::string& filename) {
     std::string shrinkBoardStr = parseValue("shrinkBoard");
     if (!shrinkBoardStr.empty()) {
         newConfig.shrinkBoard = (shrinkBoardStr == "true");
-    }
-
-    std::string logToFileStr = parseValue("logToFile");
-    if (!logToFileStr.empty()) {
-        newConfig.logToFile = (logToFileStr == "true");
-    }
-
-    std::string logToConsoleStr = parseValue("logToConsole");
-    if (!logToConsoleStr.empty()) {
-        newConfig.logToConsole = (logToConsoleStr == "true");
     }
     
     // Parse showTimestamp flag
@@ -164,13 +220,7 @@ bool Logger::loadConfigFromJsonFile(const std::string& filename) {
         newConfig.logFile = logFile;
     }
 
-    // Apply the new configuration
-    configure(newConfig);
-    
-    // Print the configuration after configuring
-    printConfiguration();
-    
-    return true;
+    return newConfig;
 }
 
 void Logger::printBoard(Group group, BoardState board) {
@@ -181,22 +231,39 @@ void Logger::printBoard(Group group, BoardState board) {
     uint8_t unpackedBoard[4][4];
     Board::unpackState(board, unpackedBoard);
 
+    // Create a string stream to capture the board output
+    std::stringstream ss;
+
     if (config.shrinkBoard) {
         // Print compact board representation with 2 digits per cell
         for (int i = 0; i < 4; i++) {
             for (int j = 0; j < 4; j++) {
-                if (j > 0) std::cout << " ";
+                if (j > 0) ss << " ";
                 if (unpackedBoard[i][j] == 0) {
-                    std::cout << "00";
+                    ss << "00";
                 } else {
-                    std::cout << std::setw(2) << std::setfill('0') << static_cast<int>(unpackedBoard[i][j]);
+                    ss << std::setw(2) << std::setfill('0') << static_cast<int>(unpackedBoard[i][j]);
                 }
             }
-            std::cout << std::endl;
+            ss << std::endl;
         }
     } else {
-        // Print full board representation
+        // Use a temporary string stream to capture Board::printBoard output
+        std::streambuf* oldCoutBuf = std::cout.rdbuf(ss.rdbuf());
         Board::printBoard(unpackedBoard);
+        std::cout.rdbuf(oldCoutBuf); // Restore cout's buffer
+    }
+
+    // Now handle the output based on the configuration
+    if (config.outputDestination == LogOutput::File || config.outputDestination == LogOutput::Both) {
+        if (fileStream.is_open()) {
+            fileStream << ss.str();
+            fileStream.flush();
+        }
+    }
+
+    if (config.outputDestination == LogOutput::Console || config.outputDestination == LogOutput::Both) {
+        std::cout << ss.str();
     }
 }
 
@@ -218,6 +285,8 @@ std::string Logger::groupToString(Group group) {
         case Group::AI: return "AI";
         case Group::Game: return "Game";
         case Group::Logger: return "Logger";
+        case Group::Parser: return "Parser";
+        case Group::Main: return "Main";
         default: return "Unknown";
     }
 }
@@ -246,22 +315,22 @@ Level Logger::stringToLevel(const std::string& levelStr) {
 }
 
 void Logger::printConfiguration() {
-    info(Group::Game, "Logger Configuration:");
-    info(Group::Game, "- Log Level:", levelToString(config.level));
+    info(Group::Logger, "Logger Configuration:");
+    info(Group::Logger, "- Log Level:", levelToString(config.level));
     
-    info(Group::Game, "- Enabled Groups:");
+    info(Group::Logger, "- Enabled Groups:");
     for (size_t i = 0; i < static_cast<size_t>(Group::COUNT); i++) {
-        info(Group::Game, "  - ", groupToString(static_cast<Group>(i)), ":", config.groupsEnabled[i] ? "Enabled" : "Disabled");
+        Group group = static_cast<Group>(i);
+        info(Group::Logger, "  - ", groupToString(group), ":", config.groupsEnabled[i] ? "Enabled" : "Disabled");
     }
     
-    info(Group::Game, "- Show Timestamp:", config.showTimestamp ? "Yes" : "No");
-    info(Group::Game, "- Log to Console:", config.logToConsole ? "Yes" : "No");
-    info(Group::Game, "- Log to File:", config.logToFile ? "Yes" : "No");
+    info(Group::Logger, "- Output Destination:", logOutputToString(config.outputDestination));
+    info(Group::Logger, "- Show Timestamp:", config.showTimestamp ? "Yes" : "No");
     
-    if (config.logToFile) {
-        info(Group::Game, "  - Log File:", config.logFile);
+    if (config.outputDestination == LogOutput::File || config.outputDestination == LogOutput::Both) {
+        info(Group::Logger, "- Log File:", config.logFile);
     }
     
-    info(Group::Game, "- Wait Enabled:", config.waitEnabled ? "Yes" : "No");
-    info(Group::Game, "- Shrink Board:", config.shrinkBoard ? "Yes" : "No");
+    info(Group::Logger, "- Wait Enabled:", config.waitEnabled ? "Yes" : "No");
+    info(Group::Logger, "- Shrink Board:", config.shrinkBoard ? "Yes" : "No");
 }

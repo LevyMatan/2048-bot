@@ -1,5 +1,6 @@
 #include "evaluation.hpp"
 #include "board.hpp"
+#include "logger.hpp"
 #include <algorithm>
 #include <cmath>
 #include <array>
@@ -8,6 +9,8 @@
 #include <sstream>
 #include <fstream>
 #include <iostream>
+
+extern Logger2048::Logger &logger;
 
 namespace Evaluation {
 
@@ -452,22 +455,41 @@ double CompositeEvaluator::evaluate(BoardState state) const {
     uint8_t board[4][4];
     unpackState(state, board);
 
-    // Print the board
-    // std::cout << "Board State:" << std::endl;
-    // for (int row = 0; row < 4; ++row) {
-    //     for (int col = 0; col < 4; ++col) {
-    //         std::cout << static_cast<int>(board[row][col]) << " ";
-    //     }
-    //     std::cout << std::endl;
-    // }
+    logger.debug(Logger2048::Group::Evaluation, "Evaluating board state:");
+    logger.printBoard(Logger2048::Group::Evaluation, state);
+    
+    // Define column widths for better formatting
+    const int componentWidth = 20;  // Width for component name column
+    const int rawValueWidth = 12;   // Width for raw value column
+    const int weightWidth = 10;     // Width for weight column
+    const int weightedValueWidth = 15; // Width for weighted value column
+    
+    // Create a header with the specified widths
+    std::stringstream header;
+    header << std::left << std::setw(componentWidth) << "Component" << "| "
+        << std::right << std::setw(rawValueWidth) << "Raw Value" << " | "
+        << std::setw(weightWidth) << "Weight" << " | "
+        << std::setw(weightedValueWidth) << "Weighted Value";
+    logger.debug(Logger2048::Group::Evaluation, header.str());
+    // Create a separator line
+    std::string separator(componentWidth + rawValueWidth + weightWidth + weightedValueWidth + 10, '-');
+    logger.debug(Logger2048::Group::Evaluation, separator);
 
     // Apply each component
     double totalScore = 0;
 
     for (const auto& component : components) {
         double componentScore = component.function(board);
-        totalScore += componentScore * component.weight;
-        // std::cout << "Component: " << component.name << ", Score: " << componentScore << ", Weight: " << component.weight << ", Weighted Score: " << componentScore * component.weight << std::endl;
+        double weightedValue = componentScore * component.weight;
+        totalScore += weightedValue;
+
+        std::stringstream line;
+        line << std::left << std::setw(componentWidth) << component.name << "| "
+                << std::right << std::setw(rawValueWidth) << std::fixed << std::setprecision(4) << componentScore << " | "
+                << std::setw(weightWidth) << component.weight << " | "
+                << std::setw(weightedValueWidth) << std::fixed << std::setprecision(4) << weightedValue;
+                
+        logger.debug(Logger2048::Group::Evaluation, line.str());
     }
 
     return totalScore;
@@ -500,6 +522,30 @@ void CompositeEvaluator::setParams(const EvalParams& params) {
     for (const auto& [name, weight] : params) {
         setWeight(name, weight);
     }
+}
+
+// Convert EvalParams to a simple string representation
+std::string evalParamsToString(const EvalParams& params) {
+    std::stringstream ss;
+    
+    ss << "{";
+    bool first = true;
+    
+    // Sort components alphabetically for consistent output
+    std::vector<std::pair<std::string, uint64_t>> sortedParams(params.begin(), params.end());
+    std::sort(sortedParams.begin(), sortedParams.end(),
+              [](const auto& a, const auto& b) { return a.first < b.first; });
+    
+    for (const auto& [name, weight] : sortedParams) {
+        if (!first) {
+            ss << ", ";
+        }
+        ss << name << ": " << weight;
+        first = false;
+    }
+    
+    ss << "}";
+    return ss.str();
 }
 
 } // namespace Evaluation

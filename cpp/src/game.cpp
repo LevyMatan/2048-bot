@@ -9,7 +9,7 @@
 #include <string>
 #include <sstream>
 
-Logger2048::Logger& logger = Logger2048::Logger::getInstance();
+extern Logger2048::Logger &logger;
 
 void Game2048::addRandomTile() {
     auto emptyTiles = Board::getEmptyTiles(board.getState());
@@ -43,8 +43,6 @@ void Game2048::addRandomTile() {
 bool Game2048::playMove(Action action, BoardState nextState, int moveScore) {
     // Validate the action and next state
     if (Action::INVALID == action) {
-        logger.warning(Logger2048::Group::Game, 
-            "Attempted invalid move");
         return false;
     }
 

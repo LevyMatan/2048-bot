@@ -7,6 +7,7 @@
 #include <vector>
 #include <unordered_map>
 #include "board.hpp"
+#include "logger.hpp"
 
 namespace Evaluation {
 
@@ -86,6 +87,9 @@ public:
     // Set weights from a parameter map
     void setParams(const EvalParams& params);
 
+    // Add this new method for detailed evaluation output
+    void printDetailedEvaluation(BoardState state) const;
+
 private:
     std::vector<EvaluationComponent> components;
     std::unordered_map<std::string, size_t> componentIndices;
@@ -103,5 +107,8 @@ struct EvaluationBreakdown {
 };
 
 std::vector<EvaluationBreakdown> getDetailedEvaluation(BoardState state);
+
+// Convert EvalParams to a simple string representation
+std::string evalParamsToString(const EvalParams& params);
 
 } // namespace Evaluation

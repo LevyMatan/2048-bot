@@ -26,6 +26,8 @@ public:
     LoggerConfig getLoggerConfig() const;
     bool shouldLoadLoggerConfig() const;
     std::string getLoggerConfigPath() const;
+    bool shouldLoadPlayerConfig() const;
+    std::string getPlayerConfigPath() const;
 
 private:
     void parseArguments(int argc, char* argv[]);
@@ -33,6 +35,7 @@ private:
     static void printHelp();
     void loadLoggerConfigIfNeeded();
     void loadSimConfigIfNeeded();
+    void loadPlayerConfigIfNeeded();
 
     SimulationConfig simConfig;
     PlayerConfigurations playerConfig;
@@ -45,4 +48,8 @@ private:
     bool loadSimConfigFromFile = false;
     std::string simConfigPath = "";
     const std::string defaultSimConfigPath = "configurations/sim_config.json";
+    
+    bool loadPlayerConfigFromFile = false;
+    std::string playerConfigPath = "";
+    const std::string defaultPlayerConfigPath = "configurations/player_config.json";
 };

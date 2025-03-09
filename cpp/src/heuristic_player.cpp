@@ -10,12 +10,15 @@
 #include <string>
 #include <vector>
 
+extern Logger2048::Logger &logger;
+
 HeuristicPlayer::HeuristicPlayer(const Evaluation::EvalParams& params)
 {
     customName = "Heuristic";
-    Evaluation::CompositeEvaluator evaluator(params);
-    evalFn = [evaluator](BoardState state) {
-        return evaluator.evaluate(state);
+    logger.debug(Logger2048::Group::AI, "Creating HeuristicPlayer with params: " + Evaluation::evalParamsToString(params));
+    evaluator = std::make_unique<Evaluation::CompositeEvaluator>(params);
+    evalFn = [this](BoardState state) {
+        return this->evaluator->evaluate(state);
     };
 }
 

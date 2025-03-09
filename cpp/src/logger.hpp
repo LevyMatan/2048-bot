@@ -6,6 +6,7 @@
 #include <iostream>
 #include <mutex>
 #include <iomanip>
+#include <chrono>
 #include "board.hpp"
 
 namespace Logger2048 {
@@ -23,16 +24,36 @@ enum class Group {
     AI,
     Game,
     Logger,
+    Parser,
+    Main,
     COUNT  // Keep this last for array size
+};
+
+// Add a new enum for log output destination
+enum class LogOutput {
+    None,      // No output
+    Console,   // Console only
+    File,      // File only
+    Both       // Both console and file
 };
 
 struct LoggerConfig {
     Level level = Level::Info;
-    std::array<bool, static_cast<size_t>(Group::COUNT)> groupsEnabled = {true, true, true, true, true};
+    std::array<bool, static_cast<size_t>(Group::COUNT)> groupsEnabled = {
+        true,  // Board
+        true,  // Evaluation
+        true,  // AI
+        true,  // Game
+        true,  // Logger
+        true,  // Parser
+        true   // Main
+    };
     bool waitEnabled = false;
     bool shrinkBoard = false;
-    bool logToFile = false;
-    bool logToConsole = true;
+    
+    // Replace logToFile and logToConsole with the new enum
+    LogOutput outputDestination = LogOutput::Console;
+    
     bool showTimestamp = false;
     std::string logFile = "log.txt";
 };
@@ -46,7 +67,7 @@ public:
 
     void configure(const LoggerConfig& config);
     
-    bool loadConfigFromJsonFile(const std::string& filename);
+    LoggerConfig loadConfigFromJsonFile(const std::string& filename);
     
     // Add a method to print the current configuration
     void printConfiguration();
@@ -77,6 +98,9 @@ public:
     const LoggerConfig& getConfig() const {
         return config;
     }
+
+    // Make this method public so it can be used by other classes
+    static LogOutput stringToLogOutput(const std::string& outputStr);
 
 private:
     Logger() = default;
@@ -115,12 +139,16 @@ private:
         ((ss << args << " "), ...);
         ss << std::endl;
 
-        if (config.logToFile && fileStream.is_open()) {
+        // Output to file if configured
+        if ((config.outputDestination == LogOutput::File || config.outputDestination == LogOutput::Both) && fileStream.is_open()) {
             fileStream << ss.str();
             fileStream.flush();
         }
 
-        if(config.logToConsole || level != Level::Debug) {
+        // Output to console if configured (and always output non-debug messages to console)
+        if (config.outputDestination == LogOutput::Console || 
+            config.outputDestination == LogOutput::Both || 
+            level != Level::Debug) {
             std::cout << ss.str();
         }
     }
@@ -129,6 +157,7 @@ private:
     std::string groupToString(Group group);
     std::string levelToString(Level level);
     static Level stringToLevel(const std::string& levelStr);
+    std::string logOutputToString(LogOutput output);
 
     LoggerConfig config;
     std::ofstream fileStream;

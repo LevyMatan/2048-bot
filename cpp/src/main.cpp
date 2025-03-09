@@ -16,6 +16,8 @@
 #include "arg_parser.hpp"
 #include "logger.hpp"
 
+Logger2048::Logger &logger = Logger2048::Logger::getInstance();
+
 // Performance test function
 void runPerformanceTest() {
     std::cout << "Running performance test..." << std::endl;
@@ -137,9 +139,19 @@ std::unique_ptr<Player> createPlayer(PlayerConfigurations config) {
         case PlayerType::Random:
             return std::make_unique<RandomPlayer>();
         case PlayerType::Heuristic:
-            return std::make_unique<HeuristicPlayer>(config.evalParams);
+            {
+                auto player = std::make_unique<HeuristicPlayer>(config.evalParams);
+                // Set debug flag if needed - this would be handled inside the Evaluation system
+                return player;
+            }
         case PlayerType::Expectimax:
-            return std::make_unique<ExpectimaxPlayer>(config.depth, config.chanceCovering, config.timeLimit, config.adaptiveDepth, config.evalParams);
+            {
+                auto player = std::make_unique<ExpectimaxPlayer>(config.depth, config.chanceCovering, 
+                                                    config.timeLimit, config.adaptiveDepth, 
+                                                    config.evalParams);
+                // Set debug flag if needed - this would be handled inside the Evaluation system
+                return player;
+            }
         default:
             throw std::invalid_argument("Invalid player type");
     }
@@ -150,21 +162,21 @@ int main(int argc, char* argv[]) {
         ArgParser parser(argc, argv);
         auto simConfig = parser.getSimConfig();
         auto playerConfig = parser.getPlayerConfig();
+        auto loggerConfig = parser.getLoggerConfig();
+
+        logger.configure(loggerConfig);
         
-        // The parser already loads the configuration if needed
-        // Just need to apply the configuration from command line args
-        Logger2048::Logger::getInstance().configure(parser.getLoggerConfig());
-        
-        // Example of using the logger
-        auto& logger = Logger2048::Logger::getInstance();
-        logger.info(Logger2048::Group::Game, "Starting application with", simConfig.numGames, "games");
+        // Example of using the logger with eval params
+        logger.info(Logger2048::Group::Main, "Starting application with", simConfig.numGames, "games");
+        logger.info(Logger2048::Group::Main, "Using player:", PlayerConfigurations::playerTypeToString(playerConfig.playerType));
+        logger.info(Logger2048::Group::Main, "Evaluation parameters:", Evaluation::evalParamsToString(playerConfig.evalParams));
         
         if (simConfig.initialState != 0) {
-            logger.info(Logger2048::Group::Game, "Using initial state:", std::hex, simConfig.initialState, std::dec);
+            logger.info(Logger2048::Group::Main, "Using initial state:", std::hex, simConfig.initialState, std::dec);
         }
         
         std::unique_ptr<Player> player = createPlayer(playerConfig);
-        logger.info(Logger2048::Group::AI, "Created player of type:", player->getName());
+        logger.info(Logger2048::Group::Main, "Created player of type:", player->getName());
 
         // Use simulation config values
         const int numGames = simConfig.numGames;
@@ -180,7 +192,7 @@ int main(int argc, char* argv[]) {
 
         auto startTime = std::chrono::high_resolution_clock::now();
 
-        logger.info(Logger2048::Group::Game, "Starting", numGames, "games with", 
+        logger.info(Logger2048::Group::Main, "Starting", numGames, "games with", 
                    player->getName(), "using", numThreads, "threads");
 
         std::vector<std::thread> threads;
@@ -206,26 +218,26 @@ int main(int argc, char* argv[]) {
         auto endTime = std::chrono::high_resolution_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
 
-        logger.info(Logger2048::Group::Game, "Final Results:");
-        logger.info(Logger2048::Group::Game, std::string(20, '-'));
+        logger.info(Logger2048::Group::Main, "Final Results:");
+        logger.info(Logger2048::Group::Main, std::string(20, '-'));
 
         // Format duration output
         if (duration.count() > 5000) {
             double seconds = duration.count() / 1000.0;
-            logger.info(Logger2048::Group::Game, "Played", numGames, "games in", std::fixed, std::setprecision(2), seconds, "s");
-            logger.info(Logger2048::Group::Game, "Average time per game:", std::fixed, std::setprecision(2), (seconds / numGames), "s");
+            logger.info(Logger2048::Group::Main, "Played", numGames, "games in", std::fixed, std::setprecision(2), seconds, "s");
+            logger.info(Logger2048::Group::Main, "Average time per game:", std::fixed, std::setprecision(2), (seconds / numGames), "s");
         } else {
-            logger.info(Logger2048::Group::Game, "Played", numGames, "games in", duration.count(), "ms");
-            logger.info(Logger2048::Group::Game, "Average time per game:", std::fixed, std::setprecision(2), (static_cast<double>(duration.count()) / numGames), "ms");
+            logger.info(Logger2048::Group::Main, "Played", numGames, "games in", duration.count(), "ms");
+            logger.info(Logger2048::Group::Main, "Average time per game:", std::fixed, std::setprecision(2), (static_cast<double>(duration.count()) / numGames), "ms");
         }
 
-        logger.info(Logger2048::Group::Game, "Best score:", bestScore.load(), "(moves:", bestMoveCount.load(), ")");
-        logger.info(Logger2048::Group::Game, "Best board:");
+        logger.info(Logger2048::Group::Main, "Best score:", bestScore.load(), "(moves:", bestMoveCount.load(), ")");
+        logger.info(Logger2048::Group::Main, "Best board:");
 
         // Create a temporary game to display the best board
         Game2048 tempGame;
         tempGame.setState(bestState.load());
-        logger.printBoard(Logger2048::Group::Game, bestState.load());
+        logger.printBoard(Logger2048::Group::Main, bestState.load());
         // Set the score and move count for the best game
         tempGame.setScore(bestScore.load());
         tempGame.setMoveCount(bestMoveCount.load());
