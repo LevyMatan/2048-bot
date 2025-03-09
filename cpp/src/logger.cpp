@@ -96,6 +96,12 @@ bool Logger::loadConfigFromJsonFile(const std::string& filename) {
     if (!logToConsoleStr.empty()) {
         newConfig.logToConsole = (logToConsoleStr == "true");
     }
+    
+    // Parse showTimestamp flag
+    std::string showTimestampStr = parseValue("showTimestamp");
+    if (!showTimestampStr.empty()) {
+        newConfig.showTimestamp = (showTimestampStr == "true");
+    }
 
     // Parse log file path
     std::string logFile = parseValue("logFile");

@@ -31,6 +31,7 @@ struct LoggerConfig {
     bool shrinkBoard = false;
     bool logToFile = false;
     bool logToConsole = true;
+    bool showTimestamp = false;
     std::string logFile = "log.txt";
 };
 
@@ -85,19 +86,22 @@ private:
 
         std::lock_guard<std::mutex> lock(logMutex);
 
-        // Get current time
-        auto now = std::chrono::system_clock::now();
-        auto time = std::chrono::system_clock::to_time_t(now);
-
-        std::tm time_info;
-        #ifdef _WIN32
-            localtime_s(&time_info, &time);
-        #else
-            localtime_r(&time, &time_info);
-        #endif
         std::stringstream ss;
-        ss << "[" << std::put_time(&time_info, "%Y-%m-%d %H:%M:%S") << "] "
-           << "[" << levelToString(level) << "] ";
+        
+        if (config.showTimestamp) {
+            auto now = std::chrono::system_clock::now();
+            auto time = std::chrono::system_clock::to_time_t(now);
+
+            std::tm time_info;
+            #ifdef _WIN32
+                localtime_s(&time_info, &time);
+            #else
+                localtime_r(&time, &time_info);
+            #endif
+            ss << "[" << std::put_time(&time_info, "%Y-%m-%d %H:%M:%S") << "] ";
+        }
+        
+        ss << "[" << levelToString(level) << "] ";
 
         ((ss << args << " "), ...);
         ss << std::endl;
