@@ -195,6 +195,17 @@ uint64_t Board::transpose(uint64_t state) {
     return b1 | (b2 >> 24) | (b3 << 24);
 }
 
+// Helper function to unpack state into a 2D board
+void Board::unpackState(BoardState state, uint8_t board[4][4]) {
+    for (int row = 0; row < 4; row++) {
+        for (int col = 0; col < 4; col++) {
+            board[row][col] = static_cast<uint8_t>(
+                (state >> ((row * 4 + col) * 4)) & 0xF
+            );
+        }
+    }
+}
+
 void Board::printBoard(uint8_t board[4][4]) {
     for (int i = 0; i < 4; ++i) {
         for (int j = 0; j < 4; ++j) {

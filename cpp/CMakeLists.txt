@@ -50,6 +50,7 @@ set(MAIN_SOURCES
     src/expectimax_player.cpp
     src/evaluation.cpp
     src/arg_parser.cpp
+    src/logger.cpp
 )
 
 # Create main executable

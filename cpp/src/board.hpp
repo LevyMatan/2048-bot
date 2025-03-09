@@ -212,6 +212,9 @@ public:
         return score;
     }
 
+    // Helper function to unpack state into a 2D board
+    static void unpackState(BoardState state, uint8_t board[4][4]);
+
     /**
      * @brief Prints the board to the console
      *
