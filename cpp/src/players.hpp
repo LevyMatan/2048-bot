@@ -198,14 +198,12 @@ public:
                         paramPos = evalParamsJson.find_first_not_of(" \t\n\r", paramPos + 1);
                         size_t valueEndPos = evalParamsJson.find_first_of(",}", paramPos);
                         std::string valueStr = evalParamsJson.substr(paramPos, valueEndPos - paramPos);
-
                         // Remove any whitespace from the value
                         valueStr.erase(std::remove_if(valueStr.begin(), valueStr.end(),
-                            [](char c) { return std::isspace(c); }), valueStr.end());
+                        [](char c) { return std::isspace(c); }), valueStr.end());
 
                         // Store the parameter
-                        config.evalParams[paramName] = std::stoul(valueStr);
-
+                        config.evalParams[paramName] = std::stod(valueStr);
                         paramPos = valueEndPos;
                     }
                 }

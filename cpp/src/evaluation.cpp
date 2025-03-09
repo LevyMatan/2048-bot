@@ -535,7 +535,7 @@ std::string evalParamsToString(const EvalParams& params) {
     bool first = true;
 
     // Sort components alphabetically for consistent output
-    std::vector<std::pair<std::string, uint64_t>> sortedParams(params.begin(), params.end());
+    std::vector<std::pair<std::string, Weight>> sortedParams(params.begin(), params.end());
     std::sort(sortedParams.begin(), sortedParams.end(),
               [](const auto& a, const auto& b) { return a.first < b.first; });
 

@@ -39,21 +39,21 @@ enum class LogOutput {
 };
 
 struct LoggerConfig {
-    Level level = Level::Info;
+    Level level = Level::Error;
     std::array<bool, static_cast<size_t>(Group::COUNT)> groupsEnabled = {
-        true,  // Board
-        true,  // Evaluation
-        true,  // AI
-        true,  // Game
-        true,  // Logger
-        true,  // Parser
-        true   // Main
+        false,  // Board
+        false,  // Evaluation
+        false,  // AI
+        false,  // Game
+        false,  // Logger
+        false,  // Parser
+        false   // Main
     };
     bool waitEnabled = false;
     bool shrinkBoard = false;
 
     // Replace logToFile and logToConsole with the new enum
-    LogOutput outputDestination = LogOutput::Console;
+    LogOutput outputDestination = LogOutput::None;
 
     bool showTimestamp = false;
     std::string logFile = "log.txt";
