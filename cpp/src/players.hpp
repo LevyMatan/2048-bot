@@ -36,6 +36,39 @@ public:
 
     PlayerConfigurations(PlayerType type, Evaluation::EvalParams params, int d, int chance, double time, bool adaptive)
         : playerType(type), evalParams(params), depth(d), chanceCovering(chance), timeLimit(time), adaptiveDepth(adaptive) {}
+
+    // Default constructor with default values
+    PlayerConfigurations()
+        : playerType(PlayerType::Random), evalParams(Evaluation::EvalParams()), depth(3), chanceCovering(1), timeLimit(1.0), adaptiveDepth(false) {}
+
+    static PlayerType playerTypeFromString(const std::string& str) {
+        if (str == "R") {
+            return PlayerType::Random;
+        } else if (str == "H") {
+            return PlayerType::Heuristic;
+        } else if (str == "E") {
+            return PlayerType::Expectimax;
+        } else {
+            throw std::invalid_argument("Invalid player type");
+        }
+    }
+
+    static PlayerConfigurations fromString(const std::string& type) {
+        PlayerConfigurations config;
+        config.playerType = playerTypeFromString(type);
+
+        if (type == "H") {
+            config.depth = 6;
+            config.adaptiveDepth = true;
+        } else if (type == "E") {
+            config.depth = 6;
+            config.chanceCovering = 4;
+            config.timeLimit = 100.0;
+            config.adaptiveDepth = true;
+        }
+
+        return config;
+    }
 };
 
 class Player {

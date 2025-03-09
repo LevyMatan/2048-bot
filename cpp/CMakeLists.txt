@@ -49,6 +49,7 @@ set(MAIN_SOURCES
     src/heuristic_player.cpp
     src/expectimax_player.cpp
     src/evaluation.cpp
+    src/arg_parser.cpp
 )
 
 # Create main executable

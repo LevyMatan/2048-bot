@@ -13,6 +13,7 @@
 #include "players.hpp"
 #include "board.hpp"
 #include "evaluation.hpp"
+#include "arg_parser.hpp"
 
 // Performance test function
 void runPerformanceTest() {
@@ -144,86 +145,83 @@ std::unique_ptr<Player> createPlayer(PlayerConfigurations config) {
 }
 
 int main(int argc, char* argv[]) {
-    if (argc < 2) {
-        printUsage(argv[0]);
+    try {
+        ArgParser parser(argc, argv);
+        auto simConfig = parser.getSimConfig();
+        auto playerConfig = parser.getPlayerConfig();
+
+        std::unique_ptr<Player> player = createPlayer(playerConfig);
+
+        // Use simulation config values
+        const int numGames = simConfig.numGames;
+        const int numThreads = simConfig.numThreads;
+        const int PROGRESS_INTERVAL = simConfig.progressInterval;
+
+        // Use atomic variables for thread safety
+        std::atomic<int> bestScore(0);
+        std::atomic<uint64_t> bestState(0);
+        std::atomic<int> bestMoveCount(0);
+        std::mutex printMutex;
+
+        auto startTime = std::chrono::high_resolution_clock::now();
+
+        std::cout << "Starting " << numGames << " games with " << player->getName()
+                 << " using " << numThreads << " threads...\n";
+
+        std::vector<std::thread> threads;
+        int gamesPerThread = numGames / numThreads;
+
+        // Create and start threads
+        for (int i = 0; i < numThreads; ++i) {
+            int startIdx = i * gamesPerThread;
+            int endIdx = (i == numThreads - 1) ? numGames : (i + 1) * gamesPerThread;
+
+            threads.emplace_back(runGamesParallel, startIdx, endIdx,
+                               std::ref(player), std::ref(bestScore),
+                               std::ref(bestState), std::ref(bestMoveCount),
+                               std::ref(printMutex), numGames, PROGRESS_INTERVAL);
+        }
+
+        // Wait for all threads to complete
+        for (auto& thread : threads) {
+            thread.join();
+        }
+
+        auto endTime = std::chrono::high_resolution_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
+
+        std::cout << "\n\nFinal Results:\n";
+        std::cout << std::string(20, '-') << "\n";
+
+        // Format duration output
+        if (duration.count() > 5000) {
+            double seconds = duration.count() / 1000.0;
+            std::cout << "Played " << numGames << " games in "
+                     << std::fixed << std::setprecision(2) << seconds << "s\n";
+            std::cout << "Average time per game: "
+                     << std::fixed << std::setprecision(2) << (seconds / numGames) << "s\n";
+        } else {
+            std::cout << "Played " << numGames << " games in " << duration.count() << "ms\n";
+            std::cout << "Average time per game: "
+                     << std::fixed << std::setprecision(2)
+                     << (static_cast<double>(duration.count()) / numGames) << "ms\n";
+        }
+
+        std::cout << "Best score: " << bestScore.load() << " (moves: " << bestMoveCount.load() << ")\n";
+        std::cout << "Best board:\n";
+
+        // Create a temporary game to display the best board
+        Game2048 tempGame;
+        tempGame.setState(bestState.load());
+        // Set the score and move count for the best game
+        tempGame.setScore(bestScore.load());
+        tempGame.setMoveCount(bestMoveCount.load());
+        tempGame.prettyPrint();
+
+    } catch (const std::exception& e) {
+        std::cerr << "Error: " << e.what() << std::endl;
         return 1;
     }
-
-    int numGames = atoi(argv[1]);  // Default value
-    PlayerConfigurations rand(PlayerType::Heuristic, Evaluation::EvalParams(), 0, 0, 0, false);
-    std::unique_ptr<Player> player = createPlayer(rand);
-
-    // Set progress interval to 10% of total games, with a minimum of 1
-    const int PROGRESS_INTERVAL = std::max(1, numGames / 10);
-
-    // Use atomic variables for thread safety
-    std::atomic<int> bestScore(0);
-    std::atomic<uint64_t> bestState(0);
-    std::atomic<int> bestMoveCount(0);
-    std::mutex printMutex;
-
-    auto startTime = std::chrono::high_resolution_clock::now();
-
-    std::cout << "Starting " << numGames << " games with " << player->getName() << "...\n";
-
-    // Determine number of threads based on hardware
-    unsigned int numThreads = std::thread::hardware_concurrency();
-    numThreads = std::max(2u, std::min(8u, numThreads));
-
-    // For small number of games, use fewer threads
-    if (numGames < 100) {
-        numThreads = std::min(numThreads, static_cast<unsigned int>(numGames));
-    }
-
-    std::vector<std::thread> threads;
-    int gamesPerThread = numGames / numThreads;
-
-    // Create and start threads
-    for (unsigned int i = 0; i < numThreads; ++i) {
-        int startIdx = i * gamesPerThread;
-        int endIdx = (i == numThreads - 1) ? numGames : (i + 1) * gamesPerThread;
-
-        threads.emplace_back(runGamesParallel, startIdx, endIdx, std::ref(player),
-                            std::ref(bestScore), std::ref(bestState),
-                            std::ref(bestMoveCount), std::ref(printMutex),
-                            numGames, PROGRESS_INTERVAL);
-    }
-
-    // Wait for all threads to complete
-    for (auto& thread : threads) {
-        thread.join();
-    }
-
-    auto endTime = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
-
-    std::cout << "\n\nFinal Results:\n";
-    std::cout << std::string(20, '-') << "\n";
-
-    // Format duration output
-    if (duration.count() > 5000) {
-        double seconds = duration.count() / 1000.0;
-        std::cout << "Played " << numGames << " games in "
-                 << std::fixed << std::setprecision(2) << seconds << "s\n";
-        std::cout << "Average time per game: "
-                 << std::fixed << std::setprecision(2) << (seconds / numGames) << "s\n";
-    } else {
-        std::cout << "Played " << numGames << " games in " << duration.count() << "ms\n";
-        std::cout << "Average time per game: "
-                 << std::fixed << std::setprecision(2)
-                 << (static_cast<double>(duration.count()) / numGames) << "ms\n";
-    }
-
-    std::cout << "Best score: " << bestScore.load() << " (moves: " << bestMoveCount.load() << ")\n";
-    std::cout << "Best board:\n";
-
-    // Create a temporary game to display the best board
-    Game2048 tempGame;
-    tempGame.setState(bestState.load());
-    // Set the score and move count for the best game
-    tempGame.setScore(bestScore.load());
-    tempGame.setMoveCount(bestMoveCount.load());
-    tempGame.prettyPrint();
 
     return 0;
 }
