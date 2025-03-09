@@ -2,6 +2,9 @@
 
 #include <string>
 #include "players.hpp"
+#include "logger.hpp"
+
+using namespace Logger2048;
 
 class SimulationConfig {
 public:
@@ -19,6 +22,7 @@ public:
 
     SimulationConfig getSimConfig() const;
     PlayerConfigurations getPlayerConfig() const;
+    LoggerConfig getLoggerConfig() const;
 
 private:
     void parseArguments(int argc, char* argv[]);
@@ -27,4 +31,5 @@ private:
 
     SimulationConfig simConfig;
     PlayerConfigurations playerConfig;
+    LoggerConfig loggerConfig;
 };

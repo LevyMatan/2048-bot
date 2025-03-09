@@ -14,6 +14,7 @@
 #include "board.hpp"
 #include "evaluation.hpp"
 #include "arg_parser.hpp"
+#include "logger.hpp"
 
 // Performance test function
 void runPerformanceTest() {
@@ -149,8 +150,17 @@ int main(int argc, char* argv[]) {
         ArgParser parser(argc, argv);
         auto simConfig = parser.getSimConfig();
         auto playerConfig = parser.getPlayerConfig();
+        auto loggerConfig = parser.getLoggerConfig();
 
+        // FIX: Use the singleton pattern correctly, don't create a local instance
+        Logger2048::Logger::getInstance().configure(loggerConfig);
+        
+        // Example of using the logger
+        auto& logger = Logger2048::Logger::getInstance();
+        logger.info(Logger2048::Group::Game, "Starting application with", simConfig.numGames, "games");
+        
         std::unique_ptr<Player> player = createPlayer(playerConfig);
+        logger.info(Logger2048::Group::AI, "Created player of type:", player->getName());
 
         // Use simulation config values
         const int numGames = simConfig.numGames;
@@ -165,8 +175,7 @@ int main(int argc, char* argv[]) {
 
         auto startTime = std::chrono::high_resolution_clock::now();
 
-        std::cout << "Starting " << numGames << " games with " << player->getName()
-                 << " using " << numThreads << " threads...\n";
+        logger.info(Logger2048::Group::Game, "Starting", numGames, "games with", player->getName(), "using", numThreads, "threads");
 
         std::vector<std::thread> threads;
         int gamesPerThread = numGames / numThreads;
@@ -190,25 +199,21 @@ int main(int argc, char* argv[]) {
         auto endTime = std::chrono::high_resolution_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
 
-        std::cout << "\n\nFinal Results:\n";
-        std::cout << std::string(20, '-') << "\n";
+        logger.info(Logger2048::Group::Game, "Final Results:");
+        logger.info(Logger2048::Group::Game, std::string(20, '-'));
 
         // Format duration output
         if (duration.count() > 5000) {
             double seconds = duration.count() / 1000.0;
-            std::cout << "Played " << numGames << " games in "
-                     << std::fixed << std::setprecision(2) << seconds << "s\n";
-            std::cout << "Average time per game: "
-                     << std::fixed << std::setprecision(2) << (seconds / numGames) << "s\n";
+            logger.info(Logger2048::Group::Game, "Played", numGames, "games in", std::fixed, std::setprecision(2), seconds, "s");
+            logger.info(Logger2048::Group::Game, "Average time per game:", std::fixed, std::setprecision(2), (seconds / numGames), "s");
         } else {
-            std::cout << "Played " << numGames << " games in " << duration.count() << "ms\n";
-            std::cout << "Average time per game: "
-                     << std::fixed << std::setprecision(2)
-                     << (static_cast<double>(duration.count()) / numGames) << "ms\n";
+            logger.info(Logger2048::Group::Game, "Played", numGames, "games in", duration.count(), "ms");
+            logger.info(Logger2048::Group::Game, "Average time per game:", std::fixed, std::setprecision(2), (static_cast<double>(duration.count()) / numGames), "ms");
         }
 
-        std::cout << "Best score: " << bestScore.load() << " (moves: " << bestMoveCount.load() << ")\n";
-        std::cout << "Best board:\n";
+        logger.info(Logger2048::Group::Game, "Best score:", bestScore.load(), "(moves:", bestMoveCount.load(), ")");
+        logger.info(Logger2048::Group::Game, "Best board:");
 
         // Create a temporary game to display the best board
         Game2048 tempGame;

@@ -9,7 +9,7 @@
 #include <unordered_map>
 
 ExpectimaxPlayer::ExpectimaxPlayer(const int depth, const int chanceCovering,
-    const int timeLimit, const bool adaptive_depth, const Evaluation::EvalParams& params)
+    const double timeLimit, const bool adaptive_depth, const Evaluation::EvalParams& params)
     : depthLimit(depth),
       chanceCovering(chanceCovering),
       timeLimit(timeLimit),

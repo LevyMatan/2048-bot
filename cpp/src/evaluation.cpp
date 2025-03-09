@@ -39,7 +39,7 @@ double calculateScore(const uint8_t board[4][4]) {
         }
     }
 
-    return score;
+    return static_cast<double>(score);
 }
 
 // Find the maximum tile value

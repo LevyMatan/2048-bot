@@ -4,6 +4,7 @@
 #include <vector>
 #include <tuple>
 #include <array>
+#include <string>
 
 /**
  * @brief Represents the four possible move directions in the 2048 game

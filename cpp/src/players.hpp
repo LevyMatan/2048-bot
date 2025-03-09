@@ -5,6 +5,7 @@
 #include <string>
 #include <memory>
 #include <random>
+#include <chrono>
 #include "board.hpp"
 #include "evaluation.hpp"
 
@@ -116,7 +117,7 @@ class ExpectimaxPlayer : public Player {
         using EvaluationFunction = Evaluation::EvaluationFunction;
 
         // Constructors
-        ExpectimaxPlayer(const int depth, const int chanceCovering, const int timeLimit, const bool adaptive_depth, const Evaluation::EvalParams& params = Evaluation::EvalParams());
+        ExpectimaxPlayer(const int depth, const int chanceCovering, const double timeLimit, const bool adaptive_depth, const Evaluation::EvalParams& params = Evaluation::EvalParams());
 
         // Implement Player interface
         ChosenActionResult chooseAction(BoardState state) override;

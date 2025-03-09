@@ -42,18 +42,28 @@ public:
     }
 
     void configure(const LoggerConfig& config);
+    
+    bool loadConfigFromJsonFile(const std::string& filename);
 
     template<typename... Args>
-    void error(Group group, Args... args);
+    void error(Group group, Args... args) {
+        log(Level::Error, group, args...);
+    }
 
     template<typename... Args>
-    void warning(Group group, Args... args);
+    void warning(Group group, Args... args) {
+        log(Level::Warning, group, args...);
+    }
 
     template<typename... Args>
-    void info(Group group, Args... args);
+    void info(Group group, Args... args) {
+        log(Level::Info, group, args...);
+    }
 
     template<typename... Args>
-    void debug(Group group, Args... args);
+    void debug(Group group, Args... args) {
+        log(Level::Debug, group, args...);
+    }
 
     void printBoard(Group group, uint64_t board);
     void wait();
@@ -70,11 +80,42 @@ private:
     Logger& operator=(const Logger&) = delete;
 
     template<typename... Args>
-    void log(Level level, Group group, Args... args);
+    void log(Level level, Group group, Args... args) {
+        if (!shouldLog(level, group)) return;
+
+        std::lock_guard<std::mutex> lock(logMutex);
+
+        // Get current time
+        auto now = std::chrono::system_clock::now();
+        auto time = std::chrono::system_clock::to_time_t(now);
+
+        std::tm time_info;
+        #ifdef _WIN32
+            localtime_s(&time_info, &time);
+        #else
+            localtime_r(&time, &time_info);
+        #endif
+        std::stringstream ss;
+        ss << "[" << std::put_time(&time_info, "%Y-%m-%d %H:%M:%S") << "] "
+           << "[" << levelToString(level) << "] ";
+
+        ((ss << args << " "), ...);
+        ss << std::endl;
+
+        if (config.logToFile && fileStream.is_open()) {
+            fileStream << ss.str();
+            fileStream.flush();
+        }
+
+        if(config.logToConsole || level != Level::Debug) {
+            std::cout << ss.str();
+        }
+    }
 
     bool shouldLog(Level level, Group group);
     std::string groupToString(Group group);
     std::string levelToString(Level level);
+    static Level stringToLevel(const std::string& levelStr);
 
     LoggerConfig config;
     std::ofstream fileStream;
