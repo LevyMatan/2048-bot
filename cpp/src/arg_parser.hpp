@@ -1,8 +1,9 @@
 #pragma once
 
 #include <string>
-#include "players.hpp"
+#include <thread>
 #include "logger.hpp"
+#include "players.hpp"
 
 using namespace Logger2048;
 
@@ -40,16 +41,42 @@ private:
     SimulationConfig simConfig;
     PlayerConfigurations playerConfig;
     LoggerConfig loggerConfig;
-    
+
     bool loadLoggerConfigFromFile = false;
     std::string loggerConfigPath = "";
     const std::string defaultLoggerConfigPath = "configurations/logger_config.json";
-    
+
     bool loadSimConfigFromFile = false;
     std::string simConfigPath = "";
     const std::string defaultSimConfigPath = "configurations/sim_config.json";
-    
+
     bool loadPlayerConfigFromFile = false;
     std::string playerConfigPath = "";
     const std::string defaultPlayerConfigPath = "configurations/player_config.json";
+};
+
+
+class TuneHeuristicParams {
+public:
+    int populationSize = 50;
+    int generations = 20;
+    int gamesPerEvaluation = 100;
+    double mutationRate = 0.15;
+    double elitePercentage = 0.2;
+    std::string outputFile = "eval_weights.csv";
+    std::string bestWeightsFile = "best_eval_weights.csv";
+    std::string jsonOutputFile = "best_eval_weights.json";
+    bool continueFromFile = false;
+    int numThreads = std::thread::hardware_concurrency();
+    int verbosity = 0;
+};
+
+class TuneHeuristicParser {
+public:
+    TuneHeuristicParser(int argc, char* argv[]);
+    void parseArguments(int argc, char* argv[]);
+    TuneHeuristicParams getParams() const;
+private:
+    TuneHeuristicParams params;
+
 };

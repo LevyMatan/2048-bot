@@ -2,6 +2,8 @@
 #include "game.hpp"
 #include "players.hpp"
 #include "evaluation.hpp"
+#include "logger.hpp"
+#include "arg_parser.hpp"
 #include <iostream>
 #include <vector>
 #include <random>
@@ -16,6 +18,11 @@
 #include <future>
 #include <unordered_map>
 #include <set>
+
+
+
+// Initialize logger
+Logger2048::Logger &logger = Logger2048::Logger::getInstance();
 
 // Structure to hold a set of evaluation weights and its performance
 struct EvalWeightSet {
@@ -254,7 +261,7 @@ void saveWeightsToFile(const std::vector<EvalWeightSet>& weightSets, const std::
         // Write all component weights
         bool first = true;
         for (const auto& comp : {"emptyTiles", "monotonicity", "smoothness",
-                                "cornerValue", "mergeability", "patternMatching"}) {
+                                "cornerValue", "mergeability", "patternMatching", "coreScore"}) {
             if (!first) file << ",";
             if (weightSet.params.find(comp) != weightSet.params.end()) {
                 file << comp << ":" << weightSet.params.at(comp);
@@ -320,9 +327,9 @@ std::vector<EvalWeightSet> loadWeightsFromFile(const std::string& filename) {
             }
 
             // Parse performance metrics
-            ws.avgScore = std::stod(tokens[6]);
-            ws.maxScore = std::stoi(tokens[7]);
-            ws.gamesPlayed = std::stoi(tokens[8]);
+            ws.avgScore = std::stod(tokens[7]);
+            ws.maxScore = std::stoi(tokens[8]);
+            ws.gamesPlayed = std::stoi(tokens[9]);
 
             weightSets.push_back(ws);
         }
@@ -400,7 +407,7 @@ void analyzeComponentContribution(const std::vector<EvalWeightSet>& population) 
     // All possible components
     std::vector<std::string> allComponents = {
         "emptyTiles", "monotonicity", "smoothness",
-        "cornerValue", "mergeability", "patternMatching"
+        "cornerValue", "mergeability", "patternMatching", "coreScore"
     };
 
     // Initialize usage counters
@@ -492,99 +499,54 @@ EvalWeightSet tournamentSelect(const std::vector<EvalWeightSet>& population, std
 }
 
 int main(int argc, char* argv[]) {
-    // Default parameters
-    int populationSize = 50;        // Increased from 20
-    int generations = 20;           // Increased from 10
-    int gamesPerEvaluation = 100;   // Increased from 20
-    double mutationRate = 0.15;
-    double elitePercentage = 0.2;
-    std::string outputFile = "eval_weights.csv";
-    std::string bestWeightsFile = "best_eval_weights.csv";
-    std::string jsonOutputFile = "best_eval_weights.json"; // New JSON output file
-    bool continueFromFile = false;
-    int numThreads = std::thread::hardware_concurrency();  // Default to available CPU cores
+    // Parse command line arguments
+    TuneHeuristicParser argParser(argc, argv);
+    TuneHeuristicParams params = argParser.getParams();
+
+    logger.info(Logger2048::Group::Tuner, "Tuning Parameters:");
+    logger.info(Logger2048::Group::Tuner, "  Population Size: " + std::to_string(params.populationSize));
+    logger.info(Logger2048::Group::Tuner, "  Generations: " + std::to_string(params.generations));
+    logger.info(Logger2048::Group::Tuner, "  Games per Evaluation: " + std::to_string(params.gamesPerEvaluation));
+    logger.info(Logger2048::Group::Tuner, "  Mutation Rate: " + std::to_string(params.mutationRate));
+    logger.info(Logger2048::Group::Tuner, "  Elite Percentage: " + std::to_string(params.elitePercentage));
+    logger.info(Logger2048::Group::Tuner, "  Output File: " + params.outputFile);
+    logger.info(Logger2048::Group::Tuner, "  Best Weights File: " + params.bestWeightsFile);
+    logger.info(Logger2048::Group::Tuner, "  JSON Output File: " + params.jsonOutputFile);
+    logger.info(Logger2048::Group::Tuner, "  Continue from File: " + std::string(params.continueFromFile ? "Yes" : "No"));
+    logger.info(Logger2048::Group::Tuner, "  Threads: " + std::to_string(params.numThreads));
+    logger.info(Logger2048::Group::Tuner, "  Verbosity: " + std::to_string(params.verbosity));
+    logger.info(Logger2048::Group::Tuner, "");
+
+    // Initialize random number generator
+    std::random_device rd;
+    std::mt19937 rng(rd());
 
     // Add before the main loop
-    double initialMutationRate = mutationRate;
+    double initialMutationRate = params.mutationRate;
 
     // Add before main loop
     int generationsWithoutImprovement = 0;
     double bestScore = 0;
     const int MAX_GENERATIONS_WITHOUT_IMPROVEMENT = 5;
 
-    // Parse command line arguments
-    for (int i = 1; i < argc; ++i) {
-        std::string arg = argv[i];
-        if (arg == "-p" && i + 1 < argc) {
-            populationSize = std::stoi(argv[++i]);
-        } else if (arg == "-g" && i + 1 < argc) {
-            generations = std::stoi(argv[++i]);
-        } else if (arg == "-n" && i + 1 < argc) {
-            gamesPerEvaluation = std::stoi(argv[++i]);
-        } else if (arg == "-m" && i + 1 < argc) {
-            mutationRate = std::stod(argv[++i]);
-        } else if (arg == "-e" && i + 1 < argc) {
-            elitePercentage = std::stod(argv[++i]);
-        } else if (arg == "-o" && i + 1 < argc) {
-            outputFile = argv[++i];
-        } else if (arg == "-b" && i + 1 < argc) {
-            bestWeightsFile = argv[++i];
-        } else if (arg == "-j" && i + 1 < argc) { // New argument for JSON output file
-            jsonOutputFile = argv[++i];
-        } else if (arg == "-c") {
-            continueFromFile = true;
-        } else if (arg == "-t" && i + 1 < argc) {
-            numThreads = std::stoi(argv[++i]);
-        } else if (arg == "-h" || arg == "--help") {
-            std::cout << "Usage: " << argv[0] << " [options]\n"
-                      << "Options:\n"
-                      << "  -p <size>       Population size (default: 20)\n"
-                      << "  -g <num>        Number of generations (default: 10)\n"
-                      << "  -n <num>        Games per evaluation (default: 20)\n"
-                      << "  -m <rate>       Mutation rate (default: 0.15)\n"
-                      << "  -e <percent>    Elite percentage (default: 0.2)\n"
-                      << "  -o <file>       Output file (default: eval_weights.csv)\n"
-                      << "  -b <file>       Best weights file (default: best_eval_weights.csv)\n"
-                      << "  -j <file>       JSON output file (default: best_eval_weights.json)\n" // New help message
-                      << "  -c              Continue from file\n"
-                      << "  -t <threads>    Number of threads (default: CPU cores)\n"
-                      << "  -h, --help      Show this help message\n";
-            return 0;
-        }
-    }
-
-    std::cout << "Tuning Parameters:\n"
-              << "  Population Size: " << populationSize << "\n"
-              << "  Generations: " << generations << "\n"
-              << "  Games per Evaluation: " << gamesPerEvaluation << "\n"
-              << "  Mutation Rate: " << mutationRate << "\n"
-              << "  Elite Percentage: " << elitePercentage << "\n"
-              << "  Output File: " << outputFile << "\n"
-              << "  Best Weights File: " << bestWeightsFile << "\n"
-              << "  JSON Output File: " << jsonOutputFile << "\n" // New output message
-              << "  Continue from File: " << (continueFromFile ? "Yes" : "No") << "\n"
-              << "  Threads: " << numThreads << "\n\n";
-
-    // Initialize random number generator
-    std::random_device rd;
-    std::mt19937 rng(rd());
+    double mutationRate = params.mutationRate; // Declare mutationRate here
 
     // Initialize population
     std::vector<EvalWeightSet> population;
 
-    if (continueFromFile) {
-        population = loadWeightsFromFile(outputFile);
+    if (params.continueFromFile) {
+        population = loadWeightsFromFile(params.outputFile);
     }
 
     // If not continuing or no weights were loaded, generate a new population
     if (population.empty()) {
         // Generate initial random weights
-        for (int i = 0; i < populationSize; ++i) {
+        for (int i = 0; i < params.populationSize; ++i) {
             population.push_back(generateRandomWeights(rng));
         }
-    } else if (population.size() < static_cast<size_t>(populationSize)) {
+    } else if (population.size() < static_cast<size_t>(params.populationSize)) {
         // If we loaded some but not enough, generate the rest
-        int toGenerate = populationSize - population.size();
+        int toGenerate = params.populationSize - population.size();
         for (int i = 0; i < toGenerate; ++i) {
             population.push_back(generateRandomWeights(rng));
         }
@@ -595,14 +557,14 @@ int main(int argc, char* argv[]) {
     bestWeightSet.avgScore = 0;
 
     // Run the evolutionary algorithm
-    for (int gen = 0; gen < generations; ++gen) {
+    for (int gen = 0; gen < params.generations; ++gen) {
         std::cout << "\n===== Generation " << gen + 1 << " =====\n";
 
         // In the generation loop
-        mutationRate = initialMutationRate * (1.0 - static_cast<double>(gen) / generations);
+        mutationRate = initialMutationRate * (1.0 - static_cast<double>(gen) / params.generations);
 
         // Evaluate all weight sets
-        evaluateWeightsInParallel(population, gamesPerEvaluation, numThreads);
+        evaluateWeightsInParallel(population, params.gamesPerEvaluation, params.numThreads);
 
         // Sort by average score (descending)
         std::sort(population.begin(), population.end(), [](const EvalWeightSet& a, const EvalWeightSet& b) {
@@ -625,14 +587,14 @@ int main(int argc, char* argv[]) {
         analyzeComponentContribution(population);
 
         // Save all weights
-        saveWeightsToFile(population, outputFile);
+        saveWeightsToFile(population, params.outputFile);
 
         // Save the best weights
-        saveBestWeightsToFile(bestWeightSet, bestWeightsFile);
+        saveBestWeightsToFile(bestWeightSet, params.bestWeightsFile);
 
         // Save the best weights to JSON file
-        if (Evaluation::saveParamsToJsonFile(bestWeightSet.params, jsonOutputFile)) {
-            std::cout << "Best weights saved to " << jsonOutputFile << std::endl;
+        if (Evaluation::saveParamsToJsonFile(bestWeightSet.params, params.jsonOutputFile)) {
+            std::cout << "Best weights saved to " << params.jsonOutputFile << std::endl;
         } else {
             std::cerr << "Error: Could not save best weights to JSON file." << std::endl;
         }
@@ -657,7 +619,7 @@ int main(int argc, char* argv[]) {
         }
 
         // If this is the last generation, we're done
-        if (gen == generations - 1) {
+        if (gen == params.generations - 1) {
             break;
         }
 
@@ -665,15 +627,15 @@ int main(int argc, char* argv[]) {
         std::vector<EvalWeightSet> nextGeneration;
 
         // Keep the elites
-        int eliteCount = static_cast<int>(elitePercentage * populationSize);
+        int eliteCount = static_cast<int>(params.elitePercentage * params.populationSize);
         for (int i = 0; i < eliteCount; ++i) {
             nextGeneration.push_back(population[i]);
         }
 
         // Create the rest through mutation and crossover
-        std::uniform_int_distribution<int> parentDist(0, std::min(populationSize - 1, static_cast<int>(populationSize * 0.5)));
+        std::uniform_int_distribution<int> parentDist(0, std::min(params.populationSize - 1, static_cast<int>(params.populationSize * 0.5)));
 
-        while (nextGeneration.size() < static_cast<size_t>(populationSize)) {
+        while (nextGeneration.size() < static_cast<size_t>(params.populationSize)) {
             EvalWeightSet parent = tournamentSelect(population, rng);
             EvalWeightSet child = mutateWeights(parent, rng, mutationRate);
             nextGeneration.push_back(child);

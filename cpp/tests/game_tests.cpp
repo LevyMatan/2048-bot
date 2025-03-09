@@ -48,16 +48,14 @@ protected:
     void SetUp() override {
         // Disable waiting in tests
         waitDisabler = std::make_unique<TestHelpers::ScopedWaitDisabler>();
-        
+
         // Set up logger for testing
         auto& logger = Logger::getInstance();
         Logger2048::LoggerConfig testConfig;
         testConfig.level = Level::Debug;
         testConfig.waitEnabled = false;
-        testConfig.logToConsole = true;
-        testConfig.logToFile = false;
         logger.configure(testConfig);
-        
+
         game = new Game2048();
 
         // Create a mock player that always tries to move left (0)
@@ -74,19 +72,19 @@ protected:
     std::function<ChosenActionResult(BoardState)> createTestPlayer(Action fixedAction) {
         return [fixedAction](BoardState state) -> ChosenActionResult {
             auto validMoves = Board::getValidMoveActionsWithScores(state);
-            
+
             // Look for the specified action
             for (const auto& move : validMoves) {
                 if (move.action == fixedAction) {
                     return move;
                 }
             }
-            
+
             // If the specific action isn't valid, return the first valid move
             if (!validMoves.empty()) {
                 return validMoves[0];
             }
-            
+
             // If no valid moves, return invalid action
             return {Action::INVALID, state, 0};
         };
@@ -103,7 +101,7 @@ private:
 TEST_F(GameTest, InitializationTest) {
     // A new game should have a non-zero state (due to initial tiles)
     EXPECT_NE(game->getState(), 0);
-    
+
     // Score and move count should be 0
     EXPECT_EQ(game->getScore(), 0);
     EXPECT_EQ(game->getMoveCount(), 0);
@@ -114,19 +112,19 @@ TEST_F(GameTest, ResetTest) {
     // Play some moves to change the game state
     game->playMove(Action::LEFT, 0x12345678, 100);
     game->playMove(Action::UP, 0x87654321, 200);
-    
+
     // Verify that the state, score, and move count have changed
     EXPECT_NE(game->getState(), 0);
     EXPECT_EQ(game->getScore(), 300);
     EXPECT_EQ(game->getMoveCount(), 2);
-    
+
     // Reset the game
     game->reset();
-    
+
     // Verify that score and move count are reset
     EXPECT_EQ(game->getScore(), 0);
     EXPECT_EQ(game->getMoveCount(), 0);
-    
+
     // State should be non-zero (due to initial tiles)
     EXPECT_NE(game->getState(), 0);
 }
@@ -135,15 +133,15 @@ TEST_F(GameTest, ResetTest) {
 TEST_F(GameTest, PlayMoveTest) {
     // Get the initial state
     BoardState initialState = game->getState();
-    
+
     // Get valid moves for the initial state
     auto validMoves = game->getValidMoves();
-    
+
     // If there are valid moves, play one and check that the state changes
     if (!validMoves.empty()) {
         ChosenActionResult move = validMoves[0];
         bool success = game->playMove(move.action, move.state, move.score);
-        
+
         EXPECT_TRUE(success);
         EXPECT_NE(game->getState(), initialState);
         EXPECT_GT(game->getMoveCount(), 0);
@@ -161,19 +159,19 @@ TEST_F(GameTest, PlayFullGameTest) {
         }
         return validMoves[0];
     };
-    
+
     // Play the game (use 0 for the initial state to start a new game)
     auto [finalScore, finalState, moveCount] = game->playGame(testPlayer, 0);
-    
+
     // The game should end eventually
     EXPECT_GE(moveCount, 1);
     EXPECT_GE(finalScore, 0);
-    
+
     // For a new test game, try with a specific initial state
     BoardState initialState = 0x0000000100020003; // Some test initial state
     Game2048 testGame;
     auto [testScore, testState, testMoves] = testGame.playGame(testPlayer, initialState);
-    
+
     // Verify game started with our initial state and then changed
     EXPECT_NE(testState, initialState);
     EXPECT_GE(testMoves, 1);

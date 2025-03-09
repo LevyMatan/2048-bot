@@ -16,10 +16,10 @@ ArgParser::ArgParser(int argc, char* argv[]) :
     loggerConfig() {
     // Set default player type to Heuristic if not specified
     playerConfig.playerType = PlayerType::Heuristic;
-    
+
     // Parse command line arguments
     parseArguments(argc, argv);
-    
+
     // Load configurations from files if needed
     loadLoggerConfigIfNeeded();
     loadSimConfigIfNeeded();
@@ -38,11 +38,11 @@ void ArgParser::parseArguments(int argc, char* argv[]) {
         try {
             if (arg[0] == '-') {
                 // Special handling for flags that can be used without a value
-                
+
                 // Logger config flags
                 if (arg == "-lc" || arg == "--log-config" || arg == "--logger-config") {
                     loadLoggerConfigFromFile = true;
-                    
+
                     // Check if the next argument exists and is not a flag (doesn't start with -)
                     if (i + 1 < argc && argv[i + 1][0] != '-') {
                         loggerConfigPath = argv[++i];
@@ -50,11 +50,11 @@ void ArgParser::parseArguments(int argc, char* argv[]) {
                     // If not, the default path will be used
                     continue;
                 }
-                
+
                 // Simulation config flags
                 if (arg == "-sc" || arg == "--sim-config" || arg == "--sim") {
                     loadSimConfigFromFile = true;
-                    
+
                     // Check if the next argument exists and is not a flag (doesn't start with -)
                     if (i + 1 < argc && argv[i + 1][0] != '-') {
                         simConfigPath = argv[++i];
@@ -62,11 +62,11 @@ void ArgParser::parseArguments(int argc, char* argv[]) {
                     // If not, the default path will be used
                     continue;
                 }
-                
+
                 // Player config flags
                 if (arg == "-pc" || arg == "--player-config") {
                     loadPlayerConfigFromFile = true;
-                    
+
                     // Check if the next argument exists and is not a flag (doesn't start with -)
                     if (i + 1 < argc && argv[i + 1][0] != '-') {
                         playerConfigPath = argv[++i];
@@ -74,7 +74,7 @@ void ArgParser::parseArguments(int argc, char* argv[]) {
                     // If not, the default path will be used
                     continue;
                 }
-                
+
                 // Boolean flags that don't need values
                 if (arg == "--wait") {
                     loggerConfig.waitEnabled = true;
@@ -92,7 +92,7 @@ void ArgParser::parseArguments(int argc, char* argv[]) {
                     playerConfig.adaptiveDepth = true;
                     continue;
                 }
-                
+
                 // For all other flags, require a value
                 if (i + 1 >= argc) {
                     throw std::runtime_error("Missing value for flag: " + arg);
@@ -118,8 +118,8 @@ void ArgParser::parseArguments(int argc, char* argv[]) {
                         }
                     } else if (arg == "--log-file") {
                         loggerConfig.logFile = value;
-                        loggerConfig.outputDestination = (loggerConfig.outputDestination == LogOutput::Console || 
-                                                         loggerConfig.outputDestination == LogOutput::None) ? 
+                        loggerConfig.outputDestination = (loggerConfig.outputDestination == LogOutput::Console ||
+                                                         loggerConfig.outputDestination == LogOutput::None) ?
                                                          LogOutput::File : LogOutput::Both;
                     } else if (arg == "--initial-state") {
                         // Parse hexadecimal state
@@ -141,7 +141,7 @@ void ArgParser::parseArguments(int argc, char* argv[]) {
             exit(1);
         }
     }
-    
+
 }
 
 void ArgParser::parseShortFlag(const std::string& flag, const std::string& value) {
@@ -166,8 +166,8 @@ void ArgParser::parseShortFlag(const std::string& flag, const std::string& value
             }
         } else if (flag == "lf") {
             loggerConfig.logFile = value;
-            loggerConfig.outputDestination = (loggerConfig.outputDestination == LogOutput::Console || 
-                                             loggerConfig.outputDestination == LogOutput::None) ? 
+            loggerConfig.outputDestination = (loggerConfig.outputDestination == LogOutput::Console ||
+                                             loggerConfig.outputDestination == LogOutput::None) ?
                                              LogOutput::File : LogOutput::Both;
         } else if (flag == "is") {
             // Parse hexadecimal state
@@ -190,52 +190,52 @@ void ArgParser::loadLoggerConfigIfNeeded() {
     if (loadLoggerConfigFromFile) {
         std::string configPath = loggerConfigPath.empty() ? defaultLoggerConfigPath : loggerConfigPath;
         loggerConfig = logger.loadConfigFromJsonFile(configPath);
-    } 
+    }
 }
 
 void ArgParser::loadSimConfigIfNeeded() {
     if (loadSimConfigFromFile) {
         std::string configPath = simConfigPath.empty() ? defaultSimConfigPath : simConfigPath;
-        
+
         std::ifstream file(configPath);
         if (!file.is_open()) {
             std::cerr << "Failed to open simulation configuration file: " << configPath << std::endl;
             return;
         }
-        
+
         logger.info(Logger2048::Group::Parser, "Loading simulation configuration from:", configPath);
-        
+
         std::string jsonContent((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
-        
+
         // Simple JSON parsing
         auto parseValue = [&jsonContent](const std::string& key) -> std::string {
             size_t pos = jsonContent.find("\"" + key + "\"");
             if (pos == std::string::npos) return "";
-            
+
             pos = jsonContent.find(':', pos);
             if (pos == std::string::npos) return "";
-            
+
             pos = jsonContent.find_first_not_of(" \t\n\r", pos + 1);
             if (pos == std::string::npos) return "";
-            
+
             // Check if value is wrapped in quotes
             if (jsonContent[pos] == '"') {
                 size_t endPos = jsonContent.find('"', pos + 1);
                 if (endPos == std::string::npos) return "";
                 return jsonContent.substr(pos + 1, endPos - pos - 1);
-            } 
+            }
             else {
                 // Number or boolean value
                 size_t endPos = jsonContent.find_first_of(",}\n", pos);
                 if (endPos == std::string::npos) endPos = jsonContent.length();
                 std::string value = jsonContent.substr(pos, endPos - pos);
                 // Trim whitespace
-                value.erase(std::remove_if(value.begin(), value.end(), 
+                value.erase(std::remove_if(value.begin(), value.end(),
                              [](char c) { return std::isspace(c); }), value.end());
                 return value;
             }
         };
-        
+
         // Parse numGames
         std::string numGamesStr = parseValue("numGames");
         if (!numGamesStr.empty()) {
@@ -245,7 +245,7 @@ void ArgParser::loadSimConfigIfNeeded() {
                 logger.warning(Logger2048::Group::Parser, "Invalid numGames in config:", numGamesStr);
             }
         }
-        
+
         // Parse numThreads
         std::string numThreadsStr = parseValue("numThreads");
         if (!numThreadsStr.empty()) {
@@ -255,7 +255,7 @@ void ArgParser::loadSimConfigIfNeeded() {
                 logger.warning(Logger2048::Group::Parser, "Invalid numThreads in config:", numThreadsStr);
             }
         }
-        
+
         // Parse progressInterval
         std::string progressIntervalStr = parseValue("progressInterval");
         if (!progressIntervalStr.empty()) {
@@ -265,7 +265,7 @@ void ArgParser::loadSimConfigIfNeeded() {
                 logger.warning(Logger2048::Group::Parser, "Invalid progressInterval in config:", progressIntervalStr);
             }
         }
-        
+
         // Parse initialState (as hex string)
         std::string initialStateStr = parseValue("initialState");
         if (!initialStateStr.empty()) {
@@ -275,7 +275,7 @@ void ArgParser::loadSimConfigIfNeeded() {
                 logger.warning(Logger2048::Group::Parser, "Invalid initialState in config:", initialStateStr);
             }
         }
-        
+
         logger.info(Logger2048::Group::Logger, "Simulation Configuration:");
         logger.info(Logger2048::Group::Logger, "- Num Games:", simConfig.numGames);
         logger.info(Logger2048::Group::Logger, "- Num Threads:", simConfig.numThreads);
@@ -288,7 +288,7 @@ void ArgParser::loadPlayerConfigIfNeeded() {
     if (loadPlayerConfigFromFile) {
         std::string configToLoad = playerConfigPath.empty() ? defaultPlayerConfigPath : playerConfigPath;
         logger.info(Logger2048::Group::Parser, "Loading player configuration from:", configToLoad);
-        
+
         try {
             playerConfig = PlayerConfigurations::loadFromJsonFile(configToLoad);
             logger.info(Logger2048::Group::Parser, "Successfully loaded player configuration");
@@ -352,7 +352,7 @@ void ArgParser::printHelp() {
               << "  --player-config <file> Load player settings from JSON file\n"
               << "\n"
               << "LOGGING OPTIONS:\n"
-              << "  -l, --log-level <lvl>  Log level: error, warn, info, debug (default: info)\n" 
+              << "  -l, --log-level <lvl>  Log level: error, warn, info, debug (default: info)\n"
               << "  -o, --output <dest>    Output destination: none, console, file, both (default: console)\n"
               << "  -f, --file <path>      Log file path (default: game.log)\n"
               << "  --wait                 Wait for keypress between moves (debug mode)\n"
@@ -376,4 +376,69 @@ void ArgParser::printHelp() {
               << "\n"
               << "  Debug mode with detailed output and waiting between moves:\n"
               << "    2048 --log-level debug --wait --output both\n";
+}
+
+
+TuneHeuristicParser::TuneHeuristicParser(int argc, char* argv[]) {
+    // Parse command line arguments
+    parseArguments(argc, argv);
+
+    // Initialize logger
+    logger.info(Logger2048::Group::Parser, "Tuning Parameters:");
+    logger.info(Logger2048::Group::Parser, "  Population Size: " + std::to_string(params.populationSize));
+    logger.info(Logger2048::Group::Parser, "  Generations: " + std::to_string(params.generations));
+    logger.info(Logger2048::Group::Parser, "  Games per Evaluation: " + std::to_string(params.gamesPerEvaluation));
+    logger.info(Logger2048::Group::Parser, "  Mutation Rate: " + std::to_string(params.mutationRate));
+    logger.info(Logger2048::Group::Parser, "  Elite Percentage: " + std::to_string(params.elitePercentage));
+    logger.info(Logger2048::Group::Parser, "  Output File: " + params.outputFile);
+}
+
+void TuneHeuristicParser::parseArguments(int argc, char* argv[]) {
+
+    for (int i = 1; i < argc; ++i) {
+        std::string arg = argv[i];
+        if (arg == "-p" && i + 1 < argc) {
+            params.populationSize = std::stoi(argv[++i]);
+        } else if (arg == "-g" && i + 1 < argc) {
+            params.generations = std::stoi(argv[++i]);
+        } else if (arg == "-n" && i + 1 < argc) {
+            params.gamesPerEvaluation = std::stoi(argv[++i]);
+        } else if (arg == "-m" && i + 1 < argc) {
+            params.mutationRate = std::stod(argv[++i]);
+        } else if (arg == "-e" && i + 1 < argc) {
+            params.elitePercentage = std::stod(argv[++i]);
+        } else if (arg == "-o" && i + 1 < argc) {
+            params.outputFile = argv[++i];
+        } else if (arg == "-b" && i + 1 < argc) {
+            params.bestWeightsFile = argv[++i];
+        } else if (arg == "-j" && i + 1 < argc) {
+            params.jsonOutputFile = argv[++i];
+        } else if (arg == "-c") {
+            params.continueFromFile = true;
+        } else if (arg == "-t" && i + 1 < argc) {
+            params.numThreads = std::stoi(argv[++i]);
+        } else if (arg == "-v" && i + 1 < argc) {
+            params.verbosity = std::stoi(argv[++i]);
+        } else if (arg == "-h" || arg == "--help") {
+            std::cout << "Usage: tune_heuristic [options]\n"
+                      << "Options:\n"
+                      << "  -p <size>       Population size (default: 50)\n"
+                      << "  -g <num>        Number of generations (default: 20)\n"
+                      << "  -n <num>        Games per evaluation (default: 100)\n"
+                      << "  -m <rate>       Mutation rate (default: 0.15)\n"
+                      << "  -e <percent>    Elite percentage (default: 0.2)\n"
+                      << "  -o <file>       Output file (default: eval_weights.csv)\n"
+                      << "  -b <file>       Best weights file (default: best_eval_weights.csv)\n"
+                      << "  -j <file>       JSON output file (default: best_eval_weights.json)\n"
+                      << "  -c              Continue from file\n"
+                      << "  -t <threads>    Number of threads (default: CPU cores)\n"
+                      << "  -v <level>      Verbosity level (0-2, default: 0)\n"
+                      << "  -h, --help      Show this help message\n";
+            exit(0);
+        }
+    }
+}
+
+TuneHeuristicParams TuneHeuristicParser::getParams() const {
+    return params;
 }

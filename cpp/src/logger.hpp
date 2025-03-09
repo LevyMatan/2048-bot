@@ -26,6 +26,7 @@ enum class Group {
     Logger,
     Parser,
     Main,
+    Tuner,
     COUNT  // Keep this last for array size
 };
 
@@ -50,10 +51,10 @@ struct LoggerConfig {
     };
     bool waitEnabled = false;
     bool shrinkBoard = false;
-    
+
     // Replace logToFile and logToConsole with the new enum
     LogOutput outputDestination = LogOutput::Console;
-    
+
     bool showTimestamp = false;
     std::string logFile = "log.txt";
 };
@@ -66,9 +67,9 @@ public:
     }
 
     void configure(const LoggerConfig& config);
-    
+
     LoggerConfig loadConfigFromJsonFile(const std::string& filename);
-    
+
     // Add a method to print the current configuration
     void printConfiguration();
 
@@ -120,7 +121,7 @@ private:
         std::lock_guard<std::mutex> lock(logMutex);
 
         std::stringstream ss;
-        
+
         if (config.showTimestamp) {
             auto now = std::chrono::system_clock::now();
             auto time = std::chrono::system_clock::to_time_t(now);
@@ -133,7 +134,7 @@ private:
             #endif
             ss << "[" << std::put_time(&time_info, "%Y-%m-%d %H:%M:%S") << "] ";
         }
-        
+
         ss << "[" << levelToString(level) << "] ";
 
         ((ss << args << " "), ...);
@@ -146,8 +147,8 @@ private:
         }
 
         // Output to console if configured (and always output non-debug messages to console)
-        if (config.outputDestination == LogOutput::Console || 
-            config.outputDestination == LogOutput::Both || 
+        if (config.outputDestination == LogOutput::Console ||
+            config.outputDestination == LogOutput::Both ||
             level != Level::Debug) {
             std::cout << ss.str();
         }

@@ -7,11 +7,12 @@
     "Game": true,
     "Logger": true,
     "Parser": true,
-    "Main": true
+    "Main": true,
+    "Tuner": true
   },
   "outputDestination": "None",
   "waitEnabled": false,
   "shrinkBoard": true,
   "showTimestamp": false,
   "logFile": "game.log"
-} 
+}

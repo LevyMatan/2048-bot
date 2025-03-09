@@ -10,6 +10,8 @@
 #include <cmath>
 #include "test_helpers.hpp"
 
+extern Logger2048::Logger &logger;
+
 using namespace Evaluation;
 
 class EvaluationTest : public ::testing::Test {
@@ -65,7 +67,7 @@ TEST_F(EvaluationTest, EmptyTilesTest) {
     // Empty board should have maximum empty tiles score
     uint8_t emptyBoard[4][4] = {};
     double emptyScore = emptyTiles(emptyBoard);
-    
+
     // Full board should have minimum empty tiles score
     uint8_t fullBoard[4][4];
     for (int i = 0; i < 4; i++) {
@@ -74,7 +76,7 @@ TEST_F(EvaluationTest, EmptyTilesTest) {
         }
     }
     double fullScore = emptyTiles(fullBoard);
-    
+
     // Expect empty board to have higher score than full board
     EXPECT_GT(emptyScore, fullScore);
 
@@ -84,7 +86,7 @@ TEST_F(EvaluationTest, EmptyTilesTest) {
     partialBoard[0][1] = 2; // 4
     partialBoard[1][0] = 3; // 8
     partialBoard[1][1] = 4; // 16
-    
+
     double partialScore = emptyTiles(partialBoard);
     // Expect partial board to have score between empty and full
     EXPECT_GT(partialScore, fullScore);
@@ -94,7 +96,7 @@ TEST_F(EvaluationTest, EmptyTilesTest) {
 // Test for monotonicity evaluation function
 TEST_F(EvaluationTest, MonotonicityTest) {
     // Create some board patterns to test
-    
+
     // Board with increasing values from left to right and top to bottom
     uint8_t increasingBoard[4][4] = {
         {1, 2, 3, 4},
@@ -102,7 +104,7 @@ TEST_F(EvaluationTest, MonotonicityTest) {
         {3, 4, 5, 6},
         {4, 5, 6, 7}
     };
-    
+
     // Board with decreasing values from left to right
     uint8_t decreasingBoard[4][4] = {
         {7, 6, 5, 4},
@@ -110,7 +112,7 @@ TEST_F(EvaluationTest, MonotonicityTest) {
         {7, 6, 5, 4},
         {7, 6, 5, 4}
     };
-    
+
     // Non-monotonic board - random arrangement
     uint8_t randomBoard[4][4] = {
         {2, 5, 1, 7},
@@ -118,15 +120,15 @@ TEST_F(EvaluationTest, MonotonicityTest) {
         {1, 4, 2, 6},
         {5, 3, 7, 4}
     };
-    
+
     // Test that the function exists and returns some value
     double increasingScore = monotonicity(increasingBoard);
     double decreasingScore = monotonicity(decreasingBoard);
     double randomScore = monotonicity(randomBoard);
-    
+
     // The scores should be different for different board layouts
     EXPECT_NE(increasingScore, randomScore);
-    
+
     // Organized boards should generally score better than random ones
     // But implementation details might vary, so don't make strict assumptions
     EXPECT_TRUE(increasingScore != 0 || decreasingScore != 0 || randomScore != 0);
@@ -141,7 +143,7 @@ TEST_F(EvaluationTest, MergeabilityTest) {
         {5, 5, 6, 6},
         {7, 7, 8, 8}
     };
-    
+
     // Board with low mergeability (no adjacent same values)
     uint8_t unmergeableBoard[4][4] = {
         {1, 2, 3, 4},
@@ -149,13 +151,13 @@ TEST_F(EvaluationTest, MergeabilityTest) {
         {9, 10, 11, 12},
         {13, 14, 15, 0}
     };
-    
+
     double mergeableScore = mergeability(mergeableBoard);
     double unmergeableScore = mergeability(unmergeableBoard);
-    
+
     // The mergeable board should have a different score than the unmergeable one
     EXPECT_NE(mergeableScore, unmergeableScore);
-    
+
     // Most implementations would give a higher score to the mergeable board
     // But we'll accept any consistent behavior
     EXPECT_TRUE(mergeableScore != 0 || unmergeableScore != 0);
@@ -170,7 +172,7 @@ TEST_F(EvaluationTest, SmoothnessTest) {
         {3, 4, 5, 6},
         {4, 5, 6, 7}
     };
-    
+
     // Board with low smoothness (abrupt value changes)
     uint8_t roughBoard[4][4] = {
         {1, 10, 1, 10},
@@ -178,13 +180,13 @@ TEST_F(EvaluationTest, SmoothnessTest) {
         {1, 10, 1, 10},
         {10, 1, 10, 1}
     };
-    
+
     double smoothScore = smoothness(smoothBoard);
     double roughScore = smoothness(roughBoard);
-    
+
     // The scores should be different for different board layouts
     EXPECT_NE(smoothScore, roughScore);
-    
+
     // Most implementations would give a better score to the smooth board
     // But we'll accept any consistent behavior
     EXPECT_TRUE(smoothScore != 0 || roughScore != 0);
@@ -195,17 +197,17 @@ TEST_F(EvaluationTest, CornerValueTest) {
     // Board with high value in corner
     uint8_t cornerBoard[4][4] = {};
     cornerBoard[0][0] = 11; // 2048
-    
+
     // Board with high value in center
     uint8_t centerBoard[4][4] = {};
     centerBoard[1][1] = 11; // 2048
-    
+
     double cornerScore = cornerValue(cornerBoard);
     double centerScore = cornerValue(centerBoard);
-    
+
     // The scores should be different for different high tile positions
     EXPECT_NE(cornerScore, centerScore);
-    
+
     // Most implementations would prefer high values in corners
     // But we'll accept any consistent behavior
     EXPECT_TRUE(cornerScore != 0 || centerScore != 0);
@@ -220,7 +222,7 @@ TEST_F(EvaluationTest, PatternMatchingTest) {
         {3, 2, 1, 0},
         {0, 0, 0, 0}
     };
-    
+
     // Random arrangement
     uint8_t randomBoard[4][4] = {
         {1, 5, 2, 7},
@@ -228,13 +230,13 @@ TEST_F(EvaluationTest, PatternMatchingTest) {
         {2, 7, 1, 5},
         {8, 4, 6, 3}
     };
-    
+
     double snakeScore = patternMatching(snakeBoard);
     double randomScore = patternMatching(randomBoard);
-    
+
     // The scores should be different for different patterns
     EXPECT_NE(snakeScore, randomScore);
-    
+
     // At least one of the patterns should get a non-zero score
     EXPECT_TRUE(snakeScore != 0 || randomScore != 0);
 }
@@ -248,9 +250,9 @@ TEST_F(EvaluationTest, CompositeEvaluatorTest) {
         {"mergeability", 100},
         {"cornerValue", 100}
     };
-    
+
     CompositeEvaluator evaluator(equalParams);
-    
+
     // Create an arbitrary board state
     std::vector<std::vector<int>> tiles = {
         {2, 4, 8, 16},
@@ -259,22 +261,22 @@ TEST_F(EvaluationTest, CompositeEvaluatorTest) {
         {0, 0, 0, 0}
     };
     BoardState state = createBoardState(tiles);
-    
+
     // Evaluate the state
     double score = evaluator.evaluate(state);
-    
+
     // Score should be non-zero for a non-empty board
     EXPECT_NE(score, 0.0);
-    
+
     // Test with different weights
     EvalParams customParams = {
         {"emptyTiles", 500},
         {"monotonicity", 300}
     };
-    
+
     CompositeEvaluator customEvaluator(customParams);
     double customScore = customEvaluator.evaluate(state);
-    
+
     // The score can be the same if these components have no effect
     // So just test that we get a number without crashing
     EXPECT_TRUE(true);
@@ -287,9 +289,9 @@ TEST_F(EvaluationTest, SetWeightsTest) {
         {"emptyTiles", 100},
         {"monotonicity", 100}
     };
-    
+
     CompositeEvaluator evaluator(initialParams);
-    
+
     // Create a test board
     std::vector<std::vector<int>> tiles = {
         {2, 4, 0, 0},
@@ -298,16 +300,16 @@ TEST_F(EvaluationTest, SetWeightsTest) {
         {0, 0, 0, 0}
     };
     BoardState state = createBoardState(tiles);
-    
+
     // Get initial evaluation
     double initialScore = evaluator.evaluate(state);
-    
+
     // Change weights - should not crash
     evaluator.setWeight("emptyTiles", 500);
-    
+
     // Get new evaluation
     double newScore = evaluator.evaluate(state);
-    
+
     // Scores might be the same if components don't behave as expected
     // Just verify we don't crash
     EXPECT_TRUE(true);
@@ -325,15 +327,15 @@ TEST_F(EvaluationTest, LoadParamsTest) {
              << "  \"cornerValue\": 789\n"
              << "}\n";
     }
-    
+
     // Load params from file
     EvalParams params = loadParamsFromJsonFile(tempFile);
-    
+
     // Check loaded values
     EXPECT_EQ(params["emptyTiles"], 123);
     EXPECT_EQ(params["monotonicity"], 456);
     EXPECT_EQ(params["cornerValue"], 789);
-    
+
     // Cleanup
     std::remove(tempFile.c_str());
 }
@@ -346,21 +348,21 @@ TEST_F(EvaluationTest, SaveParamsTest) {
         {"monotonicity", 222},
         {"cornerValue", 333}
     };
-    
+
     // Save to file
     std::string tempFile = "temp_params_save_test.json";
     bool success = saveParamsToJsonFile(params, tempFile);
-    
+
     EXPECT_TRUE(success);
-    
+
     // Load back to verify
     EvalParams loadedParams = loadParamsFromJsonFile(tempFile);
-    
+
     // Check loaded values match original
     EXPECT_EQ(loadedParams["emptyTiles"], 111);
     EXPECT_EQ(loadedParams["monotonicity"], 222);
     EXPECT_EQ(loadedParams["cornerValue"], 333);
-    
+
     // Cleanup
     std::remove(tempFile.c_str());
 }
@@ -370,19 +372,19 @@ TEST_F(EvaluationTest, NamedEvaluationTest) {
     // Directly test known evaluation functions that should exist
     auto emptyTilesFunc = getNamedEvaluation("emptyTiles");
     auto cornerFunc = getNamedEvaluation("cornerValue");
-    
+
     // Create a simple test board with some values
     uint8_t board[4][4] = {};
     board[0][0] = 1; // 2
     board[0][1] = 2; // 4
-    
+
     // Just verify the functions execute without crashing
     double emptyScore = emptyTilesFunc(board);
     double cornerScore = cornerFunc(board);
-    
+
     // Don't make assumptions about the actual values
     SUCCEED() << "Named evaluation functions executed successfully";
-    
+
     // Also test that getAvailableEvaluationNames returns something
     auto availableNames = getAvailableEvaluationNames();
     EXPECT_FALSE(availableNames.empty()) << "Expected at least one available evaluation name";
@@ -392,23 +394,23 @@ TEST_F(EvaluationTest, NamedEvaluationTest) {
 TEST_F(EvaluationTest, PresetParamsTest) {
     // Get available evaluation names
     std::vector<std::string> availableNames = getAvailableEvaluationNames();
-    
+
     // If there are any available evaluation functions, check presets
     if (availableNames.size() > 1) {
         // Use two different names
         auto params1 = getPresetParams(availableNames[0]);
         auto params2 = getPresetParams(availableNames[1]);
-        
+
         // At least one of the params should not be empty
         EXPECT_TRUE(!params1.empty() || !params2.empty());
     } else {
         // If fewer than 2 names are available, just pass this test
         EXPECT_TRUE(true);
     }
-    
+
     // Try a preset that should exist
     auto basicParams = getPresetParams("basic");
-    
+
     // Just verify we get something
     EXPECT_TRUE(true);
 }
@@ -416,4 +418,4 @@ TEST_F(EvaluationTest, PresetParamsTest) {
 int main(int argc, char **argv) {
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
-} 
+}

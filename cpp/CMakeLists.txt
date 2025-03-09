@@ -65,6 +65,7 @@ set(TUNE_SOURCES
     src/expectimax_player.cpp
     src/evaluation.cpp
     src/logger.cpp
+    src/arg_parser.cpp
 )
 
 # Create tuning executable
