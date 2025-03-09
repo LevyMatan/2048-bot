@@ -81,57 +81,9 @@ void runGamesParallel(int startIdx, int endIdx, std::unique_ptr<Player>& player,
             std::lock_guard<std::mutex> lock(printMutex);
             std::cout << "\rGame " << completed << "/" << numGames
                      << " (Best: " << bestScore.load()
-                     << ")" << std::flush;
+                     << ")\n" << std::flush;
         }
     }
-}
-
-void printUsage(const char* programName) {
-    std::cout << "Usage: " << programName << " <player_type> [options] [num_games]\n"
-              << "Player types:\n"
-              << "  Random    - Plays randomly\n"
-              << "  Heuristic - Uses a heuristic evaluation\n"
-              << "              Options:\n"
-              << "              -e <eval>      Use named evaluation function\n"
-              << "              -json <file>   Load parameters from JSON file\n"
-              << "              -list-evals    List available evaluation functions\n"
-              << "  Expectimax - Uses expectimax search\n"
-              << "              Options:\n"
-              << "              -d <depth>     Search depth (default: 3)\n"
-              << "              -c <coverage>  Chance coverage (default: 2)\n"
-              << "              -t <time>      Time limit in ms (default: 100)\n"
-              << "              -a             Enable adaptive depth\n"
-              << "              -e <eval>      Evaluation function (default: combined)\n"
-              << "              -json <file>   Load parameters from JSON file\n"
-              << "              -list-evals    List available evaluation functions\n"
-              << "              -debug        Enable debug output\n"
-              << "              -stepByStep   Enable step-by-step execution\n"
-              << "              -printBoard   Print the board for each action\n"
-              << "\n"
-              << "Available evaluation functions: corner, standard, merge, pattern, balanced\n"
-              << "\n"
-              << "Examples:\n"
-              << "  " << programName << " Heuristic 10\n"
-              << "  " << programName << " Heuristic -e corner 10\n"
-              << "  " << programName << " Heuristic -json params.json 10\n"
-              << "  " << programName << " Expectimax -d 4 -e pattern 5\n"
-              << "  " << programName << " Expectimax -json custom_params.json 5\n"
-              << "  " << programName << " Expectimax -debug -stepByStep 1\n";
-}
-
-// Helper function to print available evaluation functions
-void printAvailableEvaluations() {
-    std::cout << "Available evaluation functions:\n";
-
-    auto evalNames = Evaluation::getAvailableEvaluationNames();
-    for (const auto& name : evalNames) {
-        std::cout << "  - " << name << ":\n";
-        auto params = Evaluation::getPresetParams(name);
-        // Display a non-formatted version for the list
-        std::cout << "    " << Evaluation::getEvalParamsDetails(params, false) << "\n";
-    }
-
-    std::cout << std::endl;
 }
 
 std::unique_ptr<Player> createPlayer(PlayerConfigurations config) {
@@ -141,15 +93,13 @@ std::unique_ptr<Player> createPlayer(PlayerConfigurations config) {
         case PlayerType::Heuristic:
             {
                 auto player = std::make_unique<HeuristicPlayer>(config.evalParams);
-                // Set debug flag if needed - this would be handled inside the Evaluation system
                 return player;
             }
         case PlayerType::Expectimax:
             {
-                auto player = std::make_unique<ExpectimaxPlayer>(config.depth, config.chanceCovering, 
-                                                    config.timeLimit, config.adaptiveDepth, 
+                auto player = std::make_unique<ExpectimaxPlayer>(config.depth, config.chanceCovering,
+                                                    config.timeLimit, config.adaptiveDepth,
                                                     config.evalParams);
-                // Set debug flag if needed - this would be handled inside the Evaluation system
                 return player;
             }
         default:
@@ -160,21 +110,21 @@ std::unique_ptr<Player> createPlayer(PlayerConfigurations config) {
 int main(int argc, char* argv[]) {
     try {
         ArgParser parser(argc, argv);
+        auto loggerConfig = parser.getLoggerConfig();
+        logger.configure(loggerConfig);
+
         auto simConfig = parser.getSimConfig();
         auto playerConfig = parser.getPlayerConfig();
-        auto loggerConfig = parser.getLoggerConfig();
 
-        logger.configure(loggerConfig);
-        
         // Example of using the logger with eval params
         logger.info(Logger2048::Group::Main, "Starting application with", simConfig.numGames, "games");
         logger.info(Logger2048::Group::Main, "Using player:", PlayerConfigurations::playerTypeToString(playerConfig.playerType));
         logger.info(Logger2048::Group::Main, "Evaluation parameters:", Evaluation::evalParamsToString(playerConfig.evalParams));
-        
+
         if (simConfig.initialState != 0) {
             logger.info(Logger2048::Group::Main, "Using initial state:", std::hex, simConfig.initialState, std::dec);
         }
-        
+
         std::unique_ptr<Player> player = createPlayer(playerConfig);
         logger.info(Logger2048::Group::Main, "Created player of type:", player->getName());
 
@@ -192,7 +142,7 @@ int main(int argc, char* argv[]) {
 
         auto startTime = std::chrono::high_resolution_clock::now();
 
-        logger.info(Logger2048::Group::Main, "Starting", numGames, "games with", 
+        logger.info(Logger2048::Group::Main, "Starting", numGames, "games with",
                    player->getName(), "using", numThreads, "threads");
 
         std::vector<std::thread> threads;

@@ -41,7 +41,7 @@ public:
 
     // Default constructor with default values
     PlayerConfigurations()
-        : playerType(PlayerType::Random), evalParams(Evaluation::EvalParams()), depth(3), chanceCovering(1), timeLimit(1.0), adaptiveDepth(false) {}
+        : playerType(PlayerType::Heuristic), evalParams(Evaluation::EvalParams()), depth(3), chanceCovering(1), timeLimit(1.0), adaptiveDepth(false) {}
 
     static PlayerType playerTypeFromString(const std::string& str) {
         if (str == "R") {
@@ -84,23 +84,23 @@ public:
 
         return config;
     }
-    
+
     // Load player configuration from a JSON file
     static PlayerConfigurations loadFromJsonFile(const std::string& filename) {
         PlayerConfigurations config;
-        
+
         std::ifstream file(filename);
         if (!file.is_open()) {
             throw std::runtime_error("Failed to open player config file: " + filename);
         }
-        
+
         std::string line, jsonContent;
         while (std::getline(file, line)) {
             jsonContent += line;
         }
-        
+
         size_t pos = 0;
-        
+
         // Find the playerType
         pos = jsonContent.find("\"playerType\"");
         if (pos != std::string::npos) {
@@ -111,7 +111,7 @@ public:
                 pos++; // Skip opening quote
                 size_t endPos = jsonContent.find("\"", pos);
                 std::string typeStr = jsonContent.substr(pos, endPos - pos);
-                
+
                 // Map "Random" to "R", etc.
                 if (typeStr == "Random") {
                     config.playerType = PlayerType::Random;
@@ -124,7 +124,7 @@ public:
                 }
             }
         }
-        
+
         // Find the depth
         pos = jsonContent.find("\"depth\"");
         if (pos != std::string::npos) {
@@ -134,7 +134,7 @@ public:
             std::string valueStr = jsonContent.substr(pos, endPos - pos);
             config.depth = std::stoi(valueStr);
         }
-        
+
         // Find the chanceCovering
         pos = jsonContent.find("\"chanceCovering\"");
         if (pos != std::string::npos) {
@@ -144,7 +144,7 @@ public:
             std::string valueStr = jsonContent.substr(pos, endPos - pos);
             config.chanceCovering = std::stoi(valueStr);
         }
-        
+
         // Find the timeLimit
         pos = jsonContent.find("\"timeLimit\"");
         if (pos != std::string::npos) {
@@ -154,7 +154,7 @@ public:
             std::string valueStr = jsonContent.substr(pos, endPos - pos);
             config.timeLimit = std::stod(valueStr);
         }
-        
+
         // Find the adaptiveDepth
         pos = jsonContent.find("\"adaptiveDepth\"");
         if (pos != std::string::npos) {
@@ -164,7 +164,7 @@ public:
             std::string valueStr = jsonContent.substr(pos, endPos - pos);
             config.adaptiveDepth = (valueStr == "true");
         }
-        
+
         // Find the evaluation parameters
         pos = jsonContent.find("\"evalParams\"");
         if (pos != std::string::npos) {
@@ -173,45 +173,45 @@ public:
                 size_t startPos = pos;
                 int braceCount = 1;
                 pos++;
-                
+
                 // Find the matching closing brace
                 while (braceCount > 0 && pos < jsonContent.size()) {
                     if (jsonContent[pos] == '{') braceCount++;
                     else if (jsonContent[pos] == '}') braceCount--;
                     pos++;
                 }
-                
+
                 if (braceCount == 0) {
                     // Extract the evalParams JSON object
                     std::string evalParamsJson = jsonContent.substr(startPos, pos - startPos);
-                    
+
                     // Parse each parameter
                     size_t paramPos = 0;
                     while ((paramPos = evalParamsJson.find("\"", paramPos)) != std::string::npos) {
                         paramPos++; // Skip opening quote
                         size_t nameEndPos = evalParamsJson.find("\"", paramPos);
                         std::string paramName = evalParamsJson.substr(paramPos, nameEndPos - paramPos);
-                        
+
                         paramPos = evalParamsJson.find(":", nameEndPos);
                         if (paramPos == std::string::npos) break;
-                        
+
                         paramPos = evalParamsJson.find_first_not_of(" \t\n\r", paramPos + 1);
                         size_t valueEndPos = evalParamsJson.find_first_of(",}", paramPos);
                         std::string valueStr = evalParamsJson.substr(paramPos, valueEndPos - paramPos);
-                        
+
                         // Remove any whitespace from the value
-                        valueStr.erase(std::remove_if(valueStr.begin(), valueStr.end(), 
+                        valueStr.erase(std::remove_if(valueStr.begin(), valueStr.end(),
                             [](char c) { return std::isspace(c); }), valueStr.end());
-                            
+
                         // Store the parameter
                         config.evalParams[paramName] = std::stoul(valueStr);
-                        
+
                         paramPos = valueEndPos;
                     }
                 }
             }
         }
-        
+
         return config;
     }
 };
