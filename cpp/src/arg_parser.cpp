@@ -37,8 +37,10 @@ void ArgParser::parseArguments(int argc, char* argv[]) {
 
         try {
             if (arg[0] == '-') {
-                // Special handling for -lc, --log-config, -sc, --sim-config, -pc, --player-config which can be used without a value
-                if (arg == "-lc" || arg == "--log-config") {
+                // Special handling for flags that can be used without a value
+                
+                // Logger config flags
+                if (arg == "-lc" || arg == "--log-config" || arg == "--logger-config") {
                     loadLoggerConfigFromFile = true;
                     
                     // Check if the next argument exists and is not a flag (doesn't start with -)
@@ -49,8 +51,8 @@ void ArgParser::parseArguments(int argc, char* argv[]) {
                     continue;
                 }
                 
-                // Handle simulation config
-                if (arg == "-sc" || arg == "--sim-config") {
+                // Simulation config flags
+                if (arg == "-sc" || arg == "--sim-config" || arg == "--sim") {
                     loadSimConfigFromFile = true;
                     
                     // Check if the next argument exists and is not a flag (doesn't start with -)
@@ -61,7 +63,7 @@ void ArgParser::parseArguments(int argc, char* argv[]) {
                     continue;
                 }
                 
-                // Handle player config
+                // Player config flags
                 if (arg == "-pc" || arg == "--player-config") {
                     loadPlayerConfigFromFile = true;
                     
@@ -70,6 +72,24 @@ void ArgParser::parseArguments(int argc, char* argv[]) {
                         playerConfigPath = argv[++i];
                     }
                     // If not, the default path will be used
+                    continue;
+                }
+                
+                // Boolean flags that don't need values
+                if (arg == "--wait") {
+                    loggerConfig.waitEnabled = true;
+                    continue;
+                }
+                if (arg == "--timestamp") {
+                    loggerConfig.showTimestamp = true;
+                    continue;
+                }
+                if (arg == "--compact") {
+                    loggerConfig.shrinkBoard = true;
+                    continue;
+                }
+                if (arg == "--adaptive") {
+                    playerConfig.adaptiveDepth = true;
                     continue;
                 }
                 
@@ -122,10 +142,6 @@ void ArgParser::parseArguments(int argc, char* argv[]) {
         }
     }
     
-    // Load configurations
-    loadLoggerConfigIfNeeded();
-    loadSimConfigIfNeeded();
-    loadPlayerConfigIfNeeded();
 }
 
 void ArgParser::parseShortFlag(const std::string& flag, const std::string& value) {
@@ -318,32 +334,46 @@ std::string ArgParser::getPlayerConfigPath() const {
 }
 
 void ArgParser::printHelp() {
-    std::cout << "Usage: 2048 [options]\n\n"
-              << "Options:\n"
-              << "  -p <type>        Player type (H=Heuristic, R=Random)\n"
-              << "  -n <num>         Number of games to play\n"
-              << "  -t <num>         Number of threads\n"
-              << "  -is <hex>        Initial board state (hex uint64)\n"
-              << "  --initial-state <hex> Initial board state (hex uint64)\n"
-              << "  -sc [file]       Load simulation config from JSON file (default: configurations/sim_config.json)\n"
-              << "  --sim-config [f] Load simulation config from JSON file (default: configurations/sim_config.json)\n"
-              << "  -pc [file]       Load player config from JSON file (default: configurations/player_config.json)\n"
-              << "  --player-config [f] Load player config from JSON file (default: configurations/player_config.json)\n"
-              << "  --sim            Enable simulation mode\n"
-              << "  -l <level>       Log level (e=Error, w=Warning, i=Info, d=Debug)\n"
-              << "  -lf <file>       Log to file (output destination will include File)\n"
-              << "  -lc [file]       Load logger config from JSON file (default: configurations/logger_config.json)\n"
-              << "  --log-level <l>  Set log level (error, warning, info, debug)\n"
-              << "  --log-file <f>   Set log file (output destination will include File)\n"
-              << "  --output <dest>  Set output destination (none, console, file, both)\n"
-              << "  --log-config [f] Load logger config from JSON file (default: configurations/logger_config.json)\n"
-              << "  -h, --help       Show this help\n\n"
-              << "Examples:\n"
-              << "  2048 -p H -n 10                   (Heuristic player, 10 games)\n"
-              << "  2048 -p R -t 8                    (Random player, 8 threads)\n"
-              << "  2048 -p H -is 0x123456789abcdef0  (Start from specific board state)\n"
-              << "  2048 -p H -sc                     (Load default simulation config)\n"
-              << "  2048 -p H -lc                     (Load default logger config)\n"
-              << "  2048 -p H -pc                     (Load default player config)\n"
-              << std::endl;
+    std::cout << "2048 Game Bot - A C++ implementation of 2048 with AI players\n\n"
+              << "Usage: 2048 [options]\n\n"
+              << "GAME OPTIONS:\n"
+              << "  -n, --games <num>      Number of games to play (default: 1)\n"
+              << "  -t, --threads <num>    Number of parallel threads (default: 1)\n"
+              << "  -i, --initial <hex>    Initial board state as hex (default: random)\n"
+              << "  --progress <num>       Progress reporting interval (default: 100)\n"
+              << "  --sim <file>           Load simulation settings from JSON file\n"
+              << "\n"
+              << "PLAYER OPTIONS:\n"
+              << "  -p, --player <type>    Player type: random, heuristic, expectimax (default: heuristic)\n"
+              << "  -d, --depth <num>      Search depth for AI (default: depends on player)\n"
+              << "  -c, --chance <num>     Chance node coverage (for expectimax)\n"
+              << "  --time <ms>            Time limit per move in milliseconds\n"
+              << "  --adaptive             Enable adaptive search depth\n"
+              << "  --player-config <file> Load player settings from JSON file\n"
+              << "\n"
+              << "LOGGING OPTIONS:\n"
+              << "  -l, --log-level <lvl>  Log level: error, warn, info, debug (default: info)\n" 
+              << "  -o, --output <dest>    Output destination: none, console, file, both (default: console)\n"
+              << "  -f, --file <path>      Log file path (default: game.log)\n"
+              << "  --wait                 Wait for keypress between moves (debug mode)\n"
+              << "  --timestamp            Show timestamps in logs\n"
+              << "  --compact              Use compact board representation in logs\n"
+              << "  --logger-config <file> Load logger settings from JSON file\n"
+              << "\n"
+              << "GENERAL OPTIONS:\n"
+              << "  -h, --help             Show this help message\n"
+              << "  -v, --version          Show version information\n"
+              << "\n"
+              << "EXAMPLES:\n"
+              << "  Play 10 games with the heuristic player:\n"
+              << "    2048 --games 10 --player heuristic\n"
+              << "\n"
+              << "  Play with expectimax player, depth 4, and log to file:\n"
+              << "    2048 --player expectimax --depth 4 --output file --file my_games.log\n"
+              << "\n"
+              << "  Load configurations from JSON files:\n"
+              << "    2048 --player-config configs/player.json --logger-config configs/logger.json\n"
+              << "\n"
+              << "  Debug mode with detailed output and waiting between moves:\n"
+              << "    2048 --log-level debug --wait --output both\n";
 }
