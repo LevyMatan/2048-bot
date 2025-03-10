@@ -38,7 +38,6 @@ TEST(PlayersTest, ExpectimaxDepth0EqualsHeuristic) {
 
     // Test multiple board states
     for (int seed = 0; seed < 100; seed++) {
-        // Generate a random uint64_t
         BoardState state = Board::randomizeState();
 
         // Get actions from both players
