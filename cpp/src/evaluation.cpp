@@ -88,10 +88,10 @@ double monotonicity(const uint8_t board[4][4]) {
 
     // Check rows and columns for monotonicity
     for (int i = 0; i < 4; ++i) {
-        float row_monotonicity_left = 0;
-        float row_monotonicity_right = 0;
-        float col_monotonicity_left = 0;
-        float col_monotonicity_right = 0;
+        double row_monotonicity_left = 0;
+        double row_monotonicity_right = 0;
+        double col_monotonicity_left = 0;
+        double col_monotonicity_right = 0;
 
         // Check row monotonicity
         for (int j = 1; j < 4; ++j) {
@@ -333,7 +333,7 @@ EvalParams loadParamsFromJsonFile(const std::string& filename) {
 
             // Convert value to integer
             try {
-                uint64_t value = std::stoull(valueStr);
+                double value = std::stod(valueStr);
                 params[key] = value;
             } catch (const std::exception& e) {
                 std::cerr << "Error parsing value for key '" << key << "': " << e.what() << std::endl;
