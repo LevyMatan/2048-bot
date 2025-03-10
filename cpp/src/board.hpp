@@ -222,6 +222,21 @@ public:
      * @param board 4x4 array representing the board
      */
     static void printBoard(uint8_t board[4][4]);
+
+    /**
+     * @brief Returns a random board state.
+     *
+     * Each tile is randomized with the following probabilities:
+     *   50% chance: 0 (empty)
+     *   30% chance: a value in the range [1, 10]
+     *   15% chance: a value in the range [11, 12]
+     *    5% chance: a value in the range [13, 15]
+     *
+     * Each tile is stored as a 4-bit value.
+     *
+     * @return BoardState The generated random board state.
+     */
+    static BoardState randomizeState();
 };
 
 /**

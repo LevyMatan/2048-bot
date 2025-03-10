@@ -4,6 +4,7 @@
 #include <array>
 #include <iostream>
 #include <iomanip>
+#include <random>
 
 bool Board::lookupInitialized = false;
 std::array<uint16_t, 1 << 16> Board::leftMoves;
@@ -216,4 +217,33 @@ void Board::printBoard(uint8_t board[4][4]) {
         std::cout << "|" << std::endl;
         std::cout << "+------+------+------+------+" << std::endl;
     }
+}
+
+BoardState Board::randomizeState() {
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_real_distribution<> probDist(0.0, 1.0);
+
+    BoardState state = 0;
+    // There are 16 tiles on the board
+    for (int i = 0; i < 16; ++i) {
+        double r = probDist(gen);
+        int tile;
+        if (r < 0.5) {
+            tile = 0;
+        } else if (r < 0.8) { // 0.3 probability
+            std::uniform_int_distribution<int> dist(1, 10);
+            tile = dist(gen);
+        } else if (r < 0.95) { // 0.15 probability
+            std::uniform_int_distribution<int> dist(11, 12);
+            tile = dist(gen);
+        } else { // remaining 0.05 probability
+            std::uniform_int_distribution<int> dist(13, 15);
+            tile = dist(gen);
+        }
+        // Each tile is stored in 4 bits in the 64-bit state.
+        state |= (static_cast<BoardState>(tile) << (i * 4));
+    }
+
+    return state;
 }
