@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <array>
 #include <iostream>
+#include <iomanip>
 
 bool Board::lookupInitialized = false;
 std::array<uint16_t, 1 << 16> Board::leftMoves;
@@ -207,10 +208,12 @@ void Board::unpackState(BoardState state, uint8_t board[4][4]) {
 }
 
 void Board::printBoard(uint8_t board[4][4]) {
+    std::cout << "+------+------+------+------+" << std::endl;
     for (int i = 0; i < 4; ++i) {
         for (int j = 0; j < 4; ++j) {
-            std::cout << (int)board[i][j] << "\t";
+            std::cout << "| " << std::setw(5) << (board[i][j] ? std::to_string(board[i][j]) : " ");
         }
-        std::cout << std::endl;
+        std::cout << "|" << std::endl;
+        std::cout << "+------+------+------+------+" << std::endl;
     }
 }
