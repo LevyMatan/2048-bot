@@ -37,7 +37,7 @@ ChosenActionResult ExpectimaxPlayer::chooseAction(uint64_t state) {
     // Initialize best move with the first valid move to ensure we always have something to return
     ChosenActionResult bestAction = validMoves[0];
 
-    double bestValue = 0.0;
+    double bestValue = std::numeric_limits<double>::lowest();
 
     for (const ChosenActionResult& actionResult : validMoves) {
         double value = chanceNode(actionResult.state, searchDepth, 1.0);
