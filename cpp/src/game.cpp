@@ -26,9 +26,9 @@ void Game2048::addRandomTile() {
     int value = (dist(rng) < 0.9) ? 1 : 2;
     BoardState newState = Board::setTile(board.getState(), row, col, value);
     board.setState(newState);
-    
-    logger.debug(Logger2048::Group::Board, 
-        "Added random tile:", Board::valueToTile(value), 
+
+    logger.debug(Logger2048::Group::Board,
+        "Added random tile:", Board::valueToTile(value),
         "at position [", row, ",", col, "]");
 }
 
@@ -50,16 +50,14 @@ bool Game2048::playMove(Action action, BoardState nextState, int moveScore) {
     score += moveScore;
     moveCount++;
 
-    logger.debug(Logger2048::Group::Game, 
-        "Move #", moveCount, ": ", actionToString(action), 
+    logger.debug(Logger2048::Group::Game,
+        "Move #", moveCount, ": ", actionToString(action),
         ", Score: +", moveScore, ", Total: ", score);
 
     // Add a new random tile
     addRandomTile();
 
     logger.wait();
-    
-
     return true;
 }
 
@@ -81,7 +79,7 @@ std::tuple<int, BoardState, int> Game2048::playGame(
     }
     moveCount = 0;
     score = 0; // We don't know the score for this state, so start at 0
-    
+
     bool gameOver = false;
 
     while (!gameOver) {
