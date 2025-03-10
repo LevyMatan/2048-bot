@@ -36,11 +36,18 @@ ChosenActionResult HeuristicPlayer::chooseAction(BoardState state) {
         return {Action::INVALID, state, 0};
     }
 
-    // Find the move with the highest score
-    auto bestMoveIter = std::max_element(validMoves.begin(), validMoves.end(),
-        [this](const auto& a, const auto& b) {
-            return evalFn(a.state) < evalFn(b.state);
-        });
+    // Find the best move based on the evaluation function
+    double bestEval = evalFn(validMoves[0].state);
+    logger.debug(Logger2048::Group::AI, "Action: ", actionToString(validMoves[0].action), "Eval: ", bestEval);
+    auto bestMoveIter = validMoves.begin();
+    for (auto it = validMoves.begin() + 1; it != validMoves.end(); ++it) {
+        double eval = evalFn(it->state);
+        logger.debug(Logger2048::Group::AI, "Action: ", actionToString(it->action), "Eval: ", eval);
+        if (eval > bestEval) {
+            bestEval = eval;
+            bestMoveIter = it;
+        }
+    }
 
     return *bestMoveIter;
 }
