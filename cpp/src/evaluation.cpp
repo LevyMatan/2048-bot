@@ -67,6 +67,19 @@ double coreScore(const uint8_t board[4][4]) {
     return calculateScore(board);
 }
 
+// Computes a core score using each tile’s value multiplied by its log₂ value for smoother scaling.
+double improvedCoreScore(const uint8_t board[4][4]) {
+    double score = 0.0;
+    for (int i = 0; i < 4; ++i) {
+        for (int j = 0; j < 4; ++j) {
+            if (board[i][j] > 0) {
+                score += board[i][j];
+            }
+        }
+    }
+    return score;
+}
+
 double emptyTiles(const uint8_t board[4][4]) {
     uint64_t emptyCount = 0;
 
@@ -118,27 +131,87 @@ double monotonicity(const uint8_t board[4][4]) {
     return score;
 }
 
+// Computes monotonicity by summing differences between log₂ of adjacent tiles.
+double improvedMonotonicity(const uint8_t board[4][4]) {
+    double totals[4] = {0.0, 0.0, 0.0, 0.0};
+
+    // Row direction monotonicity:
+    for (int i = 0; i < 4; ++i) {
+        for (int j = 0; j < 3; ++j) {
+            if (board[i][j] > 0 && board[i][j+1] > 0) {
+                double current = std::log2(board[i][j]);
+                double next = std::log2(board[i][j+1]);
+                if (current > next) {
+                    totals[0] += current - next;
+                } else {
+                    totals[1] += next - current;
+                }
+            }
+        }
+    }
+
+    // Column direction monotonicity:
+    for (int j = 0; j < 4; ++j) {
+        for (int i = 0; i < 3; ++i) {
+            if (board[i][j] > 0 && board[i+1][j] > 0) {
+                double current = std::log2(board[i][j]);
+                double next = std::log2(board[i+1][j]);
+                if (current > next) {
+                    totals[2] += current - next;
+                } else {
+                    totals[3] += next - current;
+                }
+            }
+        }
+    }
+
+    // Lower differences imply a more monotonic board.
+    double monotonicityScore = - (std::min(totals[0], totals[1]) + std::min(totals[2], totals[3]));
+    return monotonicityScore;
+}
 
 // MERGEABILITY: Evaluates the potential for merging adjacent tiles
 double mergeability(const uint8_t board[4][4]) {
     int merges = 0;
+
+    // Check for merges in rows
     for (int row = 0; row < 4; ++row) {
         int prev = 0;
         int counter = 0;
         for (int col = 0; col < 4; ++col) {
             uint8_t tile = board[row][col];
             if (tile > 0) {
-                if(prev == tile) {
+                if (prev == tile) {
                     counter++;
-                }
-                else if(counter > 0) {
+                } else if (counter > 0) {
                     merges += 1 + counter;
                     counter = 0;
                 }
                 prev = tile;
             }
         }
-        if(counter > 0) {
+        if (counter > 0) {
+            merges += 1 + counter;
+        }
+    }
+
+    // Check for merges in columns
+    for (int col = 0; col < 4; ++col) {
+        int prev = 0;
+        int counter = 0;
+        for (int row = 0; row < 4; ++row) {
+            uint8_t tile = board[row][col];
+            if (tile > 0) {
+                if (prev == tile) {
+                    counter++;
+                } else if (counter > 0) {
+                    merges += 1 + counter;
+                    counter = 0;
+                }
+                prev = tile;
+            }
+        }
+        if (counter > 0) {
             merges += 1 + counter;
         }
     }
@@ -259,12 +332,12 @@ double patternMatching(const uint8_t board[4][4]) {
 
 SimpleEvalFunc getNamedEvaluation(const std::string& name) {
     if (name == "emptyTiles") return emptyTiles;
-    if (name == "monotonicity") return monotonicity;
+    if (name == "monotonicity") return improvedMonotonicity;
     if (name == "mergeability") return mergeability;
     if (name == "smoothness") return smoothness;
     if (name == "cornerValue") return cornerValue;
     if (name == "patternMatching") return patternMatching;
-    if (name == "coreScore") return coreScore;
+    if (name == "coreScore") return improvedCoreScore;
     return nullptr;
 }
 
