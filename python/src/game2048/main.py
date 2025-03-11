@@ -42,12 +42,12 @@ def play_games(args: argparse.Namespace) -> None:
 
     player_mapping = get_player_mapping()
     player_key = args.player.lower()
-    
+
     if player_key not in player_mapping:
         logger.error(f"Unknown player type '{args.player}'")
         logger.error(f"Available player types: {list(player_mapping.keys())}")
         raise SystemExit(1)
-        
+
     player_cls = player_mapping[player_key]
 
     # If the player is Human, force the number of games to be 1
@@ -65,7 +65,7 @@ def play_games(args: argparse.Namespace) -> None:
     best_score = 0
     best_state = None
     best_move_count = 0
-    
+
     logger.info(f"Playing {args.num_games} games with {player_cls.__name__}...")
 
     for _ in range(args.num_games):
@@ -101,7 +101,7 @@ def main() -> int:
     play_parser.add_argument("--profile_en", action="store_true", help="Enable profiling")
     play_parser.add_argument("-n", "--num_games", type=int, default=1, help="Number of games to play")
     play_parser.add_argument("-p", "--player", type=str, default="human",
-                          help=f"Player type {list(get_player_mapping().keys())}")
+                             help=f"Player type {list(get_player_mapping().keys())}")
     play_parser.add_argument("-v", "--verbose", action="store_true", help="Enable debug logging")
 
     # Benchmark command - delegate to benchmark module
@@ -109,6 +109,9 @@ def main() -> int:
     benchmark.add_arguments(benchmark_parser)
 
     args = parser.parse_args()
+    if not args.command:
+        parser.print_help()
+        return 0
 
     # Set up logging
     if args.verbose:
@@ -127,4 +130,4 @@ def main() -> int:
     return 0
 
 if __name__ == "__main__":
-    raise SystemExit(main()) 
+    raise SystemExit(main())
