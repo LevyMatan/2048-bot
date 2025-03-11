@@ -1,4 +1,4 @@
-#include "heuristic_player.hpp"
+#include "players.hpp"
 #include "board.hpp"
 #include "evaluation.hpp"
 #include <algorithm>
@@ -10,17 +10,19 @@
 #include <string>
 #include <vector>
 
-HeuristicPlayer::HeuristicPlayer(const Evaluation::EvalParams& params, const DebugConfig& debugCfg)
-    : Player(debugCfg) // Initialize the base class with debugConfig
+extern Logger2048::Logger &logger;
+
+HeuristicPlayer::HeuristicPlayer(const Evaluation::EvalParams& params)
 {
     customName = "Heuristic";
-    Evaluation::CompositeEvaluator evaluator(params);
-    evalFn = [evaluator](uint64_t state) {
-        return evaluator.evaluate(state);
+    logger.debug(Logger2048::Group::AI, "Creating HeuristicPlayer with params: " + Evaluation::evalParamsToString(params));
+    evaluator = std::make_unique<Evaluation::CompositeEvaluator>(params);
+    evalFn = [this](BoardState state) {
+        return this->evaluator->evaluate(state);
     };
 }
 
-HeuristicPlayer::HeuristicPlayer(const Evaluation::EvaluationFunction& fn) : Player(), evalFn(fn) {
+HeuristicPlayer::HeuristicPlayer(const Evaluation::EvaluationFunction& fn) : evalFn(fn) {
     customName = "Heuristic";
 }
 
@@ -28,17 +30,24 @@ std::string HeuristicPlayer::getName() const {
     return customName;
 }
 
-std::tuple<Action, uint64_t, int> HeuristicPlayer::chooseAction(uint64_t state) {
+ChosenActionResult HeuristicPlayer::chooseAction(BoardState state) {
     auto validMoves = Board::getValidMoveActionsWithScores(state);
     if (validMoves.empty()) {
         return {Action::INVALID, state, 0};
     }
 
-    // Find the move with the highest score
-    auto bestMove = std::max_element(validMoves.begin(), validMoves.end(),
-        [this](const auto& a, const auto& b) {
-            return evalFn(std::get<1>(a)) < evalFn(std::get<1>(b));
-        });
+    // Find the best move based on the evaluation function
+    double bestEval = evalFn(validMoves[0].state);
+    logger.debug(Logger2048::Group::AI, "Action: ", actionToString(validMoves[0].action), "Eval: ", bestEval);
+    auto bestMoveIter = validMoves.begin();
+    for (auto it = validMoves.begin() + 1; it != validMoves.end(); ++it) {
+        double eval = evalFn(it->state);
+        logger.debug(Logger2048::Group::AI, "Action: ", actionToString(it->action), "Eval: ", eval);
+        if (eval > bestEval) {
+            bestEval = eval;
+            bestMoveIter = it;
+        }
+    }
 
-    return {std::get<0>(*bestMove), std::get<1>(*bestMove), std::get<2>(*bestMove)};
+    return *bestMoveIter;
 }

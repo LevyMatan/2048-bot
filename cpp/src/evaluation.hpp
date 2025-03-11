@@ -7,8 +7,11 @@
 #include <vector>
 #include <unordered_map>
 #include "board.hpp"
+#include "logger.hpp"
 
 namespace Evaluation {
+
+using Weight = double;
 
 // Primary evaluation function type
 using EvaluationFunction = std::function<double(BoardState)>;
@@ -17,7 +20,7 @@ using EvaluationFunction = std::function<double(BoardState)>;
 using SimpleEvalFunc = std::function<double(const uint8_t[4][4])>;
 
 // Parameters for weighted evaluations
-using EvalParams = std::unordered_map<std::string, uint64_t>;
+using EvalParams = std::unordered_map<std::string, Weight>;
 
 EvalParams getPresetParams(const std::string& name);
 // Helper function to unpack state into a 2D board
@@ -51,17 +54,12 @@ std::vector<std::string> getAvailableEvaluationNames();
 
 // Display details of EvalParams with formatted output
 std::string getEvalParamsDetails(const EvalParams& params, bool formatted = true);
-
-// Component for building composite evaluations
-using Weight = uint64_t;
-using BoardValue = uint64_t;
-
 struct EvaluationComponent {
     SimpleEvalFunc function;
     Weight weight;
     std::string name;
 
-    EvaluationComponent(SimpleEvalFunc f, uint64_t w, std::string n)
+    EvaluationComponent(SimpleEvalFunc f, Weight w, std::string n)
         : function(f), weight(w), name(n) {}
 };
 
@@ -71,14 +69,17 @@ public:
     CompositeEvaluator(EvalParams params);
 
     // Add a component with weight
-    void addComponent(SimpleEvalFunc func, uint64_t weight, const std::string& name);
+    void addComponent(SimpleEvalFunc func, Weight weight, const std::string& name);
+
+    // Remove a component by name
+    void removeComponent(const std::string& name);
 
     // Evaluate a state using all components
     double evaluate(BoardState state) const;
 
     // Get/set component weights
-    void setWeight(const std::string& name, uint64_t weight);
-    uint64_t getWeight(const std::string& name) const;
+    void setWeight(const std::string& name, Weight weight);
+    Weight getWeight(const std::string& name) const;
 
     // Get parameters as a map
     EvalParams getParams() const;
@@ -86,22 +87,15 @@ public:
     // Set weights from a parameter map
     void setParams(const EvalParams& params);
 
+    // Add this new method for detailed evaluation output
+    void printDetailedEvaluation(BoardState state) const;
+
 private:
     std::vector<EvaluationComponent> components;
     std::unordered_map<std::string, size_t> componentIndices;
 };
 
-static constexpr size_t BOARD_SIZE = 4;
-static constexpr uint64_t MIN_WEIGHT = 0;
-static constexpr uint64_t MAX_WEIGHT = UINT64_MAX;
-
-// Add debugging utilities:
-struct EvaluationBreakdown {
-    std::string componentName;
-    uint64_t rawScore;
-    uint64_t weightedScore;
-};
-
-std::vector<EvaluationBreakdown> getDetailedEvaluation(BoardState state);
+// Convert EvalParams to a simple string representation
+std::string evalParamsToString(const EvalParams& params);
 
 } // namespace Evaluation

@@ -1,15 +1,21 @@
 #include "game.hpp"
-#include "player.hpp"
+#include "board.hpp"
+#include "players.hpp"
+#include "logger.hpp"
 #include <gtest/gtest.h>
+#include <functional>
+#include <tuple>
 #include <memory>
-#include <utility>
+#include "test_helpers.hpp"
+
+Logger2048::Logger &logger = Logger2048::Logger::getInstance();
 
 // Mock player for testing
 class MockPlayer : public Player {
 public:
     MockPlayer(int fixedAction) : fixedAction_(fixedAction) {}
 
-    std::tuple<Action, uint64_t, int> chooseAction(uint64_t state) override {
+    ChosenActionResult chooseAction(uint64_t state) override {
         // For testing purposes, we'll simulate a simple move
         auto validMoves = Board::getValidMoveActionsWithScores(state);
         if (validMoves.empty()) {
@@ -36,10 +42,19 @@ private:
     int fixedAction_;
 };
 
+// Test fixture for Game class
 class GameTest : public ::testing::Test {
 protected:
     void SetUp() override {
-        // Create a game
+        // Disable waiting in tests
+        waitDisabler = std::make_unique<TestHelpers::ScopedWaitDisabler>();
+
+        // Set up logger for testing
+        Logger2048::LoggerConfig testConfig;
+        testConfig.level = Logger2048::Level::Debug;
+        testConfig.waitEnabled = false;
+        logger.configure(testConfig);
+
         game = new Game2048();
 
         // Create a mock player that always tries to move left (0)
@@ -47,98 +62,118 @@ protected:
     }
 
     void TearDown() override {
+        waitDisabler.reset();
         delete game;
         delete mockPlayer;
+    }
+
+    // Helper function to create a test player that always makes a specific move
+    std::function<ChosenActionResult(BoardState)> createTestPlayer(Action fixedAction) {
+        return [fixedAction](BoardState state) -> ChosenActionResult {
+            auto validMoves = Board::getValidMoveActionsWithScores(state);
+
+            // Look for the specified action
+            for (const auto& move : validMoves) {
+                if (move.action == fixedAction) {
+                    return move;
+                }
+            }
+
+            // If the specific action isn't valid, return the first valid move
+            if (!validMoves.empty()) {
+                return validMoves[0];
+            }
+
+            // If no valid moves, return invalid action
+            return {Action::INVALID, state, 0};
+        };
     }
 
     Game2048* game;
     MockPlayer* mockPlayer;
 
-    // Helper function to play a move using the mock player
-    bool playMoveWithMockPlayer() {
-        auto [action, nextState, moveScore] = mockPlayer->chooseAction(game->getState());
-        return game->playMove(action, nextState, moveScore);
-    }
+private:
+    std::unique_ptr<TestHelpers::ScopedWaitDisabler> waitDisabler;
 };
 
 // Test game initialization
 TEST_F(GameTest, InitializationTest) {
-    // A new game should have a non-zero board state (initial tiles)
+    // A new game should have a non-zero state (due to initial tiles)
     EXPECT_NE(game->getState(), 0);
 
-    // Initial score should be 0
+    // Score and move count should be 0
     EXPECT_EQ(game->getScore(), 0);
+    EXPECT_EQ(game->getMoveCount(), 0);
 }
 
-// Test game step
-TEST_F(GameTest, StepTest) {
-    // Save initial state
-    uint64_t initialState = game->getState();
-
-    // Perform a step
-    bool validMove = playMoveWithMockPlayer();
-
-    // The move should be valid or invalid depending on the board state
-    // We can't assert a specific outcome since the initial board is random
-
-    // If the move was valid, the board state should have changed
-    if (validMove) {
-        EXPECT_NE(game->getState(), initialState);
-    }
-}
-
-// Test game reset
+// Test reset functionality
 TEST_F(GameTest, ResetTest) {
-    // Play a few moves
-    playMoveWithMockPlayer();
-    playMoveWithMockPlayer();
+    // Play some moves to change the game state
+    game->playMove(Action::LEFT, 0x12345678, 100);
+    game->playMove(Action::UP, 0x87654321, 200);
 
-    // Record the state and score
-    uint64_t stateBeforeReset = game->getState();
+    // Verify that the state, score, and move count have changed
+    EXPECT_NE(game->getState(), 0);
+    EXPECT_EQ(game->getScore(), 300);
+    EXPECT_EQ(game->getMoveCount(), 2);
 
     // Reset the game
     game->reset();
 
-    // State should be different after reset
-    EXPECT_NE(game->getState(), stateBeforeReset);
-
-    // Score should be reset to 0
+    // Verify that score and move count are reset
     EXPECT_EQ(game->getScore(), 0);
-
-    // Move count should be reset to 0
     EXPECT_EQ(game->getMoveCount(), 0);
+
+    // State should be non-zero (due to initial tiles)
+    EXPECT_NE(game->getState(), 0);
 }
 
-// Test playing a game with a limited number of moves
-TEST_F(GameTest, PlayLimitedMovesTest) {
-    // Play a few moves
-    int moveCount = 0;
-    int maxMoves = 10;
+// Test playing a single move
+TEST_F(GameTest, PlayMoveTest) {
+    // Get the initial state
+    BoardState initialState = game->getState();
 
-    while (moveCount < maxMoves && playMoveWithMockPlayer()) {
-        moveCount++;
+    // Get valid moves for the initial state
+    auto validMoves = game->getValidMoves();
+
+    // If there are valid moves, play one and check that the state changes
+    if (!validMoves.empty()) {
+        ChosenActionResult move = validMoves[0];
+        bool success = game->playMove(move.action, move.state, move.score);
+
+        EXPECT_TRUE(success);
+        EXPECT_NE(game->getState(), initialState);
+        EXPECT_GT(game->getMoveCount(), 0);
+        EXPECT_EQ(game->getScore(), move.score);
     }
-
-    // Game should have a score and state
-    EXPECT_GE(game->getScore(), 0);
-    EXPECT_NE(game->getState(), 0);
-    EXPECT_GT(game->getMoveCount(), 0);
 }
 
 // Test playing a full game
 TEST_F(GameTest, PlayFullGameTest) {
-    // Create a lambda that captures the mock player and calls its chooseAction method
-    auto chooseActionFn = [this](uint64_t state) {
-        return mockPlayer->chooseAction(state);
+    // Create a player that always tries to move left, then up, then right, then down
+    auto testPlayer = [](BoardState state) -> ChosenActionResult {
+        auto validMoves = Board::getValidMoveActionsWithScores(state);
+        if (validMoves.empty()) {
+            return {Action::INVALID, state, 0};
+        }
+        return validMoves[0];
     };
 
-    // Play a full game
-    auto [score, state, moves] = game->playGame(chooseActionFn);
+    // Play the game (use 0 for the initial state to start a new game)
+    auto [finalScore, finalState, moveCount] = game->playGame(testPlayer, 0);
 
-    // Game should have completed
-    EXPECT_GE(score, 0);
-    EXPECT_NE(state, 0);
-    EXPECT_GT(moves, 0);
+    // The game should end eventually
+    EXPECT_GE(moveCount, 1);
+    EXPECT_GE(finalScore, 0);
+
+    // For a new test game, try with a specific initial state
+    BoardState initialState = 0x0000000100020003; // Some test initial state
+    Game2048 testGame;
+    auto [testScore, testState, testMoves] = testGame.playGame(testPlayer, initialState);
+
+    // Verify game started with our initial state and then changed
+    EXPECT_NE(testState, initialState);
+    EXPECT_GE(testMoves, 1);
 }
 
 int main(int argc, char **argv) {

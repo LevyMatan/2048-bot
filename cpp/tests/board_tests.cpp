@@ -7,16 +7,17 @@
 #include <iomanip>
 #include <iostream>
 #include <sstream>
+#include "test_helpers.hpp"
 
 class BoardTest : public ::testing::Test {
 protected:
     void SetUp() override {
-        // Initialize a new board for each test
-        board = new Board();
+        // Disable waiting in tests
+        waitDisabler = std::make_unique<TestHelpers::ScopedWaitDisabler>();
     }
 
     void TearDown() override {
-        delete board;
+        waitDisabler.reset();
     }
 
     Board* board;
@@ -24,11 +25,15 @@ protected:
     // Helper function to create a board state with specific tiles
     uint64_t createBoardState(const std::vector<std::vector<int>>& tiles) {
         uint64_t state = 0;
-        for (int row = 0; row < 4; ++row) {
-            for (int col = 0; col < 4; ++col) {
-                if (tiles[row][col] > 0) {
-                    int value = Board::tileToValue(tiles[row][col]);
-                    state = Board::setTile(state, row, col, value);
+        for (int row = 0; row < 4; row++) {
+            for (int col = 0; col < 4; col++) {
+                if ((size_t)row < tiles.size() && (size_t)col < tiles[row].size()) {
+                    int value = tiles[row][col];
+                    if (value > 0) {
+                        // Convert actual tile value to internal representation
+                        int internalValue = Board::tileToValue(value);
+                        state = Board::setTile(state, row, col, internalValue);
+                    }
                 }
             }
         }
@@ -39,20 +44,29 @@ protected:
     int getTileAt(uint64_t state, int row, int col) {
         int pos = (row * 4 + col) * 4;
         int value = (state >> pos) & 0xF;
-        return value == 0 ? 0 : Board::valueToTile(value);
+        return value > 0 ? Board::valueToTile(value) : 0;
     }
 
     // Helper function to print a board state for debugging
     void printBoardState(uint64_t state) {
-        std::cout << "Board state:" << std::endl;
-        for (int row = 0; row < 4; ++row) {
-            for (int col = 0; col < 4; ++col) {
-                int tile = getTileAt(state, row, col);
-                std::cout << std::setw(5) << tile << " ";
+        for (int row = 0; row < 4; row++) {
+            for (int col = 0; col < 4; col++) {
+                std::cout << getTileAt(state, row, col) << "\t";
             }
             std::cout << std::endl;
         }
     }
+
+    BoardTest() {
+        board = new Board();
+    }
+
+    ~BoardTest() {
+        delete board;
+    }
+
+private:
+    std::unique_ptr<TestHelpers::ScopedWaitDisabler> waitDisabler;
 };
 
 // Test initialization of a new board

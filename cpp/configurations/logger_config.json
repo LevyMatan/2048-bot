@@ -1,0 +1,18 @@
+{
+  "level": "Debug",
+  "groups": {
+    "Board": true,
+    "Eval": true,
+    "AI": true,
+    "Game": true,
+    "Logger": true,
+    "Parser": true,
+    "Main": true,
+    "Tuner": true
+  },
+  "outputDestination": "Both",
+  "waitEnabled": true,
+  "shrinkBoard": true,
+  "showTimestamp": false,
+  "logFile": "game.log"
+}

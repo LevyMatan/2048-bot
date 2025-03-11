@@ -1,5 +1,7 @@
 // game.cpp
 #include "game.hpp"
+#include "players.hpp"
+#include "logger.hpp"
 #include <iostream>
 #include <iomanip>
 #include <algorithm>
@@ -7,9 +9,14 @@
 #include <string>
 #include <sstream>
 
+extern Logger2048::Logger &logger;
+
 void Game2048::addRandomTile() {
     auto emptyTiles = Board::getEmptyTiles(board.getState());
-    if (emptyTiles.empty()) return;
+    if (emptyTiles.empty()) {
+        logger.debug(Logger2048::Group::Game, "No empty tiles available for adding random tile");
+        return;
+    }
 
     // Choose a random empty tile
     int idx = static_cast<int>(dist(rng) * emptyTiles.size());
@@ -17,7 +24,12 @@ void Game2048::addRandomTile() {
 
     // 90% chance of a 2, 10% chance of a 4
     int value = (dist(rng) < 0.9) ? 1 : 2;
-    board.setState(Board::setTile(board.getState(), row, col, value));
+    BoardState newState = Board::setTile(board.getState(), row, col, value);
+    board.setState(newState);
+
+    logger.debug(Logger2048::Group::Board,
+        "Added random tile:", Board::valueToTile(value),
+        "at position [", row, ",", col, "]");
 }
 
 /**
@@ -28,7 +40,7 @@ void Game2048::addRandomTile() {
  * @param moveScore The score obtained from the move.
  * @return true if the move is valid and executed, false otherwise.
  */
-bool Game2048::playMove(Action action, uint64_t nextState, int moveScore) {
+bool Game2048::playMove(Action action, BoardState nextState, int moveScore) {
     // Validate the action and next state
     if (Action::INVALID == action) {
         return false;
@@ -38,8 +50,14 @@ bool Game2048::playMove(Action action, uint64_t nextState, int moveScore) {
     score += moveScore;
     moveCount++;
 
+    logger.debug(Logger2048::Group::Game,
+        "Move #", moveCount, ": ", actionToString(action),
+        ", Score: +", moveScore, ", Total: ", score);
+
     // Add a new random tile
     addRandomTile();
+
+    logger.wait();
     return true;
 }
 
@@ -51,15 +69,28 @@ void Game2048::reset() {
     addRandomTile();
 }
 
-std::tuple<int, uint64_t, int> Game2048::playGame(
-    std::function<std::tuple<Action, uint64_t, int>(uint64_t)> chooseActionFn) {
+std::tuple<int, BoardState, int> Game2048::playGame(
+    std::function<ChosenActionResult(BoardState)> chooseActionFn,
+    BoardState initialState) {
+    if (initialState == 0) {
+        reset();
+    } else {
+        setState(initialState);
+    }
+    moveCount = 0;
+    score = 0; // We don't know the score for this state, so start at 0
 
-    reset();
     bool gameOver = false;
 
     while (!gameOver) {
-        auto [action, nextState, moveScore] = chooseActionFn(board.getState());
-        gameOver = !playMove(action, nextState, moveScore);
+        logger.debug(Logger2048::Group::Game, "Need to choose action, current state:", board.getState());
+        logger.printBoard(Logger2048::Group::Game, board.getState());
+        logger.wait();
+        ChosenActionResult actionResult = chooseActionFn(board.getState());
+        logger.debug(Logger2048::Group::Game, "Action:", actionToString(actionResult.action), "Next State:", actionResult.state, "Move Score:", actionResult.score);
+        logger.printBoard(Logger2048::Group::Game, actionResult.state);
+        logger.wait();
+        gameOver = !playMove(actionResult.action, actionResult.state, actionResult.score);
     }
 
     return {score, board.getState(), moveCount};
@@ -68,7 +99,7 @@ std::tuple<int, uint64_t, int> Game2048::playGame(
 void Game2048::prettyPrint() const {
     // Calculate the width needed for the board based on the highest tile
     int maxTileValue = 0;
-    uint64_t state = board.getState();
+    BoardState state = board.getState();
     for (int i = 0; i < 4; ++i) {
         for (int j = 0; j < 4; ++j) {
             int pos = (i * 4 + j) * 4;

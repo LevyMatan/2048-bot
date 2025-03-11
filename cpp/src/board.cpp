@@ -3,6 +3,8 @@
 #include <algorithm>
 #include <array>
 #include <iostream>
+#include <iomanip>
+#include <random>
 
 bool Board::lookupInitialized = false;
 std::array<uint16_t, 1 << 16> Board::leftMoves;
@@ -25,7 +27,7 @@ std::string actionToString(Action action) {
     }
 }
 
-uint16_t Board::moveLeft(uint16_t row, int& score) {
+uint16_t Board::moveRight(uint16_t row, int& score) {
     int values[4] = {
         (row >> 12) & 0xF,
         (row >> 8) & 0xF,
@@ -65,10 +67,10 @@ uint16_t Board::moveLeft(uint16_t row, int& score) {
     return static_cast<uint16_t>((result[0] << 12) | (result[1] << 8) | (result[2] << 4) | result[3]);
 }
 
-uint16_t Board::moveRight(uint16_t row, int& score) {
+uint16_t Board::moveLeft(uint16_t row, int& score) {
     uint16_t reversed = ((row & 0xF) << 12) | ((row & 0xF0) << 4) |
                        ((row & 0xF00) >> 4) | ((row & 0xF000) >> 12);
-    uint16_t moved = moveLeft(reversed, score);
+    uint16_t moved = moveRight(reversed, score);
     return ((moved & 0xF) << 12) | ((moved & 0xF0) << 4) |
            ((moved & 0xF00) >> 4) | ((moved & 0xF000) >> 12);
 }
@@ -94,7 +96,7 @@ void Board::initLookupTables() {
     }
 }
 
-std::vector<std::tuple<int, int>> Board::getEmptyTiles(uint64_t state) {
+std::vector<std::tuple<int, int>> Board::getEmptyTiles(BoardState state) {
     std::vector<std::tuple<int, int>> empty;
     empty.reserve(16);  // Pre-allocate maximum possible size
 
@@ -111,13 +113,13 @@ std::vector<std::tuple<int, int>> Board::getEmptyTiles(uint64_t state) {
     return empty;
 }
 
-uint64_t Board::setTile(uint64_t state, int row, int col, int value) {
+BoardState Board::setTile(BoardState state, int row, int col, int value) {
     int pos = (row * 4 + col) * 4;
-    return state | (static_cast<uint64_t>(value) << pos);
+    return state | (static_cast<BoardState>(value) << pos);
 }
 
-std::vector<std::tuple<uint64_t, int>> Board::simulateMovesWithScores(uint64_t state) {
-    std::vector<std::tuple<uint64_t, int>> results(4);
+std::vector<std::tuple<BoardState, int>> Board::simulateMovesWithScores(BoardState state) {
+    std::vector<std::tuple<BoardState, int>> results(4);
 
     // Initialize all states to the original state and scores to 0
     for (int i = 0; i < 4; ++i) {
@@ -126,22 +128,22 @@ std::vector<std::tuple<uint64_t, int>> Board::simulateMovesWithScores(uint64_t s
     }
 
     // Vertical moves
-    uint64_t transposedState = transpose(state);
+    BoardState transposedState = transpose(state);
     // Horizontal moves
     for (int idx = 0; idx < 4; ++idx) {
-        uint64_t shift = 16 * idx;
+        BoardState shift = 16 * idx;
         uint16_t rowVal = (state >> shift) & 0xFFFF;
-        std::get<0>(results[0]) |= static_cast<uint64_t>(leftMoves[rowVal]) << shift;
+        std::get<0>(results[0]) |= static_cast<BoardState>(leftMoves[rowVal]) << shift;
         std::get<1>(results[0]) += leftScores[rowVal];
 
-        std::get<0>(results[1]) |= static_cast<uint64_t>(rightMoves[rowVal]) << shift;
+        std::get<0>(results[1]) |= static_cast<BoardState>(rightMoves[rowVal]) << shift;
         std::get<1>(results[1]) += rightScores[rowVal];
 
         uint16_t colVal = (transposedState >> shift) & 0xFFFF;
-        std::get<0>(results[2]) |= static_cast<uint64_t>(leftMoves[colVal]) << shift;
+        std::get<0>(results[2]) |= static_cast<BoardState>(leftMoves[colVal]) << shift;
         std::get<1>(results[2]) += leftScores[colVal];
 
-        std::get<0>(results[3]) |= static_cast<uint64_t>(rightMoves[colVal]) << shift;
+        std::get<0>(results[3]) |= static_cast<BoardState>(rightMoves[colVal]) << shift;
         std::get<1>(results[3]) += rightScores[colVal];
     }
 
@@ -151,8 +153,8 @@ std::vector<std::tuple<uint64_t, int>> Board::simulateMovesWithScores(uint64_t s
     return results;
 }
 
-std::vector<std::tuple<Action, uint64_t, int>> Board::getValidMoveActionsWithScores(uint64_t state) {
-    std::vector<std::tuple<Action, uint64_t, int>> valid;
+std::vector<ChosenActionResult> Board::getValidMoveActionsWithScores(BoardState state) {
+    std::vector<ChosenActionResult> valid;
     auto moves = simulateMovesWithScores(state);
 
     for (int i = 0; i < 4; ++i) {
@@ -164,9 +166,9 @@ std::vector<std::tuple<Action, uint64_t, int>> Board::getValidMoveActionsWithSco
     return valid;
 }
 
-std::vector<std::tuple<Action, uint64_t>> Board::getValidMoveActions(uint64_t state) {
+std::vector<std::tuple<Action, BoardState>> Board::getValidMoveActions(BoardState state) {
     auto movesWithScores = getValidMoveActionsWithScores(state);
-    std::vector<std::tuple<Action, uint64_t>> valid;
+    std::vector<std::tuple<Action, BoardState>> valid;
 
     for (const auto& [action, nextState, score] : movesWithScores) {
         valid.emplace_back(action, nextState);
@@ -182,24 +184,66 @@ std::vector<std::tuple<Action, uint64_t>> Board::getValidMoveActions(uint64_t st
  * the 4-bit tiles within the 64-bit state.
  *
  * @param state 64-bit board state
- * @return uint64_t Transposed board state
+ * @return BoardState Transposed board state
  */
-uint64_t Board::transpose(uint64_t state) {
-    uint64_t a1 = state & 0xF0F00F0FF0F00F0FULL;
-    uint64_t a2 = state & 0x0000F0F00000F0F0ULL;
-    uint64_t a3 = state & 0x0F0F00000F0F0000ULL;
-    uint64_t a = a1 | (a2 << 12) | (a3 >> 12);
-    uint64_t b1 = a & 0xFF00FF0000FF00FFULL;
-    uint64_t b2 = a & 0x00FF00FF00000000ULL;
-    uint64_t b3 = a & 0x00000000FF00FF00ULL;
+BoardState Board::transpose(BoardState state) {
+    BoardState a1 = state & 0xF0F00F0FF0F00F0FULL;
+    BoardState a2 = state & 0x0000F0F00000F0F0ULL;
+    BoardState a3 = state & 0x0F0F00000F0F0000ULL;
+    BoardState a = a1 | (a2 << 12) | (a3 >> 12);
+    BoardState b1 = a & 0xFF00FF0000FF00FFULL;
+    BoardState b2 = a & 0x00FF00FF00000000ULL;
+    BoardState b3 = a & 0x00000000FF00FF00ULL;
     return b1 | (b2 >> 24) | (b3 << 24);
 }
 
+// Helper function to unpack state into a 2D board
+void Board::unpackState(BoardState state, uint8_t board[4][4]) {
+    for (int row = 0; row < 4; row++) {
+        for (int col = 0; col < 4; col++) {
+            board[row][col] = static_cast<uint8_t>(
+                (state >> ((row * 4 + col) * 4)) & 0xF
+            );
+        }
+    }
+}
+
 void Board::printBoard(uint8_t board[4][4]) {
+    std::cout << "+------+------+------+------+" << std::endl;
     for (int i = 0; i < 4; ++i) {
         for (int j = 0; j < 4; ++j) {
-            std::cout << (int)board[i][j] << "\t";
+            std::cout << "| " << std::setw(5) << (board[i][j] ? std::to_string(board[i][j]) : " ");
         }
-        std::cout << std::endl;
+        std::cout << "|" << std::endl;
+        std::cout << "+------+------+------+------+" << std::endl;
     }
+}
+
+BoardState Board::randomizeState() {
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_real_distribution<> probDist(0.0, 1.0);
+
+    BoardState state = 0;
+    // There are 16 tiles on the board
+    for (int i = 0; i < 16; ++i) {
+        double r = probDist(gen);
+        int tile;
+        if (r < 0.5) {
+            tile = 0;
+        } else if (r < 0.8) { // 0.3 probability
+            std::uniform_int_distribution<int> dist(1, 10);
+            tile = dist(gen);
+        } else if (r < 0.95) { // 0.15 probability
+            std::uniform_int_distribution<int> dist(11, 12);
+            tile = dist(gen);
+        } else { // remaining 0.05 probability
+            std::uniform_int_distribution<int> dist(13, 15);
+            tile = dist(gen);
+        }
+        // Each tile is stored in 4 bits in the 64-bit state.
+        state |= (static_cast<BoardState>(tile) << (i * 4));
+    }
+
+    return state;
 }

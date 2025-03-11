@@ -49,6 +49,8 @@ set(MAIN_SOURCES
     src/heuristic_player.cpp
     src/expectimax_player.cpp
     src/evaluation.cpp
+    src/arg_parser.cpp
+    src/logger.cpp
 )
 
 # Create main executable
@@ -62,6 +64,8 @@ set(TUNE_SOURCES
     src/heuristic_player.cpp
     src/expectimax_player.cpp
     src/evaluation.cpp
+    src/logger.cpp
+    src/arg_parser.cpp
 )
 
 # Create tuning executable

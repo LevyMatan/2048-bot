@@ -1,5 +1,6 @@
 #include "evaluation.hpp"
 #include "board.hpp"
+#include "logger.hpp"
 #include <algorithm>
 #include <cmath>
 #include <array>
@@ -8,6 +9,8 @@
 #include <sstream>
 #include <fstream>
 #include <iostream>
+
+extern Logger2048::Logger &logger;
 
 namespace Evaluation {
 
@@ -28,13 +31,14 @@ void unpackState(BoardState state, uint8_t board[4][4]) {
 
 // Utility function to calculate the score from the board state
 double calculateScore(const uint8_t board[4][4]) {
-    uint64_t score = 0;
+    double SCORE_SUM_POWER = 3.5;
+    double score = 0;
 
     for (int row = 0; row < 4; row++) {
         for (int col = 0; col < 4; col++) {
             uint8_t tileValue = board[row][col];
             if (tileValue > 1) { // Only score tiles > 2 (log base 2)
-                score += (1ULL << tileValue);
+                score += pow(tileValue, SCORE_SUM_POWER);
             }
         }
     }
@@ -63,7 +67,19 @@ double coreScore(const uint8_t board[4][4]) {
     return calculateScore(board);
 }
 
-// Count empty tiles in the board (normalized to 0-1000)
+// Computes a core score using each tile’s value multiplied by its log₂ value for smoother scaling.
+double improvedCoreScore(const uint8_t board[4][4]) {
+    double score = 0.0;
+    for (int i = 0; i < 4; ++i) {
+        for (int j = 0; j < 4; ++j) {
+            if (board[i][j] > 0) {
+                score += board[i][j];
+            }
+        }
+    }
+    return score;
+}
+
 double emptyTiles(const uint8_t board[4][4]) {
     uint64_t emptyCount = 0;
 
@@ -75,77 +91,132 @@ double emptyTiles(const uint8_t board[4][4]) {
         }
     }
 
-    // Normalize: Max empty tiles is 16, so multiply by 1000/16 = 62.5
-    return std::pow(2, emptyCount);
+    return static_cast<double>(emptyCount);
 }
 
 // MONOTONICITY: Evaluates how well the tiles are arranged in increasing/decreasing order
 double monotonicity(const uint8_t board[4][4]) {
+    const float SCORE_MONOTONICITY_POWER = 4.0f;
     double score = 0.0;
 
     // Check rows and columns for monotonicity
     for (int i = 0; i < 4; ++i) {
-        double rowScore = 0.0;
-        double colScore = 0.0;
+        double row_monotonicity_left = 0;
+        double row_monotonicity_right = 0;
+        double col_monotonicity_left = 0;
+        double col_monotonicity_right = 0;
 
-        // Check increasing and decreasing patterns
-        for (int j = 0; j < 3; ++j) {
-            // Row check
-            int rowDiff = board[i][j+1] - board[i][j];
-            if (rowDiff >= 0) rowScore += 1.0 / (1.0 + std::abs(rowDiff));
-
-            // Column check
-            int colDiff = board[j+1][i] - board[j][i];
-            if (colDiff >= 0) colScore += 1.0 / (1.0 + std::abs(colDiff));
+        // Check row monotonicity
+        for (int j = 1; j < 4; ++j) {
+            if (board[i][j-1] > board[i][j]) {
+                row_monotonicity_left += pow(board[i][j-1], SCORE_MONOTONICITY_POWER) - pow(board[i][j], SCORE_MONOTONICITY_POWER);
+            } else {
+                row_monotonicity_right += pow(board[i][j], SCORE_MONOTONICITY_POWER) - pow(board[i][j-1], SCORE_MONOTONICITY_POWER);
+            }
         }
 
-        score += std::max(rowScore, 3.0 - rowScore) * 125.0;  // Normalize to 0-125 per line
-        score += std::max(colScore, 3.0 - colScore) * 125.0;
+        // Check column monotonicity
+        for (int j = 1; j < 4; ++j) {
+            if (board[j-1][i] > board[j][i]) {
+                col_monotonicity_left += pow(board[j-1][i], SCORE_MONOTONICITY_POWER) - pow(board[j][i], SCORE_MONOTONICITY_POWER);
+            } else {
+                col_monotonicity_right += pow(board[j][i], SCORE_MONOTONICITY_POWER) - pow(board[j-1][i], SCORE_MONOTONICITY_POWER);
+            }
+        }
+
+        score += std::min(row_monotonicity_left, row_monotonicity_right);
+        score += std::min(col_monotonicity_left, col_monotonicity_right);
     }
 
     return score;
 }
 
-// MERGEABILITY: Evaluates the potential for merging adjacent tiles (normalized to 0-1000)
+// Computes monotonicity by summing differences between log₂ of adjacent tiles.
+double improvedMonotonicity(const uint8_t board[4][4]) {
+    double totals[4] = {0.0, 0.0, 0.0, 0.0};
+
+    // Row direction monotonicity:
+    for (int i = 0; i < 4; ++i) {
+        for (int j = 0; j < 3; ++j) {
+            if (board[i][j] > 0 && board[i][j+1] > 0) {
+                double current = std::log2(board[i][j]);
+                double next = std::log2(board[i][j+1]);
+                if (current > next) {
+                    totals[0] += current - next;
+                } else {
+                    totals[1] += next - current;
+                }
+            }
+        }
+    }
+
+    // Column direction monotonicity:
+    for (int j = 0; j < 4; ++j) {
+        for (int i = 0; i < 3; ++i) {
+            if (board[i][j] > 0 && board[i+1][j] > 0) {
+                double current = std::log2(board[i][j]);
+                double next = std::log2(board[i+1][j]);
+                if (current > next) {
+                    totals[2] += current - next;
+                } else {
+                    totals[3] += next - current;
+                }
+            }
+        }
+    }
+
+    // Lower differences imply a more monotonic board.
+    double monotonicityScore = - (std::min(totals[0], totals[1]) + std::min(totals[2], totals[3]));
+    return monotonicityScore;
+}
+
+// MERGEABILITY: Evaluates the potential for merging adjacent tiles
 double mergeability(const uint8_t board[4][4]) {
-    uint64_t score = 0;
-    uint64_t maxScore = 0;
-    uint8_t maxTile = findMaxTile(board);
+    int merges = 0;
 
-    // Theoretical max score if all tiles have the same value
-    // In a 4x4 grid, there are 24 adjacent pairs:
-    // - 12 horizontal pairs (3 per row × 4 rows)
-    // - 12 vertical pairs (3 per column × 4 columns)
-    // But at most all 16 tiles having the same value gives 24 merge possibilities
-    if (maxTile > 1) {
-        maxScore = 24 * (1ULL << maxTile) * 2;
-    } else {
-        // If no significant tiles, set a reasonable minimum
-        maxScore = 2048;
-    }
-
-    // Check horizontal merge potential
-    for (int row = 0; row < 4; row++) {
-        for (int col = 0; col < 3; col++) {
-            if (board[row][col] > 0 && board[row][col] == board[row][col+1]) {
-                // Higher value tiles are worth more to merge
-                score += (1ULL << board[row][col]) * 2;
+    // Check for merges in rows
+    for (int row = 0; row < 4; ++row) {
+        int prev = 0;
+        int counter = 0;
+        for (int col = 0; col < 4; ++col) {
+            uint8_t tile = board[row][col];
+            if (tile > 0) {
+                if (prev == tile) {
+                    counter++;
+                } else if (counter > 0) {
+                    merges += 1 + counter;
+                    counter = 0;
+                }
+                prev = tile;
             }
+        }
+        if (counter > 0) {
+            merges += 1 + counter;
         }
     }
 
-    // Check vertical merge potential
-    for (int col = 0; col < 4; col++) {
-        for (int row = 0; row < 3; row++) {
-            if (board[row][col] > 0 && board[row][col] == board[row+1][col]) {
-                // Higher value tiles are worth more to merge
-                score += (1ULL << board[row][col]) * 2;
+    // Check for merges in columns
+    for (int col = 0; col < 4; ++col) {
+        int prev = 0;
+        int counter = 0;
+        for (int row = 0; row < 4; ++row) {
+            uint8_t tile = board[row][col];
+            if (tile > 0) {
+                if (prev == tile) {
+                    counter++;
+                } else if (counter > 0) {
+                    merges += 1 + counter;
+                    counter = 0;
+                }
+                prev = tile;
             }
+        }
+        if (counter > 0) {
+            merges += 1 + counter;
         }
     }
 
-    // Normalize to 0-1000
-    return std::min(1000.0, (score * 1000.0) / maxScore);
+    return static_cast<double>(merges);
 }
 
 // SMOOTHNESS: Evaluates how smooth/gradual the transitions between adjacent tiles are
@@ -261,12 +332,12 @@ double patternMatching(const uint8_t board[4][4]) {
 
 SimpleEvalFunc getNamedEvaluation(const std::string& name) {
     if (name == "emptyTiles") return emptyTiles;
-    if (name == "monotonicity") return monotonicity;
+    if (name == "monotonicity") return improvedMonotonicity;
     if (name == "mergeability") return mergeability;
     if (name == "smoothness") return smoothness;
     if (name == "cornerValue") return cornerValue;
     if (name == "patternMatching") return patternMatching;
-    if (name == "coreScore") return coreScore;
+    if (name == "coreScore") return improvedCoreScore;
     return nullptr;
 }
 
@@ -335,7 +406,7 @@ EvalParams loadParamsFromJsonFile(const std::string& filename) {
 
             // Convert value to integer
             try {
-                uint64_t value = std::stoull(valueStr);
+                double value = std::stod(valueStr);
                 params[key] = value;
             } catch (const std::exception& e) {
                 std::cerr << "Error parsing value for key '" << key << "': " << e.what() << std::endl;
@@ -380,7 +451,7 @@ bool saveParamsToJsonFile(const EvalParams& params, const std::string& filename)
 // Display details of EvalParams with formatted output
 std::string getEvalParamsDetails(const EvalParams& params, bool formatted) {
     std::stringstream ss;
-    uint64_t totalWeight = 0;
+    Weight totalWeight = 0;
 
     if (formatted) {
         ss << "Evaluation Parameters:\n";
@@ -395,7 +466,7 @@ std::string getEvalParamsDetails(const EvalParams& params, bool formatted) {
     }
 
     // Sort components by weight (descending) for better readability
-    std::vector<std::pair<std::string, uint64_t>> sortedParams(params.begin(), params.end());
+    std::vector<std::pair<std::string, Weight>> sortedParams(params.begin(), params.end());
     std::sort(sortedParams.begin(), sortedParams.end(),
               [](const auto& a, const auto& b) { return a.second > b.second; });
 
@@ -442,9 +513,17 @@ CompositeEvaluator::CompositeEvaluator(EvalParams params) {
     }
 }
 
-void CompositeEvaluator::addComponent(SimpleEvalFunc func, uint64_t weight, const std::string& name) {
+void CompositeEvaluator::addComponent(SimpleEvalFunc func, Weight weight, const std::string& name) {
     components.emplace_back(func, weight, name);
     componentIndices[name] = components.size() - 1;
+}
+
+void CompositeEvaluator::removeComponent(const std::string& name) {
+    auto it = componentIndices.find(name);
+    if (it != componentIndices.end()) {
+        components.erase(components.begin() + it->second);
+        componentIndices.erase(it);
+    }
 }
 
 double CompositeEvaluator::evaluate(BoardState state) const {
@@ -452,35 +531,54 @@ double CompositeEvaluator::evaluate(BoardState state) const {
     uint8_t board[4][4];
     unpackState(state, board);
 
-    // Print the board
-    // std::cout << "Board State:" << std::endl;
-    // for (int row = 0; row < 4; ++row) {
-    //     for (int col = 0; col < 4; ++col) {
-    //         std::cout << static_cast<int>(board[row][col]) << " ";
-    //     }
-    //     std::cout << std::endl;
-    // }
+    logger.debug(Logger2048::Group::Evaluation, "Evaluating board state:");
+    logger.printBoard(Logger2048::Group::Evaluation, state);
+
+    // Define column widths for better formatting
+    const int componentWidth = 20;  // Width for component name column
+    const int rawValueWidth = 12;   // Width for raw value column
+    const int weightWidth = 10;     // Width for weight column
+    const int weightedValueWidth = 15; // Width for weighted value column
+
+    // Create a header with the specified widths
+    std::stringstream header;
+    header << std::left << std::setw(componentWidth) << "Component" << "| "
+        << std::right << std::setw(rawValueWidth) << "Raw Value" << " | "
+        << std::setw(weightWidth) << "Weight" << " | "
+        << std::setw(weightedValueWidth) << "Weighted Value";
+    logger.debug(Logger2048::Group::Evaluation, header.str());
+    // Create a separator line
+    std::string separator(componentWidth + rawValueWidth + weightWidth + weightedValueWidth + 10, '-');
+    logger.debug(Logger2048::Group::Evaluation, separator);
 
     // Apply each component
     double totalScore = 0;
 
     for (const auto& component : components) {
         double componentScore = component.function(board);
-        totalScore += componentScore * component.weight;
-        // std::cout << "Component: " << component.name << ", Score: " << componentScore << ", Weight: " << component.weight << ", Weighted Score: " << componentScore * component.weight << std::endl;
+        double weightedValue = componentScore * component.weight;
+        totalScore += weightedValue;
+
+        std::stringstream line;
+        line << std::left << std::setw(componentWidth) << component.name << "| "
+                << std::right << std::setw(rawValueWidth) << std::fixed << std::setprecision(4) << componentScore << " | "
+                << std::setw(weightWidth) << component.weight << " | "
+                << std::setw(weightedValueWidth) << std::fixed << std::setprecision(4) << weightedValue;
+
+        logger.debug(Logger2048::Group::Evaluation, line.str());
     }
 
     return totalScore;
 }
 
-void CompositeEvaluator::setWeight(const std::string& name, uint64_t weight) {
+void CompositeEvaluator::setWeight(const std::string& name, Weight weight) {
     auto it = componentIndices.find(name);
     if (it != componentIndices.end()) {
         components[it->second].weight = weight;
     }
 }
 
-uint64_t CompositeEvaluator::getWeight(const std::string& name) const {
+Weight CompositeEvaluator::getWeight(const std::string& name) const {
     auto it = componentIndices.find(name);
     if (it != componentIndices.end()) {
         return components[it->second].weight;
@@ -500,6 +598,30 @@ void CompositeEvaluator::setParams(const EvalParams& params) {
     for (const auto& [name, weight] : params) {
         setWeight(name, weight);
     }
+}
+
+// Convert EvalParams to a simple string representation
+std::string evalParamsToString(const EvalParams& params) {
+    std::stringstream ss;
+
+    ss << "{";
+    bool first = true;
+
+    // Sort components alphabetically for consistent output
+    std::vector<std::pair<std::string, Weight>> sortedParams(params.begin(), params.end());
+    std::sort(sortedParams.begin(), sortedParams.end(),
+              [](const auto& a, const auto& b) { return a.first < b.first; });
+
+    for (const auto& [name, weight] : sortedParams) {
+        if (!first) {
+            ss << ", ";
+        }
+        ss << name << ": " << weight;
+        first = false;
+    }
+
+    ss << "}";
+    return ss.str();
 }
 
 } // namespace Evaluation

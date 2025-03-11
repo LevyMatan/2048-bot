@@ -1,0 +1,13 @@
+{
+  "playerType": "Heuristic",
+  "depth": 4,
+  "chanceCovering": 2,
+  "timeLimit": 50.0,
+  "adaptiveDepth": true,
+  "evalParams": {
+    "emptyTiles": 270.0,
+    "monotonicity": -47.0,
+    "mergeability": 700.0,
+    "coreScore": -11.0
+  }
+}
