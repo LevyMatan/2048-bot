@@ -62,7 +62,7 @@ void runGamesParallel(int startIdx, int endIdx, std::unique_ptr<Player>& player,
     static std::atomic<int> gamesCompleted(0);
 
     for (int i = startIdx; i < endIdx; ++i) {
-        auto [score, state, moveCount] = game.playGame(chooseActionFn, initialState);
+        auto [moveCount, state, score] = game.playGame(chooseActionFn, initialState);
 
         // Update best score if better (using atomic compare-exchange)
         int currentBest = bestScore.load();

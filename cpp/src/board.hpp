@@ -5,6 +5,7 @@
 #include <tuple>
 #include <array>
 #include <string>
+#include "score_types.hpp"
 
 /**
  * @brief Represents the four possible move directions in the 2048 game
@@ -24,9 +25,9 @@ using BoardState = uint64_t;
 typedef struct ChosenActionResult {
     Action action;
     BoardState state;
-    int score;
+    Score::GameScore score;
 
-    ChosenActionResult(Action a, BoardState s, int sc) : action(a), state(s), score(sc) {}
+    ChosenActionResult(Action a, BoardState s, Score::GameScore sc) : action(a), state(s), score(sc) {}
 } ChosenActionResult;
 class Board {
 private:
@@ -194,10 +195,10 @@ public:
      * @brief Calculates the score for a given board state
      *
      * @param state 64-bit board state
-     * @return BoardState Score calculated from the board state
+     * @return Score::GameScore Score calculated from the board state
      */
-    static uint64_t getScore(BoardState state) {
-        uint64_t score = 0;
+    static Score::GameScore getScore(BoardState state) {
+        Score::GameScore score = 0;
 
         // Sum the values of all tiles
         for (int row = 0; row < 4; row++) {

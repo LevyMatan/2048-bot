@@ -8,16 +8,17 @@
 #include <unordered_map>
 #include "board.hpp"
 #include "logger.hpp"
+#include "score_types.hpp"
 
 namespace Evaluation {
 
 using Weight = double;
 
 // Primary evaluation function type
-using EvaluationFunction = std::function<double(BoardState)>;
+using EvaluationFunction = std::function<Score::BoardEval(BoardState)>;
 
 // Simple evaluation function that works on unpacked board
-using SimpleEvalFunc = std::function<double(const uint8_t[4][4])>;
+using SimpleEvalFunc = std::function<Score::BoardEval(const uint8_t[4][4])>;
 
 // Parameters for weighted evaluations
 using EvalParams = std::unordered_map<std::string, Weight>;
@@ -29,12 +30,12 @@ void unpackState(BoardState state, uint8_t board[4][4]);
 uint8_t findMaxTile(const uint8_t board[4][4]);
 
 // Core simple evaluation functions
-double monotonicity(const uint8_t board[4][4]);
-double emptyTiles(const uint8_t board[4][4]);
-double mergeability(const uint8_t board[4][4]);
-double smoothness(const uint8_t board[4][4]);
-double cornerValue(const uint8_t board[4][4]);
-double patternMatching(const uint8_t board[4][4]);
+Score::BoardEval monotonicity(const uint8_t board[4][4]);
+Score::BoardEval emptyTiles(const uint8_t board[4][4]);
+Score::BoardEval mergeability(const uint8_t board[4][4]);
+Score::BoardEval smoothness(const uint8_t board[4][4]);
+Score::BoardEval cornerValue(const uint8_t board[4][4]);
+Score::BoardEval patternMatching(const uint8_t board[4][4]);
 
 
 // Get a named evaluation function

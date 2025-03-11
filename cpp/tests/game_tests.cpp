@@ -2,6 +2,7 @@
 #include "board.hpp"
 #include "players.hpp"
 #include "logger.hpp"
+#include "score_types.hpp"
 #include <gtest/gtest.h>
 #include <functional>
 #include <tuple>
@@ -160,7 +161,7 @@ TEST_F(GameTest, PlayFullGameTest) {
     };
 
     // Play the game (use 0 for the initial state to start a new game)
-    auto [finalScore, finalState, moveCount] = game->playGame(testPlayer, 0);
+    auto [moveCount, finalState, finalScore] = game->playGame(testPlayer, 0);
 
     // The game should end eventually
     EXPECT_GE(moveCount, 1);
@@ -169,7 +170,7 @@ TEST_F(GameTest, PlayFullGameTest) {
     // For a new test game, try with a specific initial state
     BoardState initialState = 0x0000000100020003; // Some test initial state
     Game2048 testGame;
-    auto [testScore, testState, testMoves] = testGame.playGame(testPlayer, initialState);
+    auto [testMoves, testState, testScore] = testGame.playGame(testPlayer, initialState);
 
     // Verify game started with our initial state and then changed
     EXPECT_NE(testState, initialState);

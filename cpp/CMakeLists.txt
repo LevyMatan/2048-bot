@@ -51,6 +51,7 @@ set(MAIN_SOURCES
     src/evaluation.cpp
     src/arg_parser.cpp
     src/logger.cpp
+    src/score_types.hpp
 )
 
 # Create main executable
@@ -66,6 +67,7 @@ set(TUNE_SOURCES
     src/evaluation.cpp
     src/logger.cpp
     src/arg_parser.cpp
+    src/score_types.hpp
 )
 
 # Create tuning executable

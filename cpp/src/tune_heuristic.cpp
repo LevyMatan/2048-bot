@@ -4,6 +4,7 @@
 #include "evaluation.hpp"
 #include "logger.hpp"
 #include "arg_parser.hpp"
+#include "score_types.hpp"
 #include <iostream>
 #include <vector>
 #include <random>
@@ -27,8 +28,8 @@ Logger2048::Logger &logger = Logger2048::Logger::getInstance();
 // Structure to hold a set of evaluation weights and its performance
 struct EvalWeightSet {
     Evaluation::EvalParams params;
-    double avgScore;
-    int maxScore;
+    Score::GameScore avgScore;
+    Score::GameScore maxScore;
     int gamesPlayed;
     std::set<std::string> activeComponents;
 
@@ -68,7 +69,7 @@ struct EvalWeightSet {
         std::cout << "------------------------------------------------------------\n";
 
         // Calculate total weight
-        uint64_t totalWeight = 0;
+        Evaluation::Weight totalWeight = 0;
         for (const auto& [name, weight] : params) {
             totalWeight += weight;
         }
@@ -98,33 +99,35 @@ std::atomic<int> g_totalGamesPlayed(0);
 // Evaluate a set of weights by playing multiple games
 void evaluateWeights(EvalWeightSet& weightSet, int numGames) {
     Game2048 game;
-    int totalScore = 0;
-    int maxScore = 0;
+    Score::GameScore totalScore = 0;
+    Score::GameScore maxScore = 0;
 
     for (int i = 0; i < numGames; ++i) {
         // Create a composite evaluator with the given parameters
         Evaluation::CompositeEvaluator evaluator(weightSet.params);
-        auto evalFn = [evaluator](uint64_t state) {
+        auto evalFn = [evaluator](BoardState state) -> Score::BoardEval {
             return evaluator.evaluate(state);
         };
 
         auto player = std::make_unique<HeuristicPlayer>(weightSet.params);
 
         // Create a lambda that captures the player and calls its chooseAction method
-        auto chooseActionFn = [&player](uint64_t state) {
+        auto chooseActionFn = [&player](BoardState state) {
             return player->chooseAction(state);
         };
 
-        auto [score, state, moves] = game.playGame(chooseActionFn, 0);
+        auto [moveCount, finalState, score] = game.playGame(chooseActionFn, 0);
 
         totalScore += score;
-        maxScore = std::max(maxScore, score);
+        if (score > maxScore) {
+            maxScore = score;
+        }
 
-        // Increment the global game counter
         g_totalGamesPlayed++;
     }
 
-    weightSet.avgScore = static_cast<double>(totalScore) / numGames;
+    // Update the weight set with the results
+    weightSet.avgScore = totalScore / numGames;
     weightSet.maxScore = maxScore;
     weightSet.gamesPlayed = numGames;
 }
@@ -327,8 +330,8 @@ std::vector<EvalWeightSet> loadWeightsFromFile(const std::string& filename) {
             }
 
             // Parse performance metrics
-            ws.avgScore = std::stod(tokens[7]);
-            ws.maxScore = std::stoi(tokens[8]);
+            ws.avgScore = static_cast<Score::GameScore>(std::stod(tokens[7]));
+            ws.maxScore = static_cast<Score::GameScore>(std::stoi(tokens[8]));
             ws.gamesPlayed = std::stoi(tokens[9]);
 
             weightSets.push_back(ws);
@@ -486,7 +489,7 @@ void evaluateWeightsInParallel(std::vector<EvalWeightSet>& weightSets, int numGa
 
 // Add new function
 EvalWeightSet tournamentSelect(const std::vector<EvalWeightSet>& population, std::mt19937& rng, int tournamentSize = 3) {
-    std::uniform_int_distribution<int> dist(0, population.size() - 1);
+    std::uniform_int_distribution<int> dist(0, static_cast<int>(population.size()) - 1);
     EvalWeightSet best = population[dist(rng)];
 
     for (int i = 1; i < tournamentSize; i++) {
@@ -546,7 +549,7 @@ int main(int argc, char* argv[]) {
         }
     } else if (population.size() < static_cast<size_t>(params.populationSize)) {
         // If we loaded some but not enough, generate the rest
-        int toGenerate = params.populationSize - population.size();
+        int toGenerate = static_cast<int>(params.populationSize - population.size());
         for (int i = 0; i < toGenerate; ++i) {
             population.push_back(generateRandomWeights(rng));
         }
@@ -606,8 +609,9 @@ int main(int argc, char* argv[]) {
         }
 
         // In the generation loop after evaluation
-        if (population[0].avgScore > bestScore) {
-            bestScore = population[0].avgScore;
+        double currentBestScore = static_cast<double>(population[0].avgScore);
+        if (currentBestScore > bestScore) {
+            bestScore = currentBestScore;
             generationsWithoutImprovement = 0;
         } else {
             generationsWithoutImprovement++;

@@ -2,6 +2,7 @@
 #include "game.hpp"
 #include "players.hpp"
 #include "logger.hpp"
+#include "score_types.hpp"
 #include <iostream>
 #include <iomanip>
 #include <algorithm>
@@ -40,7 +41,7 @@ void Game2048::addRandomTile() {
  * @param moveScore The score obtained from the move.
  * @return true if the move is valid and executed, false otherwise.
  */
-bool Game2048::playMove(Action action, BoardState nextState, int moveScore) {
+bool Game2048::playMove(Action action, BoardState nextState, Score::GameScore moveScore) {
     // Validate the action and next state
     if (Action::INVALID == action) {
         return false;
@@ -69,7 +70,7 @@ void Game2048::reset() {
     addRandomTile();
 }
 
-std::tuple<int, BoardState, int> Game2048::playGame(
+std::tuple<int, BoardState, Score::GameScore> Game2048::playGame(
     std::function<ChosenActionResult(BoardState)> chooseActionFn,
     BoardState initialState) {
     if (initialState == 0) {
@@ -93,7 +94,7 @@ std::tuple<int, BoardState, int> Game2048::playGame(
         gameOver = !playMove(actionResult.action, actionResult.state, actionResult.score);
     }
 
-    return {score, board.getState(), moveCount};
+    return {moveCount, board.getState(), score};
 }
 
 void Game2048::prettyPrint() const {
