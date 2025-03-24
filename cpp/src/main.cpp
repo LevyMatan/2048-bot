@@ -15,6 +15,7 @@
 #include "evaluation.hpp"
 #include "arg_parser.hpp"
 #include "logger.hpp"
+#include "score_types.hpp"
 
 Logger2048::Logger &logger = Logger2048::Logger::getInstance();
 
@@ -47,9 +48,9 @@ void runPerformanceTest() {
 
 // Function to run games in parallel
 void runGamesParallel(int startIdx, int endIdx, std::unique_ptr<Player>& player,
-                     std::atomic<int>& bestScore, std::atomic<BoardState>& bestState,
+                     std::atomic<Score::GameScore>& bestScore, std::atomic<BoardState>& bestState,
                      std::atomic<int>& bestMoveCount, std::mutex& printMutex,
-                     int numGames, int PROGRESS_INTERVAL, BoardState initialState) {
+                     int numGames, BoardState initialState) {
 
     Game2048 game;
 
@@ -65,7 +66,7 @@ void runGamesParallel(int startIdx, int endIdx, std::unique_ptr<Player>& player,
         auto [moveCount, state, score] = game.playGame(chooseActionFn, initialState);
 
         // Update best score if better (using atomic compare-exchange)
-        int currentBest = bestScore.load();
+        Score::GameScore currentBest = bestScore.load();
         while (score > currentBest && !bestScore.compare_exchange_weak(currentBest, score)) {
             // Keep trying if another thread updated the value
         }
@@ -77,7 +78,8 @@ void runGamesParallel(int startIdx, int endIdx, std::unique_ptr<Player>& player,
 
         // Increment shared counter and print progress
         int completed = ++gamesCompleted;
-        if (completed % PROGRESS_INTERVAL == 0 || completed == numGames) {
+        int progressInterval = std::max(1, numGames / 100);
+        if (completed % progressInterval == 0 || completed == numGames) {
             std::lock_guard<std::mutex> lock(printMutex);
             std::cout << "\rGame " << completed << "/" << numGames
                      << " (Best: " << bestScore.load()
@@ -131,11 +133,10 @@ int main(int argc, char* argv[]) {
         // Use simulation config values
         const int numGames = simConfig.numGames;
         const int numThreads = simConfig.numThreads;
-        const int PROGRESS_INTERVAL = simConfig.progressInterval;
         const BoardState initialState = simConfig.initialState;
 
         // Use atomic variables for thread safety
-        std::atomic<int> bestScore(0);
+        std::atomic<Score::GameScore> bestScore(0);
         std::atomic<BoardState> bestState(0);
         std::atomic<int> bestMoveCount(0);
         std::mutex printMutex;
@@ -156,7 +157,7 @@ int main(int argc, char* argv[]) {
             threads.emplace_back(runGamesParallel, startIdx, endIdx,
                                std::ref(player), std::ref(bestScore),
                                std::ref(bestState), std::ref(bestMoveCount),
-                               std::ref(printMutex), numGames, PROGRESS_INTERVAL,
+                               std::ref(printMutex), numGames,
                                initialState);
         }
 
