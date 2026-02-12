@@ -12,6 +12,8 @@
 # production
 build/
 **/build/
+cpp/.cache/
+**/*.egg-info/
 
 # misc
 .DS_Store
