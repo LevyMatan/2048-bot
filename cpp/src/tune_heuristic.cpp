@@ -101,22 +101,15 @@ void evaluateWeights(EvalWeightSet& weightSet, int numGames) {
     Game2048 game;
     Score::GameScore totalScore = 0;
     Score::GameScore maxScore = 0;
+    auto player = std::make_unique<HeuristicPlayer>(weightSet.params);
+
+    auto chooseActionFn = [&player](BoardState state) {
+        return player->chooseAction(state);
+    };
 
     for (int i = 0; i < numGames; ++i) {
-        // Create a composite evaluator with the given parameters
-        Evaluation::CompositeEvaluator evaluator(weightSet.params);
-        auto evalFn = [evaluator](BoardState state) -> Score::BoardEval {
-            return evaluator.evaluate(state);
-        };
-
-        auto player = std::make_unique<HeuristicPlayer>(weightSet.params);
-
-        // Create a lambda that captures the player and calls its chooseAction method
-        auto chooseActionFn = [&player](BoardState state) {
-            return player->chooseAction(state);
-        };
-
-        auto [moveCount, finalState, score] = game.playGame(chooseActionFn, 0);
+        auto gameResult = game.playGame(chooseActionFn, 0);
+        Score::GameScore score = std::get<2>(gameResult);
 
         totalScore += score;
         if (score > maxScore) {
@@ -310,11 +303,11 @@ std::vector<EvalWeightSet> loadWeightsFromFile(const std::string& filename) {
             tokens.push_back(token);
         }
 
-        if (tokens.size() >= 9) { // 6 components + 3 metrics
+        if (tokens.size() >= 10) { // 7 components + 3 metrics
             EvalWeightSet ws;
 
             // Parse component weights
-            for (int i = 0; i < 6; ++i) {
+            for (int i = 0; i < 7; ++i) {
                 std::string compToken = tokens[i];
                 size_t colonPos = compToken.find(':');
 
@@ -636,9 +629,7 @@ int main(int argc, char* argv[]) {
             nextGeneration.push_back(population[i]);
         }
 
-        // Create the rest through mutation and crossover
-        std::uniform_int_distribution<int> parentDist(0, std::min(params.populationSize - 1, static_cast<int>(params.populationSize * 0.5)));
-
+        // Create the rest through mutation.
         while (nextGeneration.size() < static_cast<size_t>(params.populationSize)) {
             EvalWeightSet parent = tournamentSelect(population, rng);
             EvalWeightSet child = mutateWeights(parent, rng, mutationRate);

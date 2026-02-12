@@ -7,6 +7,7 @@
 #include <sstream>
 #include <algorithm>
 #include <string>
+#include <cctype>
 
 extern Logger2048::Logger &logger;
 
@@ -27,11 +28,27 @@ ArgParser::ArgParser(int argc, char* argv[]) :
 }
 
 void ArgParser::parseArguments(int argc, char* argv[]) {
+    auto parseLogLevel = [](const std::string& value) -> Logger2048::Level {
+        std::string normalized = value;
+        std::transform(normalized.begin(), normalized.end(), normalized.begin(),
+            [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+
+        if (normalized == "e" || normalized == "error") return Logger2048::Level::Error;
+        if (normalized == "w" || normalized == "warn" || normalized == "warning") return Logger2048::Level::Warning;
+        if (normalized == "i" || normalized == "info") return Logger2048::Level::Info;
+        if (normalized == "d" || normalized == "debug") return Logger2048::Level::Debug;
+        throw std::runtime_error("Invalid log level: " + value);
+    };
+
     for (int i = 1; i < argc; i++) {
         std::string arg = argv[i];
 
         if (arg == "-h" || arg == "--help") {
             printHelp();
+            exit(0);
+        }
+        if (arg == "-v" || arg == "--version") {
+            std::cout << "2048 Game Bot version 1.0.0\n";
             exit(0);
         }
 
@@ -102,26 +119,26 @@ void ArgParser::parseArguments(int argc, char* argv[]) {
                 if (arg[1] == '-') { // Long format
                     if (arg == "--player") {
                         playerConfig.playerType = PlayerConfigurations::playerTypeFromString(value);
-                    } else if (arg == "--sim") {
-                        simConfig.progressInterval = 100;
+                    } else if (arg == "--games") {
+                        simConfig.numGames = std::stoi(value);
+                    } else if (arg == "--threads") {
+                        simConfig.numThreads = std::stoi(value);
+                    } else if (arg == "--depth") {
+                        playerConfig.depth = std::stoi(value);
+                    } else if (arg == "--chance") {
+                        playerConfig.chanceCovering = std::stoi(value);
+                    } else if (arg == "--time") {
+                        playerConfig.timeLimit = std::stod(value);
+                    } else if (arg == "--progress") {
+                        simConfig.progressInterval = std::stoi(value);
                     } else if (arg == "--log-level") {
-                        if (value == "error") {
-                            loggerConfig.level = Logger2048::Level::Error;
-                        } else if (value == "warning") {
-                            loggerConfig.level = Logger2048::Level::Warning;
-                        } else if (value == "info") {
-                            loggerConfig.level = Logger2048::Level::Info;
-                        } else if (value == "debug") {
-                            loggerConfig.level = Logger2048::Level::Debug;
-                        } else {
-                            throw std::runtime_error("Invalid log level: " + value);
-                        }
-                    } else if (arg == "--log-file") {
+                        loggerConfig.level = parseLogLevel(value);
+                    } else if (arg == "--log-file" || arg == "--file") {
                         loggerConfig.logFile = value;
                         loggerConfig.outputDestination = (loggerConfig.outputDestination == LogOutput::Console ||
                                                          loggerConfig.outputDestination == LogOutput::None) ?
                                                          LogOutput::File : LogOutput::Both;
-                    } else if (arg == "--initial-state") {
+                    } else if (arg == "--initial-state" || arg == "--initial") {
                         // Parse hexadecimal state
                         try {
                             simConfig.initialState = std::stoull(value, nullptr, 16);
@@ -130,6 +147,8 @@ void ArgParser::parseArguments(int argc, char* argv[]) {
                         }
                     } else if (arg == "--output") {
                         loggerConfig.outputDestination = Logger2048::Logger::stringToLogOutput(value);
+                    } else {
+                        throw std::runtime_error("Unknown flag: " + arg);
                     }
                 } else { // Short format
                     parseShortFlag(arg.substr(1), value);
@@ -151,25 +170,30 @@ void ArgParser::parseShortFlag(const std::string& flag, const std::string& value
         } else if (flag == "t") {
             simConfig.numThreads = std::stoi(value);
         } else if (flag == "p") {
-            playerConfig = PlayerConfigurations::fromString(value);
+            playerConfig.playerType = PlayerConfigurations::playerTypeFromString(value);
+        } else if (flag == "d") {
+            playerConfig.depth = std::stoi(value);
+        } else if (flag == "c") {
+            playerConfig.chanceCovering = std::stoi(value);
+        } else if (flag == "time") {
+            playerConfig.timeLimit = std::stod(value);
+        } else if (flag == "progress") {
+            simConfig.progressInterval = std::stoi(value);
         } else if (flag == "l") {
-            if (value == "e") {
-                loggerConfig.level = Logger2048::Level::Error;
-            } else if (value == "w") {
-                loggerConfig.level = Logger2048::Level::Warning;
-            } else if (value == "i") {
-                loggerConfig.level = Logger2048::Level::Info;
-            } else if (value == "d") {
-                loggerConfig.level = Logger2048::Level::Debug;
-            } else {
-                throw std::runtime_error("Invalid log level: " + value);
-            }
-        } else if (flag == "lf") {
+            std::string normalized = value;
+            std::transform(normalized.begin(), normalized.end(), normalized.begin(),
+                [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+            if (normalized == "e" || normalized == "error") loggerConfig.level = Logger2048::Level::Error;
+            else if (normalized == "w" || normalized == "warn" || normalized == "warning") loggerConfig.level = Logger2048::Level::Warning;
+            else if (normalized == "i" || normalized == "info") loggerConfig.level = Logger2048::Level::Info;
+            else if (normalized == "d" || normalized == "debug") loggerConfig.level = Logger2048::Level::Debug;
+            else throw std::runtime_error("Invalid log level: " + value);
+        } else if (flag == "f" || flag == "lf") {
             loggerConfig.logFile = value;
             loggerConfig.outputDestination = (loggerConfig.outputDestination == LogOutput::Console ||
                                              loggerConfig.outputDestination == LogOutput::None) ?
                                              LogOutput::File : LogOutput::Both;
-        } else if (flag == "is") {
+        } else if (flag == "i" || flag == "is") {
             // Parse hexadecimal state
             try {
                 simConfig.initialState = std::stoull(value, nullptr, 16);
@@ -372,7 +396,7 @@ void ArgParser::printHelp() {
               << "    2048 --player expectimax --depth 4 --output file --file my_games.log\n"
               << "\n"
               << "  Load configurations from JSON files:\n"
-              << "    2048 --player-config configs/player.json --logger-config configs/logger.json\n"
+              << "    2048 --player-config configurations/player_config.json --logger-config configurations/logger_config.json\n"
               << "\n"
               << "  Debug mode with detailed output and waiting between moves:\n"
               << "    2048 --log-level debug --wait --output both\n";

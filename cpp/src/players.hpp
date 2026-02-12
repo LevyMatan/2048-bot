@@ -3,6 +3,8 @@
 #include <cstdint>
 #include <utility>
 #include <string>
+#include <algorithm>
+#include <cctype>
 #include <memory>
 #include <random>
 #include <chrono>
@@ -44,11 +46,15 @@ public:
         : playerType(PlayerType::Heuristic), evalParams(Evaluation::EvalParams()), depth(3), chanceCovering(1), timeLimit(1.0), adaptiveDepth(false) {}
 
     static PlayerType playerTypeFromString(const std::string& str) {
-        if (str == "R") {
+        std::string normalized = str;
+        std::transform(normalized.begin(), normalized.end(), normalized.begin(),
+            [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+
+        if (normalized == "r" || normalized == "random") {
             return PlayerType::Random;
-        } else if (str == "H") {
+        } else if (normalized == "h" || normalized == "heuristic") {
             return PlayerType::Heuristic;
-        } else if (str == "E") {
+        } else if (normalized == "e" || normalized == "expectimax") {
             return PlayerType::Expectimax;
         } else {
             throw std::invalid_argument("Invalid player type");
@@ -72,10 +78,14 @@ public:
         PlayerConfigurations config;
         config.playerType = playerTypeFromString(type);
 
-        if (type == "H") {
+        std::string normalized = type;
+        std::transform(normalized.begin(), normalized.end(), normalized.begin(),
+            [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+
+        if (normalized == "h" || normalized == "heuristic") {
             config.depth = 6;
             config.adaptiveDepth = true;
-        } else if (type == "E") {
+        } else if (normalized == "e" || normalized == "expectimax") {
             config.depth = 6;
             config.chanceCovering = 4;
             config.timeLimit = 100.0;

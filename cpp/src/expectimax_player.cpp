@@ -46,13 +46,8 @@ ChosenActionResult ExpectimaxPlayer::chooseAction(uint64_t state) {
             bestValue = value;
             bestAction = actionResult;
         }
-
-
         if (shouldTimeOut()) {
-            // Log timeout for debugging
-            std::cerr << "Expectimax search timed out after "
-                     << std::chrono::duration<double>(std::chrono::steady_clock::now() - startTime).count()
-                     << " seconds" << std::endl;
+            // Return the best-so-far action when time budget is exhausted.
             break;
         }
     }

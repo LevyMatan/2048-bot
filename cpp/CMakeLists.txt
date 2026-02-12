@@ -92,3 +92,30 @@ endif()
 include(GoogleTest)
 
 add_subdirectory(tests)
+
+# Installation configuration
+install(TARGETS 2048
+    RUNTIME DESTINATION bin
+    BUNDLE DESTINATION .
+)
+
+# CPack configuration
+set(CPACK_PACKAGE_NAME "2048")
+set(CPACK_PACKAGE_VERSION "1.0.0")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "2048 Game with AI Players")
+set(CPACK_PACKAGE_VENDOR "Matan Levy")
+set(CPACK_PACKAGE_CONTACT "levymatanlevy@gmail.com")
+
+if(APPLE)
+    # macOS specific settings
+    set(CPACK_GENERATOR "DragNDrop")
+    set(CPACK_DMG_VOLUME_NAME "2048")
+    set(CPACK_DMG_FORMAT "UDZO")
+    set(CPACK_DMG_BACKGROUND_IMAGE "${CMAKE_SOURCE_DIR}/resources/dmg_background.png")
+    set(CPACK_DMG_DS_STORE "${CMAKE_SOURCE_DIR}/resources/.DS_Store")
+    
+    # Only package the main executable
+    set(CPACK_COMPONENTS_ALL applications)
+endif()
+
+include(CPack)

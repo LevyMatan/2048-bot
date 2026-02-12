@@ -19,6 +19,8 @@
 
 Logger2048::Logger &logger = Logger2048::Logger::getInstance();
 
+std::unique_ptr<Player> createPlayer(PlayerConfigurations config);
+
 // Performance test function
 void runPerformanceTest() {
     std::cout << "Running performance test..." << std::endl;
@@ -47,20 +49,19 @@ void runPerformanceTest() {
 }
 
 // Function to run games in parallel
-void runGamesParallel(int startIdx, int endIdx, std::unique_ptr<Player>& player,
+void runGamesParallel(int startIdx, int endIdx, PlayerConfigurations playerConfig,
                      std::atomic<Score::GameScore>& bestScore, std::atomic<BoardState>& bestState,
                      std::atomic<int>& bestMoveCount, std::mutex& printMutex,
-                     int numGames, BoardState initialState) {
+                     std::atomic<int>& gamesCompleted, int numGames, int progressInterval,
+                     BoardState initialState) {
 
     Game2048 game;
+    std::unique_ptr<Player> player = createPlayer(playerConfig);
 
     // Create a lambda that captures the player and calls its chooseAction method
     auto chooseActionFn = [&player](BoardState state) {
         return player->chooseAction(state);
     };
-
-    // Use a shared atomic counter for progress reporting
-    static std::atomic<int> gamesCompleted(0);
 
     for (int i = startIdx; i < endIdx; ++i) {
         auto [moveCount, state, score] = game.playGame(chooseActionFn, initialState);
@@ -78,7 +79,6 @@ void runGamesParallel(int startIdx, int endIdx, std::unique_ptr<Player>& player,
 
         // Increment shared counter and print progress
         int completed = ++gamesCompleted;
-        int progressInterval = std::max(1, numGames / 100);
         if (completed % progressInterval == 0 || completed == numGames) {
             std::lock_guard<std::mutex> lock(printMutex);
             std::cout << "\rGame " << completed << "/" << numGames
@@ -127,24 +127,26 @@ int main(int argc, char* argv[]) {
             logger.info(Logger2048::Group::Main, "Using initial state:", std::hex, simConfig.initialState, std::dec);
         }
 
-        std::unique_ptr<Player> player = createPlayer(playerConfig);
-        logger.info(Logger2048::Group::Main, "Created player of type:", player->getName());
+        auto logPlayer = createPlayer(playerConfig);
+        logger.info(Logger2048::Group::Main, "Created player of type:", logPlayer->getName());
 
         // Use simulation config values
         const int numGames = simConfig.numGames;
-        const int numThreads = simConfig.numThreads;
+        const int numThreads = std::max(1, simConfig.numThreads);
+        const int progressInterval = std::max(1, simConfig.progressInterval);
         const BoardState initialState = simConfig.initialState;
 
         // Use atomic variables for thread safety
         std::atomic<Score::GameScore> bestScore(0);
         std::atomic<BoardState> bestState(0);
         std::atomic<int> bestMoveCount(0);
+        std::atomic<int> gamesCompleted(0);
         std::mutex printMutex;
 
         auto startTime = std::chrono::high_resolution_clock::now();
 
         logger.info(Logger2048::Group::Main, "Starting", numGames, "games with",
-                   player->getName(), "using", numThreads, "threads");
+                   logPlayer->getName(), "using", numThreads, "threads");
 
         std::vector<std::thread> threads;
         int gamesPerThread = numGames / numThreads;
@@ -155,9 +157,10 @@ int main(int argc, char* argv[]) {
             int endIdx = (i == numThreads - 1) ? numGames : (i + 1) * gamesPerThread;
 
             threads.emplace_back(runGamesParallel, startIdx, endIdx,
-                               std::ref(player), std::ref(bestScore),
+                               playerConfig, std::ref(bestScore),
                                std::ref(bestState), std::ref(bestMoveCount),
-                               std::ref(printMutex), numGames,
+                               std::ref(printMutex), std::ref(gamesCompleted),
+                               numGames, progressInterval,
                                initialState);
         }
 

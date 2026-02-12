@@ -72,8 +72,9 @@ public:
     inline void debug(Group, Args&&...) {}
     inline void printBoard(Group, uint64_t) {}
     inline void wait() {}
-    inline LoggerConfig loadConfigFromJsonFile(const std::string&) { return LoggerConfig{}; }
-    inline void configure(const LoggerConfig&) {}
+    inline LoggerConfig loadConfigFromJsonFile(const std::string&) { return config; }
+    inline void configure(const LoggerConfig& newConfig) { config = newConfig; }
+    inline const LoggerConfig& getConfig() const { return config; }
     inline void printConfiguration() {}
     static inline LogOutput stringToLogOutput(const std::string&) { return LogOutput::None; }
 private:
@@ -81,6 +82,7 @@ private:
     ~Logger() = default;
     Logger(const Logger&) = delete;
     Logger& operator=(const Logger&) = delete;
+    LoggerConfig config{};
 };
 #else   // Debug build: include full logging implementation
 class Logger {
