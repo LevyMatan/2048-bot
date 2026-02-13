@@ -14,6 +14,17 @@ extern Logger2048::Logger &logger;
 
 namespace Evaluation {
 
+namespace {
+inline double tilePow4(uint8_t value) {
+    double v = static_cast<double>(value);
+    return v * v * v * v;
+}
+
+inline double tileValue(uint8_t log2Value) {
+    return static_cast<double>(1ULL << log2Value);
+}
+} // namespace
+
 //------------------------------------------------------
 // Helper functions
 //------------------------------------------------------
@@ -96,7 +107,6 @@ double emptyTiles(const uint8_t board[4][4]) {
 
 // MONOTONICITY: Evaluates how well the tiles are arranged in increasing/decreasing order
 double monotonicity(const uint8_t board[4][4]) {
-    const float SCORE_MONOTONICITY_POWER = 4.0f;
     double score = 0.0;
 
     // Check rows and columns for monotonicity
@@ -108,19 +118,23 @@ double monotonicity(const uint8_t board[4][4]) {
 
         // Check row monotonicity
         for (int j = 1; j < 4; ++j) {
+            double leftVal = tilePow4(board[i][j - 1]);
+            double rightVal = tilePow4(board[i][j]);
             if (board[i][j-1] > board[i][j]) {
-                row_monotonicity_left += pow(board[i][j-1], SCORE_MONOTONICITY_POWER) - pow(board[i][j], SCORE_MONOTONICITY_POWER);
+                row_monotonicity_left += leftVal - rightVal;
             } else {
-                row_monotonicity_right += pow(board[i][j], SCORE_MONOTONICITY_POWER) - pow(board[i][j-1], SCORE_MONOTONICITY_POWER);
+                row_monotonicity_right += rightVal - leftVal;
             }
         }
 
         // Check column monotonicity
         for (int j = 1; j < 4; ++j) {
+            double upVal = tilePow4(board[j - 1][i]);
+            double downVal = tilePow4(board[j][i]);
             if (board[j-1][i] > board[j][i]) {
-                col_monotonicity_left += pow(board[j-1][i], SCORE_MONOTONICITY_POWER) - pow(board[j][i], SCORE_MONOTONICITY_POWER);
+                col_monotonicity_left += upVal - downVal;
             } else {
-                col_monotonicity_right += pow(board[j][i], SCORE_MONOTONICITY_POWER) - pow(board[j-1][i], SCORE_MONOTONICITY_POWER);
+                col_monotonicity_right += downVal - upVal;
             }
         }
 
@@ -231,7 +245,8 @@ double smoothness(const uint8_t board[4][4]) {
             // Check right neighbor
             if (col < 3 && board[row][col+1] > 0) {
                 int diff = std::abs(board[row][col] - board[row][col+1]);
-                double weight = std::pow(2.0, std::max(board[row][col], board[row][col+1]));
+                uint8_t maxLog2Value = std::max(board[row][col], board[row][col + 1]);
+                double weight = tileValue(maxLog2Value);
                 score += weight * (1.0 / (1.0 + diff));
                 totalWeight += weight;
             }
@@ -239,7 +254,8 @@ double smoothness(const uint8_t board[4][4]) {
             // Check bottom neighbor
             if (row < 3 && board[row+1][col] > 0) {
                 int diff = std::abs(board[row][col] - board[row+1][col]);
-                double weight = std::pow(2.0, std::max(board[row][col], board[row+1][col]));
+                uint8_t maxLog2Value = std::max(board[row][col], board[row + 1][col]);
+                double weight = tileValue(maxLog2Value);
                 score += weight * (1.0 / (1.0 + diff));
                 totalWeight += weight;
             }
@@ -269,14 +285,14 @@ double cornerValue(const uint8_t board[4][4]) {
             }
 
             // Higher value tiles should be closer to corners
-            double tileWeight = std::pow(2.0, board[row][col]);
+            double tileWeight = tileValue(board[row][col]);
             double distanceScore = (6.0 - minDistance) / 6.0; // Normalize to 0-1
             score += tileWeight * distanceScore;
         }
     }
 
     // Normalize to 0-1000
-    double maxPossibleScore = std::pow(2.0, maxTile) * 4.0; // 4 corners
+    double maxPossibleScore = tileValue(maxTile) * 4.0; // 4 corners
     return std::min(1000.0, (score * 1000.0) / maxPossibleScore);
 }
 
@@ -531,8 +547,15 @@ double CompositeEvaluator::evaluate(BoardState state) const {
     uint8_t board[4][4];
     unpackState(state, board);
 
-    logger.debug(Logger2048::Group::Evaluation, "Evaluating board state:");
-    logger.printBoard(Logger2048::Group::Evaluation, state);
+    const auto& loggerConfig = logger.getConfig();
+    const bool logEvalDetails =
+        loggerConfig.groupsEnabled[static_cast<size_t>(Logger2048::Group::Evaluation)] &&
+        static_cast<int>(loggerConfig.level) >= static_cast<int>(Logger2048::Level::Debug);
+
+    if (logEvalDetails) {
+        logger.debug(Logger2048::Group::Evaluation, "Evaluating board state:");
+        logger.printBoard(Logger2048::Group::Evaluation, state);
+    }
 
     // Define column widths for better formatting
     const int componentWidth = 20;  // Width for component name column
@@ -540,16 +563,18 @@ double CompositeEvaluator::evaluate(BoardState state) const {
     const int weightWidth = 10;     // Width for weight column
     const int weightedValueWidth = 15; // Width for weighted value column
 
-    // Create a header with the specified widths
-    std::stringstream header;
-    header << std::left << std::setw(componentWidth) << "Component" << "| "
-        << std::right << std::setw(rawValueWidth) << "Raw Value" << " | "
-        << std::setw(weightWidth) << "Weight" << " | "
-        << std::setw(weightedValueWidth) << "Weighted Value";
-    logger.debug(Logger2048::Group::Evaluation, header.str());
-    // Create a separator line
-    std::string separator(componentWidth + rawValueWidth + weightWidth + weightedValueWidth + 10, '-');
-    logger.debug(Logger2048::Group::Evaluation, separator);
+    if (logEvalDetails) {
+        // Create a header with the specified widths
+        std::stringstream header;
+        header << std::left << std::setw(componentWidth) << "Component" << "| "
+            << std::right << std::setw(rawValueWidth) << "Raw Value" << " | "
+            << std::setw(weightWidth) << "Weight" << " | "
+            << std::setw(weightedValueWidth) << "Weighted Value";
+        logger.debug(Logger2048::Group::Evaluation, header.str());
+        // Create a separator line
+        std::string separator(componentWidth + rawValueWidth + weightWidth + weightedValueWidth + 10, '-');
+        logger.debug(Logger2048::Group::Evaluation, separator);
+    }
 
     // Apply each component
     double totalScore = 0;
@@ -559,13 +584,14 @@ double CompositeEvaluator::evaluate(BoardState state) const {
         double weightedValue = componentScore * component.weight;
         totalScore += weightedValue;
 
-        std::stringstream line;
-        line << std::left << std::setw(componentWidth) << component.name << "| "
-                << std::right << std::setw(rawValueWidth) << std::fixed << std::setprecision(4) << componentScore << " | "
-                << std::setw(weightWidth) << component.weight << " | "
-                << std::setw(weightedValueWidth) << std::fixed << std::setprecision(4) << weightedValue;
-
-        logger.debug(Logger2048::Group::Evaluation, line.str());
+        if (logEvalDetails) {
+            std::stringstream line;
+            line << std::left << std::setw(componentWidth) << component.name << "| "
+                    << std::right << std::setw(rawValueWidth) << std::fixed << std::setprecision(4) << componentScore << " | "
+                    << std::setw(weightWidth) << component.weight << " | "
+                    << std::setw(weightedValueWidth) << std::fixed << std::setprecision(4) << weightedValue;
+            logger.debug(Logger2048::Group::Evaluation, line.str());
+        }
     }
 
     return totalScore;

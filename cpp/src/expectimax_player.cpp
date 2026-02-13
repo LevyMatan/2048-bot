@@ -60,28 +60,37 @@ double ExpectimaxPlayer::chanceNode(BoardState state, int depth, double prob) {
         return evalFn(state);
     }
 
-    auto emptyTiles = Board::getEmptyTiles(state);
-    if (emptyTiles.empty()) {
+    int emptyCount = 0;
+    BoardState tmp = state;
+    BoardState tileMask = 1;
+    while (tileMask) {
+        if ((tmp & 0xF) == 0) {
+            ++emptyCount;
+        }
+        tmp >>= 4;
+        tileMask <<= 4;
+    }
+
+    if (emptyCount == 0) {
         return evalFn(state);
     }
 
-    uint64_t num_open = emptyTiles.size();
-    prob /= num_open;
+    prob /= static_cast<double>(emptyCount);
 
     double res = 0.0;
-    BoardState tmp = state;
-    BoardState tile_2 = 1;
-    while (tile_2) {
+    tmp = state;
+    tileMask = 1;
+    while (tileMask) {
         if ((tmp & 0xf) == 0) {
-            double value2 = maxNode(state | tile_2, depth - 1, prob * 0.9) * 0.9;
-            double value4 = maxNode(state | (tile_2 << 1U), depth - 1, prob * 0.1) * 0.1;
+            double value2 = maxNode(state | tileMask, depth - 1, prob * 0.9) * 0.9;
+            double value4 = maxNode(state | (tileMask << 1U), depth - 1, prob * 0.1) * 0.1;
             res += value2;
             res += value4;
         }
         tmp >>= 4;
-        tile_2 <<= 4;
+        tileMask <<= 4;
     }
-    res = res / num_open;
+    res /= static_cast<double>(emptyCount);
     return res;
 }
 

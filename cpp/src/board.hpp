@@ -192,6 +192,19 @@ public:
     }
 
     /**
+     * @brief Returns the maximum tile value (internal representation 1-15) on the board.
+     * Value 13 = 8192 (8K), value 12 = 4096 (4K).
+     */
+    static int getMaxTileValue(BoardState state) {
+        int maxVal = 0;
+        for (int i = 0; i < 16; ++i) {
+            int v = static_cast<int>((state >> (i * 4)) & 0xF);
+            if (v > maxVal) maxVal = v;
+        }
+        return maxVal;
+    }
+
+    /**
      * @brief Calculates the score for a given board state
      *
      * @param state 64-bit board state
