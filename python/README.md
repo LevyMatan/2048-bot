@@ -48,18 +48,20 @@ python/
 ## Setup Instructions
 
 1. **Prerequisites:**
-   - Python 3.8 or higher
+   - Python 3.10 or higher
    - pip (Python package manager)
 
 2. **Installation:**
 
+   From the **`python/`** directory:
+
    ```bash
    # Create and activate a virtual environment (optional but recommended)
    python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   
-   # Install dependencies
-   pip install -r requirements.txt
+   source venv/bin/activate   # On Windows: venv\Scripts\activate
+
+   # Install the package and its dependencies (required to run the game)
+   pip install -e .
    ```
 
    On Windows, you can also use the provided setup script:
@@ -67,16 +69,28 @@ python/
    setup.bat
    ```
 
+   Dependencies are defined in `pyproject.toml` (e.g. `readchar`, `tabulate`).
+
 ## Running the Game
 
-The game supports two main commands: `play` for playing games and `benchmark` for comparing AI players.
+The game supports two main commands: `play` for playing games and `benchmark` for comparing AI players. Run these from any directory **after** installing the package (see above).
 
 ### Play Command
 
 Run individual games or multiple games with a specific player:
 
 ```bash
+# Using the installed console script (recommended)
+game2048 play [options]
+
+# Or as a module (from any directory after pip install -e .)
 python -m game2048.main play [options]
+```
+
+**Without installing the package** (e.g. for development): install runtime deps with `pip install readchar tabulate`, then from the `python/` directory:
+
+```bash
+PYTHONPATH=src python -m game2048.main play [options]
 ```
 
 **Play command options:**
@@ -90,7 +104,8 @@ python -m game2048.main play [options]
 Compare the performance of different AI players:
 
 ```bash
-python -m game2048.main benchmark [options]
+game2048 benchmark [options]
+# or: python -m game2048.main benchmark [options]
 ```
 
 **Benchmark command options:**
@@ -134,9 +149,10 @@ The benchmark command generates detailed reports including:
 
 ## Running Tests
 
-Tests can be run using pytest:
+From the **`python/`** directory, run tests with pytest (the project config sets `pythonpath = ["src"]`):
 
 ```bash
+cd python
 pytest tests/
 ```
 
