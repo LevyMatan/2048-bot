@@ -147,6 +147,8 @@ void ArgParser::parseArguments(int argc, char* argv[]) {
                         }
                     } else if (arg == "--output") {
                         loggerConfig.outputDestination = Logger2048::Logger::stringToLogOutput(value);
+                    } else if (arg == "--benchmark-output") {
+                        benchmarkOutputPath = value;
                     } else {
                         throw std::runtime_error("Unknown flag: " + arg);
                     }
@@ -385,6 +387,7 @@ void ArgParser::printHelp() {
               << "  --logger-config <file> Load logger settings from JSON file\n"
               << "\n"
               << "GENERAL OPTIONS:\n"
+              << "  --benchmark-output <path> Write benchmark stats (8K rate, scores) as JSON\n"
               << "  -h, --help             Show this help message\n"
               << "  -v, --version          Show version information\n"
               << "\n"

@@ -29,6 +29,8 @@ public:
     std::string getLoggerConfigPath() const;
     bool shouldLoadPlayerConfig() const;
     std::string getPlayerConfigPath() const;
+    /** If non-empty, write benchmark stats (8K rate, scores, etc.) to this path as JSON. */
+    std::string getBenchmarkOutputPath() const { return benchmarkOutputPath; }
 
 private:
     void parseArguments(int argc, char* argv[]);
@@ -53,6 +55,8 @@ private:
     bool loadPlayerConfigFromFile = false;
     std::string playerConfigPath = "";
     const std::string defaultPlayerConfigPath = "configurations/player_config.json";
+
+    std::string benchmarkOutputPath;
 };
 
 

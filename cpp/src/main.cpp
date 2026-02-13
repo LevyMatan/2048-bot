@@ -3,12 +3,13 @@
 #include <string>
 #include <chrono>
 #include <fstream>
-#include <iomanip>  // Add this for std::setprecision
-#include <thread>   // Add this for std::thread
-#include <mutex>    // Add this for std::mutex
-#include <vector>   // Already included, but making it explicit
-#include <atomic>   // Add this for std::atomic
+#include <iomanip>
+#include <thread>
+#include <mutex>
+#include <vector>
+#include <atomic>
 #include <memory>
+#include <algorithm>
 #include "game.hpp"
 #include "players.hpp"
 #include "board.hpp"
@@ -20,6 +21,12 @@
 Logger2048::Logger &logger = Logger2048::Logger::getInstance();
 
 std::unique_ptr<Player> createPlayer(PlayerConfigurations config);
+
+struct GameResult {
+    Score::GameScore score = 0;
+    int maxTileValue = 0;  // internal representation: 12 = 4K, 13 = 8K
+    int moveCount = 0;
+};
 
 // Performance test function
 void runPerformanceTest() {
@@ -50,6 +57,7 @@ void runPerformanceTest() {
 
 // Function to run games in parallel
 void runGamesParallel(int startIdx, int endIdx, PlayerConfigurations playerConfig,
+                     GameResult* results,
                      std::atomic<Score::GameScore>& bestScore, std::atomic<BoardState>& bestState,
                      std::atomic<int>& bestMoveCount, std::mutex& printMutex,
                      std::atomic<int>& gamesCompleted, int numGames, int progressInterval,
@@ -58,26 +66,28 @@ void runGamesParallel(int startIdx, int endIdx, PlayerConfigurations playerConfi
     Game2048 game;
     std::unique_ptr<Player> player = createPlayer(playerConfig);
 
-    // Create a lambda that captures the player and calls its chooseAction method
     auto chooseActionFn = [&player](BoardState state) {
         return player->chooseAction(state);
     };
 
     for (int i = startIdx; i < endIdx; ++i) {
         auto [moveCount, state, score] = game.playGame(chooseActionFn, initialState);
+        int maxTile = Board::getMaxTileValue(state);
 
-        // Update best score if better (using atomic compare-exchange)
-        Score::GameScore currentBest = bestScore.load();
-        while (score > currentBest && !bestScore.compare_exchange_weak(currentBest, score)) {
-            // Keep trying if another thread updated the value
+        if (results) {
+            results[i].score = score;
+            results[i].maxTileValue = maxTile;
+            results[i].moveCount = moveCount;
         }
 
+        Score::GameScore currentBest = bestScore.load();
+        while (score > currentBest && !bestScore.compare_exchange_weak(currentBest, score)) {
+        }
         if (score > currentBest) {
             bestState.store(state);
             bestMoveCount.store(moveCount);
         }
 
-        // Increment shared counter and print progress
         int completed = ++gamesCompleted;
         if (completed % progressInterval == 0 || completed == numGames) {
             std::lock_guard<std::mutex> lock(printMutex);
@@ -135,8 +145,11 @@ int main(int argc, char* argv[]) {
         const int numThreads = std::max(1, simConfig.numThreads);
         const int progressInterval = std::max(1, simConfig.progressInterval);
         const BoardState initialState = simConfig.initialState;
+        const std::string benchmarkOutputPath = parser.getBenchmarkOutputPath();
 
-        // Use atomic variables for thread safety
+        std::vector<GameResult> results(benchmarkOutputPath.empty() ? 0 : static_cast<size_t>(numGames));
+        GameResult* resultsPtr = results.empty() ? nullptr : results.data();
+
         std::atomic<Score::GameScore> bestScore(0);
         std::atomic<BoardState> bestState(0);
         std::atomic<int> bestMoveCount(0);
@@ -151,13 +164,12 @@ int main(int argc, char* argv[]) {
         std::vector<std::thread> threads;
         int gamesPerThread = numGames / numThreads;
 
-        // Create and start threads
         for (int i = 0; i < numThreads; ++i) {
             int startIdx = i * gamesPerThread;
             int endIdx = (i == numThreads - 1) ? numGames : (i + 1) * gamesPerThread;
 
             threads.emplace_back(runGamesParallel, startIdx, endIdx,
-                               playerConfig, std::ref(bestScore),
+                               playerConfig, resultsPtr, std::ref(bestScore),
                                std::ref(bestState), std::ref(bestMoveCount),
                                std::ref(printMutex), std::ref(gamesCompleted),
                                numGames, progressInterval,
@@ -188,14 +200,45 @@ int main(int argc, char* argv[]) {
         logger.info(Logger2048::Group::Main, "Best score:", bestScore.load(), "(moves:", bestMoveCount.load(), ")");
         logger.info(Logger2048::Group::Main, "Best board:");
 
-        // Create a temporary game to display the best board
         Game2048 tempGame;
         tempGame.setState(bestState.load());
         logger.printBoard(Logger2048::Group::Main, bestState.load());
-        // Set the score and move count for the best game
         tempGame.setScore(bestScore.load());
         tempGame.setMoveCount(bestMoveCount.load());
         tempGame.prettyPrint();
+
+        if (!benchmarkOutputPath.empty() && !results.empty()) {
+            int count4K = 0, count8K = 0;
+            Score::GameScore sumScore = 0;
+            for (const auto& r : results) {
+                if (r.maxTileValue >= 12) count4K++;
+                if (r.maxTileValue >= 13) count8K++;
+                sumScore += r.score;
+            }
+            std::vector<Score::GameScore> scores;
+            scores.reserve(results.size());
+            for (const auto& r : results) scores.push_back(r.score);
+            std::sort(scores.begin(), scores.end());
+            size_t p95Idx = static_cast<size_t>(95 * numGames / 100);
+            if (p95Idx >= scores.size()) p95Idx = scores.size() - 1;
+            Score::GameScore p95Score = scores[p95Idx];
+            double timePerGameMs = static_cast<double>(duration.count()) / numGames;
+
+            std::ofstream out(benchmarkOutputPath);
+            if (out.is_open()) {
+                out << "{\n";
+                out << "  \"numGames\": " << numGames << ",\n";
+                out << "  \"hitRate4K\": " << (static_cast<double>(count4K) / numGames) << ",\n";
+                out << "  \"hitRate8K\": " << (static_cast<double>(count8K) / numGames) << ",\n";
+                out << "  \"avgScore\": " << (static_cast<double>(sumScore) / numGames) << ",\n";
+                out << "  \"p95Score\": " << p95Score << ",\n";
+                out << "  \"timePerGameMs\": " << std::fixed << std::setprecision(2) << timePerGameMs << ",\n";
+                out << "  \"totalTimeMs\": " << duration.count() << "\n";
+                out << "}\n";
+                out.close();
+                logger.info(Logger2048::Group::Main, "Benchmark stats written to", benchmarkOutputPath);
+            }
+        }
 
     } catch (const std::exception& e) {
         std::cerr << "Error: " << e.what() << std::endl;
