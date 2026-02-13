@@ -1,0 +1,14 @@
+{
+  "playerType": "Expectimax",
+  "depth": 5,
+  "chanceCovering": 2,
+  "timeLimit": 100.0,
+  "adaptiveDepth": true,
+  "evalParams": {
+    "emptyTiles": 270,
+    "monotonicity": -47,
+    "mergeability": 700,
+    "coreScore": -11,
+    "cornerValue": 117
+  }
+}

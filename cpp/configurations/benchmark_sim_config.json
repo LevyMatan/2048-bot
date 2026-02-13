@@ -1,0 +1,6 @@
+{
+  "numGames": 500,
+  "numThreads": 4,
+  "progressInterval": 50,
+  "initialState": 0
+}

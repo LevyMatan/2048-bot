@@ -1,0 +1,31 @@
+# Run 8K regression guard: fail if hitRate8K drops below threshold.
+# Uses a small sample (BENCHMARK_SAMPLE_GAMES) for CI; increase for full validation.
+name: Benchmark 8K regression
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 2 * * 0'   # weekly Sunday 02:00 UTC
+
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Build C++ 2048
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y cmake g++
+        cd cpp && mkdir -p build && cd build
+        cmake .. -DCMAKE_BUILD_TYPE=Release
+        make 2048
+
+    - name: Run 8K regression check
+      run: |
+        cd cpp
+        # Threshold 0.01 = do not regress below ~1% 8K. Increase when we reach 30% 8K.
+        chmod +x scripts/check_8k_regression.sh
+        scripts/check_8k_regression.sh 0.01 30 configurations/expectimax_tuned_weights_v1.json
