@@ -1,0 +1,27 @@
+# Evaluation Weights
+# Format: component1:weight,component2:weight,...,avgScore,maxScore,gamesPlayed
+emptyTiles:323.854,monotonicity:393.042,smoothness:0,cornerValue:0,mergeability:220.931,patternMatching:62.1732,coreScore:0,9134,24688,50
+emptyTiles:360.226,monotonicity:372.538,smoothness:0,cornerValue:0,mergeability:213.243,patternMatching:53.9925,coreScore:0,8663,25332,50
+emptyTiles:232.479,monotonicity:467.056,smoothness:0,cornerValue:0,mergeability:199.711,patternMatching:100.755,coreScore:0,8465,24688,50
+emptyTiles:363.837,monotonicity:370.051,smoothness:0,cornerValue:0,mergeability:237.323,patternMatching:28.7891,coreScore:0,8378,16064,50
+emptyTiles:247.289,monotonicity:322.455,smoothness:0,cornerValue:0,mergeability:307.472,patternMatching:55.803,coreScore:66.9806,8282,22516,50
+emptyTiles:240.759,monotonicity:338.084,smoothness:0,cornerValue:0,mergeability:389.628,patternMatching:31.5297,coreScore:0,8040,15300,50
+emptyTiles:246.096,monotonicity:485.745,smoothness:0,cornerValue:0,mergeability:183.28,patternMatching:84.8789,coreScore:0,8010,22264,50
+emptyTiles:242.18,monotonicity:398.52,smoothness:0,cornerValue:0,mergeability:318.773,patternMatching:40.5273,coreScore:0,7867,23284,50
+emptyTiles:251.429,monotonicity:465.338,smoothness:0,cornerValue:0,mergeability:204.078,patternMatching:79.1542,coreScore:0,7716,27752,50
+emptyTiles:336.972,monotonicity:300.628,smoothness:0,cornerValue:0,mergeability:336.606,patternMatching:25.7932,coreScore:0,7683,15168,50
+emptyTiles:223.167,monotonicity:508.682,smoothness:0,cornerValue:0,mergeability:164.56,patternMatching:103.59,coreScore:0,7509,27284,50
+emptyTiles:74.4937,monotonicity:444.538,smoothness:0,cornerValue:21.7934,mergeability:459.175,patternMatching:0,coreScore:0,7361,15140,50
+emptyTiles:272.922,monotonicity:431.023,smoothness:0,cornerValue:0,mergeability:176.67,patternMatching:119.384,coreScore:0,7191,27156,50
+emptyTiles:113.109,monotonicity:373.871,smoothness:0,cornerValue:30.2794,mergeability:472.288,patternMatching:10.453,coreScore:0,6882,16408,50
+emptyTiles:133.351,monotonicity:452.823,smoothness:0,cornerValue:0,mergeability:293.202,patternMatching:120.624,coreScore:0,6674,25160,50
+emptyTiles:300.776,monotonicity:313.515,smoothness:0,cornerValue:52.3844,mergeability:333.325,patternMatching:0,coreScore:0,6549,21048,50
+emptyTiles:204.721,monotonicity:369.717,smoothness:0,cornerValue:51.9279,mergeability:373.634,patternMatching:1.13687e-13,coreScore:0,6516,16124,50
+emptyTiles:295.745,monotonicity:336.958,smoothness:56.4259,cornerValue:8.05971,mergeability:220.308,patternMatching:82.5032,coreScore:0,5771,16052,50
+emptyTiles:0,monotonicity:291.784,smoothness:0,cornerValue:0,mergeability:508.758,patternMatching:199.458,coreScore:0,5433,23096,50
+emptyTiles:167.009,monotonicity:507.419,smoothness:0,cornerValue:0,mergeability:325.572,patternMatching:0,coreScore:0,4975,11828,50
+emptyTiles:272.715,monotonicity:376.781,smoothness:0,cornerValue:0,mergeability:350.504,patternMatching:0,coreScore:0,4738,7268,50
+emptyTiles:0,monotonicity:910.341,smoothness:0,cornerValue:0,mergeability:0,patternMatching:89.6594,coreScore:0,4617,14508,50
+emptyTiles:225.42,monotonicity:294.496,smoothness:89.1371,cornerValue:0,mergeability:339.015,patternMatching:51.9321,coreScore:0,3904,14348,50
+emptyTiles:153.089,monotonicity:348.593,smoothness:128.715,cornerValue:21.11,mergeability:348.493,patternMatching:0,coreScore:0,3297,7144,50
+emptyTiles:463.408,monotonicity:451.397,smoothness:0,cornerValue:60.7926,mergeability:0,patternMatching:24.4022,coreScore:0,3240,9212,50

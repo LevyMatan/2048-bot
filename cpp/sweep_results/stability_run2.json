@@ -1,0 +1,9 @@
+{
+  "numGames": 80,
+  "hitRate4K": 0.075,
+  "hitRate8K": 0.0125,
+  "avgScore": 9578.1,
+  "p95Score": 62608,
+  "timePerGameMs": 5122.69,
+  "totalTimeMs": 409815
+}

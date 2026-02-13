@@ -1,0 +1,28 @@
+# Best Evaluation Weights
+cornerValue:0
+emptyTiles:323.854
+mergeability:220.931
+monotonicity:393.042
+patternMatching:62.1732
+# Performance
+avgScore:9134
+maxScore:24688
+gamesPlayed:50
+
+# Ready-to-use code
+Evaluation::EvalParams params;
+params["cornerValue"] = 0;
+params["patternMatching"] = 62.1732;
+params["mergeability"] = 220.931;
+params["emptyTiles"] = 323.854;
+params["monotonicity"] = 393.042;
+
+# For getPresetParams function
+if (name == "tuned") {
+    params["cornerValue"] = 0;
+    params["patternMatching"] = 62.1732;
+    params["mergeability"] = 220.931;
+    params["emptyTiles"] = 323.854;
+    params["monotonicity"] = 393.042;
+    return params;
+}
