@@ -3,18 +3,27 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>2048 Bot — N-Tuple TD-Learning Player</title>
+  <title>2048 Bot — Documentation</title>
   <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
   <style>
     :root {
-      --bg: #f5f5f5;
+      --bg: #f8fafc;
       --surface: #fff;
-      --text: #1a1a1a;
-      --text-muted: #555;
+      --text: #1a1a2e;
+      --text-muted: #64748b;
       --accent: #2563eb;
+      --accent-hover: #1d4ed8;
       --accent-soft: #dbeafe;
-      --border: #e5e7eb;
+      --border: #e2e8f0;
       --code-bg: #f1f5f9;
+      --code-border: #e2e8f0;
+      --nav-bg: #fff;
+      --hero-gradient: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%);
+      --tag-bg: #dbeafe;
+      --tag-text: #1e40af;
+      --table-stripe: #f8fafc;
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+      --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.07), 0 2px 4px -2px rgba(0,0,0,0.05);
     }
     @media (prefers-color-scheme: dark) {
       :root {
@@ -23,288 +32,814 @@
         --text: #e2e8f0;
         --text-muted: #94a3b8;
         --accent: #60a5fa;
+        --accent-hover: #93bbfc;
         --accent-soft: #1e3a5f;
         --border: #334155;
         --code-bg: #0f172a;
+        --code-border: #334155;
+        --nav-bg: #1e293b;
+        --hero-gradient: linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%);
+        --tag-bg: #1e3a5f;
+        --tag-text: #93c5fd;
+        --table-stripe: #1e293b;
+        --shadow-sm: 0 1px 2px rgba(0,0,0,0.2);
+        --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.3);
       }
     }
-    * { box-sizing: border-box; }
-    html { scroll-behavior: smooth; }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; scroll-padding-top: 1.5rem; }
+
     body {
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-      line-height: 1.6;
+      font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+      line-height: 1.7;
       color: var(--text);
       background: var(--bg);
-      margin: 0;
-      padding: 0;
     }
+
+    /* Layout */
     .layout {
       display: grid;
-      grid-template-columns: 200px 1fr;
-      gap: 2rem;
-      max-width: 1100px;
+      grid-template-columns: 220px 1fr;
+      max-width: 1200px;
       margin: 0 auto;
-      padding: 1rem 2rem 3rem;
+      gap: 2.5rem;
+      padding: 0 2rem 4rem;
     }
-    @media (max-width: 768px) {
-      .layout { grid-template-columns: 1fr; }
-      nav { position: static !important; }
+    @media (max-width: 860px) {
+      .layout { grid-template-columns: 1fr; padding: 0 1rem 3rem; }
+      nav.sidebar { position: static !important; margin-bottom: 1rem; }
     }
-    nav {
+
+    /* Sidebar */
+    nav.sidebar {
       position: sticky;
       top: 1rem;
       height: fit-content;
-      padding: 0.5rem 0;
+      max-height: calc(100vh - 2rem);
+      overflow-y: auto;
+      padding: 1rem 0;
     }
-    nav a {
+    nav.sidebar .nav-group { margin-bottom: 1rem; }
+    nav.sidebar .nav-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      padding: 0.25rem 0.75rem;
+    }
+    nav.sidebar a {
       display: block;
       color: var(--text-muted);
       text-decoration: none;
-      padding: 0.35rem 0;
-      font-size: 0.9rem;
+      padding: 0.3rem 0.75rem;
+      font-size: 0.85rem;
+      border-radius: 6px;
+      transition: color 0.15s, background 0.15s;
     }
-    nav a:hover { color: var(--accent); }
+    nav.sidebar a:hover {
+      color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+    /* Main content */
     main { min-width: 0; }
-    h1 { font-size: 1.75rem; margin-top: 0; }
-    h2 { font-size: 1.35rem; margin-top: 2rem; padding-top: 0.5rem; border-top: 1px solid var(--border); }
-    h2:first-of-type { margin-top: 1rem; border-top: none; padding-top: 0; }
-    h3 { font-size: 1.1rem; margin-top: 1.25rem; }
-    p { margin: 0.75rem 0; }
-    a { color: var(--accent); }
+
+    /* Hero */
+    .hero {
+      background: var(--hero-gradient);
+      color: #fff;
+      padding: 2.5rem 2rem;
+      border-radius: 12px;
+      margin-bottom: 2.5rem;
+      box-shadow: var(--shadow-md);
+    }
+    .hero h1 { font-size: 2rem; font-weight: 800; margin-bottom: 0.5rem; }
+    .hero p { color: #cbd5e1; font-size: 1.05rem; margin-top: 0.5rem; }
+    .hero p:last-child { margin-bottom: 0; }
+    .hero a { color: #93c5fd; }
+    .hero .tags { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 1rem; }
+    .hero .tag {
+      display: inline-block;
+      background: rgba(255,255,255,0.15);
+      color: #e0f2fe;
+      padding: 0.2rem 0.65rem;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+
+    /* Sections */
+    section { margin-bottom: 2.5rem; }
+    h2 {
+      font-size: 1.4rem;
+      font-weight: 700;
+      margin-top: 2.5rem;
+      margin-bottom: 0.75rem;
+      padding-bottom: 0.4rem;
+      border-bottom: 2px solid var(--border);
+    }
+    h3 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-top: 1.5rem;
+      margin-bottom: 0.5rem;
+      color: var(--text);
+    }
+    h4 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin-top: 1.25rem;
+      margin-bottom: 0.4rem;
+    }
+    p { margin: 0.6rem 0; }
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    ul, ol { padding-left: 1.5rem; margin: 0.5rem 0; }
+    li { margin: 0.25rem 0; }
+
+    /* Code */
     pre, code {
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, monospace;
-      font-size: 0.875rem;
+      font-family: 'JetBrains Mono', 'Fira Code', ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.82rem;
+    }
+    code {
+      padding: 0.15em 0.4em;
+      border-radius: 4px;
+      background: var(--code-bg);
+      border: 1px solid var(--code-border);
     }
     pre {
       background: var(--code-bg);
-      padding: 1rem;
-      border-radius: 6px;
-      overflow-x: auto;
-      border: 1px solid var(--border);
-    }
-    code { padding: 0.15em 0.4em; border-radius: 4px; background: var(--code-bg); }
-    pre code { padding: 0; background: none; }
-    .hero {
-      background: var(--surface);
-      padding: 2rem;
+      padding: 1rem 1.25rem;
       border-radius: 8px;
-      border: 1px solid var(--border);
-      margin-bottom: 2rem;
+      overflow-x: auto;
+      border: 1px solid var(--code-border);
+      margin: 0.75rem 0;
+      line-height: 1.55;
     }
-    .hero h1 { margin-top: 0; }
-    .hero p:last-child { margin-bottom: 0; }
-    .board-svg { width: 100%; max-width: 280px; height: auto; }
-    .mermaid { margin: 1rem 0; }
+    pre code { padding: 0; border: none; background: none; }
+
+    /* Tables */
     table {
       border-collapse: collapse;
       width: 100%;
-      max-width: 420px;
+      margin: 0.75rem 0;
+      font-size: 0.9rem;
+    }
+    th, td { padding: 0.6rem 0.85rem; text-align: left; border: 1px solid var(--border); }
+    th { background: var(--code-bg); font-weight: 600; font-size: 0.82rem; }
+    tr:nth-child(even) td { background: var(--table-stripe); }
+
+    /* Cards */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.25rem 1.5rem;
+      margin: 0.75rem 0;
+      box-shadow: var(--shadow-sm);
+    }
+    .card h4 { margin-top: 0; }
+
+    /* Grid */
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1rem;
       margin: 1rem 0;
     }
-    th, td { padding: 0.5rem 0.75rem; text-align: left; border: 1px solid var(--border); }
-    th { background: var(--code-bg); }
-    section { margin-bottom: 2rem; }
+
+    /* Mermaid */
+    .mermaid { margin: 1rem 0; }
+
+    /* SVG board diagrams */
+    .board-svg { width: 100%; max-width: 340px; height: auto; margin: 0.5rem 0; }
+
+    /* Callout boxes */
+    .callout {
+      border-left: 4px solid var(--accent);
+      background: var(--accent-soft);
+      padding: 0.85rem 1.1rem;
+      border-radius: 0 8px 8px 0;
+      margin: 1rem 0;
+      font-size: 0.92rem;
+    }
+    .callout.warning {
+      border-left-color: #f59e0b;
+      background: #fef3c7;
+    }
+    @media (prefers-color-scheme: dark) {
+      .callout.warning { background: #422006; }
+    }
+
+    /* File tree */
+    .file-tree {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.82rem;
+      line-height: 1.6;
+      background: var(--code-bg);
+      border: 1px solid var(--code-border);
+      padding: 1rem 1.25rem;
+      border-radius: 8px;
+      margin: 0.75rem 0;
+    }
+    .file-tree .dir { color: var(--accent); font-weight: 600; }
+    .file-tree .comment { color: var(--text-muted); }
+
+    /* Math-like */
+    .formula {
+      font-family: 'Georgia', 'Times New Roman', serif;
+      font-style: italic;
+      display: block;
+      text-align: center;
+      margin: 1rem 0;
+      font-size: 1.05rem;
+    }
+
+    /* Scroll to top */
+    .back-top {
+      text-align: center;
+      margin: 2rem 0 0;
+      font-size: 0.85rem;
+    }
   </style>
 </head>
 <body>
-  <div class="layout">
-    <nav>
-      <a href="#intro">Intro</a>
-      <a href="#problem">The Problem</a>
+
+<div class="layout">
+  <!-- Sidebar Navigation -->
+  <nav class="sidebar">
+    <div class="nav-group">
+      <div class="nav-label">Overview</div>
+      <a href="#intro">Introduction</a>
+      <a href="#project-structure">Project Structure</a>
+      <a href="#players">Player Types</a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-label">Getting Started</div>
+      <a href="#prerequisites">Prerequisites</a>
+      <a href="#building">Building</a>
+      <a href="#running">Running Games</a>
+      <a href="#cli-reference">CLI Reference</a>
+    </div>
+    <div class="nav-group">
+      <div class="nav-label">TDL Deep Dive</div>
+      <a href="#tdl-overview">Overview</a>
       <a href="#ntuple">N-Tuple Networks</a>
       <a href="#symmetry">Isomorphic Symmetry</a>
       <a href="#afterstate">Afterstate Value</a>
-      <a href="#td">TD(0) Learning</a>
+      <a href="#td-learning">TD(0) Learning</a>
       <a href="#architecture">Architecture</a>
-      <a href="#results">Training & Results</a>
-      <a href="#usage">Usage</a>
-    </nav>
-    <main>
-      <section id="intro" class="hero">
-        <h1>2048 Bot — N-Tuple TD-Learning Player</h1>
-        <p>This repo implements a strong 2048 AI using <strong>n-tuple networks</strong> and <strong>temporal-difference (TD) learning</strong>. The TDL player learns a value function from self-play and can reach the 8192 tile in a large fraction of games after training.</p>
-        <p><a href="https://github.com/LevyMatan/2048-bot">View on GitHub</a></p>
-      </section>
+      <a href="#training">Training the Network</a>
+      <a href="#results">Results</a>
+    </div>
+  </nav>
 
-      <section id="problem">
-        <h2>The Problem</h2>
-        <p>2048 is a single-player puzzle: slide tiles on a 4×4 grid, merge equal numbers, and try to reach 2048 and beyond. The game is stochastic (a random 2 or 4 appears after each move), so planning must account for uncertainty.</p>
-        <p>Hand-crafted heuristics (monotonicity, smoothness, corner value, etc.) with tuned weights power an expectimax search, but they hit a ceiling: the evaluation cannot capture the complex patterns that matter. In practice, expectimax with heuristic evaluation rarely reaches the 8192 tile. Strong play requires a <em>learned</em> value function.</p>
-      </section>
+  <!-- Main Content -->
+  <main>
 
-      <section id="ntuple">
-        <h2>N-Tuple Networks</h2>
-        <p>An <strong>n-tuple network</strong> is a set of pattern-based features. Each &ldquo;pattern&rdquo; is a fixed set of board positions (e.g. six cells). For a given board state, we read the tile values at those positions (each value 0–15 in log₂ form), concatenate them into a single index, and look up a weight in a table. The value of the state is the sum of the looked-up weights over all patterns (and over all symmetric views; see below).</p>
-        <p>We use four <strong>6-tuples</strong>. Each 6-tuple has 16<sup>6</sup> = 16,777,216 entries (one float per possible 6-tile configuration). Four patterns × 64 MB ≈ 256 MB total. The board layout (positions 0–15) is:</p>
-        <p><strong>Board positions (row-major):</strong></p>
-        <pre><code> 0  1  2  3
- 4  5  6  7
- 8  9 10 11
-12 13 14 15</code></pre>
-        <p>The four patterns in this implementation are:</p>
-        <ul>
-          <li><strong>Pattern A:</strong> {0, 1, 2, 3, 4, 5} — top row + start of second row</li>
-          <li><strong>Pattern B:</strong> {4, 5, 6, 7, 8, 9} — second and third rows (left to middle)</li>
-          <li><strong>Pattern C:</strong> {0, 1, 2, 4, 5, 6} — L-shaped (top-left block)</li>
-          <li><strong>Pattern D:</strong> {4, 5, 6, 8, 9, 10} — L-shaped (middle block)</li>
-        </ul>
-        <p>Which cells each pattern covers (highlighted in each grid):</p>
-        <svg class="board-svg" viewBox="0 0 340 200" xmlns="http://www.w3.org/2000/svg">
-          <!-- Pattern A: 0,1,2,3,4,5 -->
-          <text x="0" y="14" font-size="12" fill="currentColor">A</text>
-          <g transform="translate(0,18)"><rect x="0" y="0" width="36" height="36" rx="3" fill="var(--code-bg)" stroke="var(--border)"/><rect x="2" y="2" width="32" height="32" rx="2" fill="#3b82f6" opacity="0.8"/></g>
-          <g transform="translate(40,18)"><rect x="0" y="0" width="36" height="36" rx="3" fill="var(--code-bg)" stroke="var(--border)"/><rect x="2" y="2" width="32" height="32" rx="2" fill="#3b82f6" opacity="0.8"/></g>
-          <g transform="translate(80,18)"><rect x="0" y="0" width="36" height="36" rx="3" fill="var(--code-bg)" stroke="var(--border)"/><rect x="2" y="2" width="32" height="32" rx="2" fill="#3b82f6" opacity="0.8"/></g>
-          <g transform="translate(120,18)"><rect x="0" y="0" width="36" height="36" rx="3" fill="var(--code-bg)" stroke="var(--border)"/><rect x="2" y="2" width="32" height="32" rx="2" fill="#3b82f6" opacity="0.8"/></g>
-          <g transform="translate(0,58)"><rect x="0" y="0" width="36" height="36" rx="3" fill="var(--code-bg)" stroke="var(--border)"/><rect x="2" y="2" width="32" height="32" rx="2" fill="#3b82f6" opacity="0.8"/></g>
-          <g transform="translate(40,58)"><rect x="0" y="0" width="36" height="36" rx="3" fill="var(--code-bg)" stroke="var(--border)"/><rect x="2" y="2" width="32" height="32" rx="2" fill="#3b82f6" opacity="0.8"/></g>
-          <g transform="translate(80,58)"><rect x="0" y="0" width="36" height="36" rx="3" fill="var(--code-bg)" stroke="var(--border)"/></g>
-          <g transform="translate(120,58)"><rect x="0" y="0" width="36" height="36" rx="3" fill="var(--code-bg)" stroke="var(--border)"/></g>
-          <!-- Pattern B: 4,5,6,7,8,9 -->
-          <text x="160" y="14" font-size="12" fill="currentColor">B</text>
-          <g transform="translate(160,18)"><rect x="0" y="0" width="36" height="36" rx="3" fill="var(--code-bg)" stroke="var(--border)"/></g>
-          <g transform="translate(200,18)"><rect x="0" y="0" width="36" height="36" rx="3" fill="var(--code-bg)" stroke="var(--border)"/><rect x="2" y="2" width="32" height="32" rx="2" fill="#22c55e" opacity="0.8"/></g>
-          <g transform="translate(240,18)"><rect x="0" y="0" width="36" height="36" rx="3" fill="var(--code-bg)" stroke="var(--border)"/><rect x="2" y="2" width="32" height="32" rx="2" fill="#22c55e" opacity="0.8"/></g>
-          <g transform="translate(280,18)"><rect x="0" y="0" width="36" height="36" rx="3" fill="var(--code-bg)" stroke="var(--border)"/><rect x="2" y="2" width="32" height="32" rx="2" fill="#22c55e" opacity="0.8"/></g>
-          <g transform="translate(160,58)"><rect x="0" y="0" width="36" height="36" rx="3" fill="var(--code-bg)" stroke="var(--border)"/><rect x="2" y="2" width="32" height="32" rx="2" fill="#22c55e" opacity="0.8"/></g>
-          <g transform="translate(200,58)"><rect x="0" y="0" width="36" height="36" rx="3" fill="var(--code-bg)" stroke="var(--border)"/><rect x="2" y="2" width="32" height="32" rx="2" fill="#22c55e" opacity="0.8"/></g>
-          <g transform="translate(240,58)"><rect x="0" y="0" width="36" height="36" rx="3" fill="var(--code-bg)" stroke="var(--border)"/><rect x="2" y="2" width="32" height="32" rx="2" fill="#22c55e" opacity="0.8"/></g>
-          <g transform="translate(280,58)"><rect x="0" y="0" width="36" height="36" rx="3" fill="var(--code-bg)" stroke="var(--border)"/></g>
-          <!-- Pattern C: 0,1,2,4,5,6 -->
-          <text x="0" y="114" font-size="12" fill="currentColor">C</text>
-          <g transform="translate(0,118)"><rect x="0" y="0" width="36" height="36" rx="3" fill="var(--code-bg)" stroke="var(--border)"/><rect x="2" y="2" width="32" height="32" rx="2" fill="#eab308" opacity="0.8"/></g>
-          <g transform="translate(40,118)"><rect x="0" y="0" width="36" height="36" rx="3" fill="var(--code-bg)" stroke="var(--border)"/><rect x="2" y="2" width="32" height="32" rx="2" fill="#eab308" opacity="0.8"/></g>
-          <g transform="translate(80,118)"><rect x="0" y="0" width="36" height="36" rx="3" fill="var(--code-bg)" stroke="var(--border)"/><rect x="2" y="2" width="32" height="32" rx="2" fill="#eab308" opacity="0.8"/></g>
-          <g transform="translate(120,118)"><rect x="0" y="0" width="36" height="36" rx="3" fill="var(--code-bg)" stroke="var(--border)"/></g>
-          <g transform="translate(0,158)"><rect x="0" y="0" width="36" height="36" rx="3" fill="var(--code-bg)" stroke="var(--border)"/><rect x="2" y="2" width="32" height="32" rx="2" fill="#eab308" opacity="0.8"/></g>
-          <g transform="translate(40,158)"><rect x="0" y="0" width="36" height="36" rx="3" fill="var(--code-bg)" stroke="var(--border)"/><rect x="2" y="2" width="32" height="32" rx="2" fill="#eab308" opacity="0.8"/></g>
-          <g transform="translate(80,158)"><rect x="0" y="0" width="36" height="36" rx="3" fill="var(--code-bg)" stroke="var(--border)"/><rect x="2" y="2" width="32" height="32" rx="2" fill="#eab308" opacity="0.8"/></g>
-          <g transform="translate(120,158)"><rect x="0" y="0" width="36" height="36" rx="3" fill="var(--code-bg)" stroke="var(--border)"/></g>
-          <!-- Pattern D: 4,5,6,8,9,10 -->
-          <text x="160" y="114" font-size="12" fill="currentColor">D</text>
-          <g transform="translate(160,118)"><rect x="0" y="0" width="36" height="36" rx="3" fill="var(--code-bg)" stroke="var(--border)"/></g>
-          <g transform="translate(200,118)"><rect x="0" y="0" width="36" height="36" rx="3" fill="var(--code-bg)" stroke="var(--border)"/><rect x="2" y="2" width="32" height="32" rx="2" fill="#a855f7" opacity="0.8"/></g>
-          <g transform="translate(240,118)"><rect x="0" y="0" width="36" height="36" rx="3" fill="var(--code-bg)" stroke="var(--border)"/><rect x="2" y="2" width="32" height="32" rx="2" fill="#a855f7" opacity="0.8"/></g>
-          <g transform="translate(280,118)"><rect x="0" y="0" width="36" height="36" rx="3" fill="var(--code-bg)" stroke="var(--border)"/></g>
-          <g transform="translate(160,158)"><rect x="0" y="0" width="36" height="36" rx="3" fill="var(--code-bg)" stroke="var(--border)"/><rect x="2" y="2" width="32" height="32" rx="2" fill="#a855f7" opacity="0.8"/></g>
-          <g transform="translate(200,158)"><rect x="0" y="0" width="36" height="36" rx="3" fill="var(--code-bg)" stroke="var(--border)"/><rect x="2" y="2" width="32" height="32" rx="2" fill="#a855f7" opacity="0.8"/></g>
-          <g transform="translate(240,158)"><rect x="0" y="0" width="36" height="36" rx="3" fill="var(--code-bg)" stroke="var(--border)"/><rect x="2" y="2" width="32" height="32" rx="2" fill="#a855f7" opacity="0.8"/></g>
-          <g transform="translate(280,158)"><rect x="0" y="0" width="36" height="36" rx="3" fill="var(--code-bg)" stroke="var(--border)"/></g>
-        </svg>
-        <p>Index computation: for one pattern and one symmetric view, we read tiles at the pattern&rsquo;s positions (after mapping through that view), pack them into a 24-bit index: <code>index = tile[0] | (tile[1] &lt;&lt; 4) | ... | (tile[5] &lt;&lt; 20)</code>, and add <code>weights[index]</code> to the state value.</p>
-      </section>
+    <!-- Hero -->
+    <section class="hero" id="intro">
+      <h1>2048 Bot</h1>
+      <p>A high-performance 2048 AI exploring multiple strategies &mdash; from simple heuristics to a <strong>temporal-difference learning</strong> agent that regularly reaches the <strong>8192</strong> tile and beyond.</p>
+      <p><a href="https://github.com/LevyMatan/2048-bot">View on GitHub</a></p>
+      <div class="tags">
+        <span class="tag">C++17</span>
+        <span class="tag">CMake</span>
+        <span class="tag">N-Tuple Networks</span>
+        <span class="tag">TD Learning</span>
+        <span class="tag">Expectimax</span>
+        <span class="tag">Multi-threaded</span>
+      </div>
+    </section>
 
-      <section id="symmetry">
-        <h2>Isomorphic Symmetry</h2>
-        <p>The same board configuration can appear in 8 equivalent forms: 4 rotations and 4 reflections. We share weights across these views by evaluating the board in all 8 symmetric forms and summing the looked-up weights. That way we need only one weight table per pattern, and the policy is rotation/reflection invariant.</p>
-        <p>To get the &ldquo;canonical&rdquo; positions for each symmetric view we use an <strong>index board</strong>: a fixed 64-bit state where cell <em>i</em> contains the value <em>i</em> (so we can see where each original cell moved after a transform). In code this is <code>0xFEDCBA9876543210</code> (nibbles 0–15 in row-major order). We apply each of the 8 transforms (4 rotations of the identity, then 4 rotations of the mirrored board) to this index board; for each transformed board, we read the values at the pattern positions. Those values are the original cell indices we should sample. So for symmetry <em>s</em> and pattern position <em>j</em>, <code>isom[s][j]</code> = which cell to read from the current board to get the &ldquo;logical&rdquo; tile at <em>j</em> in view <em>s</em>.</p>
-        <p>Evaluation: for each of the 4 patterns, we do 8 lookups (one per symmetric view), sum them, and add to the total. So <code>V(state) = sum over patterns of (sum over 8 isomorphisms of weights[index])</code>.</p>
-      </section>
+    <!-- ==================== PROJECT OVERVIEW ==================== -->
 
-      <section id="afterstate">
-        <h2>Afterstate Value Function</h2>
-        <p>We learn the value of <strong>afterstates</strong>: the board <em>after</em> the player&rsquo;s move but <em>before</em> the random tile is placed. That is more stable than valuing &ldquo;raw&rdquo; states (after the random tile), because the same afterstate can lead to many possible next states (one per possible tile placement).</p>
-        <p>Flow in one step:</p>
-        <div class="mermaid">
-flowchart LR
-  S0["state s"]
-  A["move"]
-  S1["afterstate s'"]
-  R["random tile"]
-  S2["next state s''"]
-  S0 --> A --> S1 --> R --> S2
+    <section id="project-structure">
+      <h2>Project Structure</h2>
+      <p>The repository is organized into a C++ implementation (primary, high-performance) and a Python implementation (prototyping and visualization).</p>
+
+      <div class="file-tree">
+<span class="dir">2048-bot/</span>
+<span class="dir">&boxvr;&boxh; cpp/</span>                         <span class="comment"># C++ implementation</span>
+&boxv;   <span class="dir">&boxvr;&boxh; src/</span>                     <span class="comment"># Source files</span>
+&boxv;   &boxv;   &boxvr;&boxh; main.cpp              <span class="comment"># Entry point &amp; game runner</span>
+&boxv;   &boxv;   &boxvr;&boxh; board.cpp/hpp          <span class="comment"># 64-bit board representation</span>
+&boxv;   &boxv;   &boxvr;&boxh; game.cpp/hpp           <span class="comment"># Game loop &amp; mechanics</span>
+&boxv;   &boxv;   &boxvr;&boxh; players.hpp            <span class="comment"># Player base class &amp; configs</span>
+&boxv;   &boxv;   &boxvr;&boxh; random_player.cpp      <span class="comment"># Random move selection</span>
+&boxv;   &boxv;   &boxvr;&boxh; heuristic_player.cpp   <span class="comment"># Weighted heuristic eval</span>
+&boxv;   &boxv;   &boxvr;&boxh; expectimax_player.cpp  <span class="comment"># Expectimax search</span>
+&boxv;   &boxv;   &boxvr;&boxh; tdl_player.cpp/hpp     <span class="comment"># TD-Learning player</span>
+&boxv;   &boxv;   &boxvr;&boxh; ntuple_network.hpp     <span class="comment"># N-Tuple network impl</span>
+&boxv;   &boxv;   &boxvr;&boxh; evaluation.cpp/hpp     <span class="comment"># Heuristic evaluation fns</span>
+&boxv;   &boxv;   &boxvr;&boxh; arg_parser.cpp/hpp     <span class="comment"># CLI argument parsing</span>
+&boxv;   &boxv;   &boxur;&boxh; logger.cpp/hpp         <span class="comment"># Configurable logger</span>
+&boxv;   <span class="dir">&boxvr;&boxh; configurations/</span>      <span class="comment"># JSON config files</span>
+&boxv;   <span class="dir">&boxvr;&boxh; tests/</span>               <span class="comment"># Google Test suite</span>
+&boxv;   &boxur;&boxh; CMakeLists.txt        <span class="comment"># Build configuration</span>
+<span class="dir">&boxvr;&boxh; python/</span>                      <span class="comment"># Python implementation</span>
+<span class="dir">&boxvr;&boxh; docs/</span>                        <span class="comment"># This documentation</span>
+<span class="dir">&boxvr;&boxh; .github/workflows/</span>          <span class="comment"># CI: tests, benchmarks</span>
+&boxur;&boxh; README.md
+      </div>
+
+      <h3>Board Representation</h3>
+      <p>The board is stored as a single <strong>64-bit integer</strong> (<code>BoardState = uint64_t</code>). Each of the 16 cells occupies 4 bits (one nibble), storing the log<sub>2</sub> of the tile value (0 = empty, 1 = 2, 2 = 4, ..., 15 = 32768). This compact representation enables fast bitwise operations for moves, scoring, and evaluation.</p>
+      <pre><code>Nibble layout (position 0 = LSB):
+Pos:  0  1  2  3  4  5  6  7  8  9 10 11 12 13 14 15
+Row:  [--- row 0 ---] [--- row 1 ---] [--- row 2 ---] [--- row 3 ---]</code></pre>
+
+      <h3>Build System</h3>
+      <p>The C++ project uses <strong>CMake</strong> (minimum 3.10) with C++17. Key build features:</p>
+      <ul>
+        <li><strong>Release mode:</strong> <code>-O3 -march=native -flto -DNDEBUG</code> &mdash; maximum performance, logging compiled out</li>
+        <li><strong>Debug mode:</strong> <code>-O0 -g</code> &mdash; full logging, step-through debugging with <code>--wait</code></li>
+        <li><strong>Google Test:</strong> fetched automatically via <code>FetchContent</code> if not installed</li>
+        <li><strong>CPack:</strong> generates distributable packages (DMG on macOS)</li>
+      </ul>
+    </section>
+
+    <section id="players">
+      <h2>Player Types</h2>
+      <p>The bot ships with four player strategies, from baseline to state-of-the-art:</p>
+
+      <div class="card-grid">
+        <div class="card">
+          <h4>Random</h4>
+          <p>Picks a random legal move each turn. Baseline for comparison &mdash; average score ~1,000.</p>
+          <p><code>-p random</code></p>
         </div>
-        <p>At move time we have state <em>s</em>. For each legal move we get afterstate <em>s'</em> and immediate reward <em>r</em>. We choose the move that maximizes <code>r + V(s')</code>. So the policy is greedy with respect to reward plus afterstate value.</p>
-      </section>
-
-      <section id="td">
-        <h2>TD(0) Learning</h2>
-        <p>We train by self-play. Each episode is one game. We collect a trajectory of (afterstate, reward) pairs. After the game ends we perform a <strong>backward pass</strong> and update weights with the temporal-difference error.</p>
-        <p>Let <em>r<sub>t</sub></em> be the reward for the move at step <em>t</em>, and <em>s'<sub>t</sub></em> the afterstate after that move. The next afterstate in the trajectory is <em>s'<sub>t+1</sub></em> (or we treat the terminal as having value 0). TD(0) update:</p>
-        <p><code>V(s'<sub>t</sub>) += α · (r<sub>t</sub> + V(s'<sub>t+1</sub>) − V(s'<sub>t</sub>))</code></p>
-        <p>We iterate backwards over the trajectory so that when we update <em>s'<sub>t</sub></em>, we use the already-updated value of <em>s'<sub>t+1</sub></em> (or 0 for the last step). The adjustment <code>α · (r + V(s'') − V(s'))</code> is distributed evenly across all pattern lookups that contributed to <code>V(s')</code> (i.e. each of the 4 patterns gets one quarter, and within each pattern the 8 isomorphic lookups get one eighth each).</p>
-        <p>Pseudocode:</p>
-        <pre><code>for episode = 1 to N:
-  path = []
-  state = initial_board()
-  while has_valid_move(state):
-    move = argmax over legal moves of (reward(move) + V(afterstate(move)))
-    path.append((afterstate(move), reward(move)))
-    state = afterstate(move)
-    state = add_random_tile(state)
-  target = 0
-  for t = len(path)-1 down to 0:
-    (s', r) = path[t]
-    error = target - V(s')
-    V(s') += alpha * error   // distributed over pattern lookups
-    target = r + V(s')</code></pre>
-      </section>
-
-      <section id="architecture">
-        <h2>Architecture</h2>
-        <p>Class structure and data flow:</p>
-        <div class="mermaid">
-flowchart TB
-  subgraph network [NTupleNetwork]
-    P1[NTuplePattern 1]
-    P2[NTuplePattern 2]
-    P3[NTuplePattern 3]
-    P4[NTuplePattern 4]
-    P1 --> W1["weights 16^6"]
-    P2 --> W2["weights 16^6"]
-    P3 --> W3["weights 16^6"]
-    P4 --> W4["weights 16^6"]
-  end
-  TDL[TDLPlayer]
-  TDL --> network
-  TDL -->|chooseAction| moves["getValidMoves"]
-  moves -->|for each move| eval["reward + estimate(afterstate)"]
-  eval --> network
-  TDL -->|argmax| best["best move"]
+        <div class="card">
+          <h4>Heuristic</h4>
+          <p>Scores each move using a weighted combination of features: empty cells, monotonicity, smoothness, corner value, and more.</p>
+          <p><code>-p heuristic</code></p>
         </div>
-        <p><strong>NTuplePattern</strong>: holds one weight table (size 16<sup>6</sup>), the 8 isomorphic index rows for this pattern, and implements <code>estimate(state)</code> (sum of 8 table lookups) and <code>update(state, adjust)</code> (add <code>adjust/8</code> to each of the 8 entries).</p>
-        <p><strong>NTupleNetwork</strong>: holds 4 <code>NTuplePattern</code>s, implements <code>estimate(state)</code> and <code>update(state, adjust)</code> by delegating to each pattern (splitting <code>adjust</code> by 4). Provides <code>save(path)</code> and <code>load(path)</code> for binary serialization.</p>
-        <p><strong>TDLPlayer</strong>: holds a shared <code>NTupleNetwork</code>. <code>chooseAction(state)</code> enumerates legal moves, computes <code>score(move) + network.estimate(afterstate)</code> for each, and returns the move with the highest value. Training is a static method that runs episodes and calls <code>network.update</code> in the backward pass.</p>
-      </section>
+        <div class="card">
+          <h4>Expectimax</h4>
+          <p>Depth-limited search with chance nodes for random tile placement. Uses the heuristic evaluation at leaf nodes. Adaptive depth and time limits.</p>
+          <p><code>-p expectimax</code></p>
+        </div>
+        <div class="card">
+          <h4>TDL (TD-Learning)</h4>
+          <p>Learns a value function from self-play using n-tuple networks and temporal-difference updates. The strongest player &mdash; routinely reaches 8192.</p>
+          <p><code>-p tdl</code></p>
+        </div>
+      </div>
+    </section>
 
-      <section id="results">
-        <h2>Training & Results</h2>
-        <p>Training runs for a fixed number of episodes (e.g. 100,000). Each episode is one game to termination. Stats (average score, max score, tile distribution) are printed every 1,000 episodes (or every 100 for shorter runs). Weights are saved at the end; if the weights file already exists at the start, it is loaded so you can resume training.</p>
-        <p>Rough expectations (single run, 4×6-tuple, α=0.1):</p>
-        <table>
-          <thead>
-            <tr><th>Episodes</th><th>Avg score (approx)</th><th>Reach 2048</th><th>Reach 4096</th><th>Reach 8192</th></tr>
-          </thead>
-          <tbody>
-            <tr><td>1K</td><td>~4k</td><td>~100%</td><td>~50%</td><td>~0%</td></tr>
-            <tr><td>10K</td><td>~20k–40k</td><td>~100%</td><td>~80%</td><td>~5–15%</td></tr>
-            <tr><td>100K</td><td>~60k–80k</td><td>~100%</td><td>~95%</td><td>~15–25%</td></tr>
-          </tbody>
-        </table>
-        <p>Exact numbers depend on hardware and random seed. Training 100K episodes typically takes on the order of a few minutes.</p>
-      </section>
+    <!-- ==================== GETTING STARTED ==================== -->
 
-      <section id="usage">
-        <h2>Usage</h2>
-        <p>Build (from repo root):</p>
-        <pre><code>cd cpp && mkdir -p build && cd build
-cmake .. -DCMAKE_BUILD_TYPE=Release && make 2048</code></pre>
-        <p>Train (creates or resumes <code>weights.bin</code>):</p>
-        <pre><code>./2048 --train --episodes 100000 --alpha 0.1 --weights weights.bin --output none</code></pre>
-        <p>Play with the trained network (e.g. 100 games, 4 threads, write benchmark JSON):</p>
-        <pre><code>./2048 -n 100 -t 4 --player-config ../configurations/tdl_config.json --benchmark-output results.json</code></pre>
-        <p><code>tdl_config.json</code> should contain:</p>
-        <pre><code>{
+    <section id="prerequisites">
+      <h2>Prerequisites</h2>
+      <table>
+        <thead><tr><th>Tool</th><th>Version</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td>C++ compiler</td><td>C++17</td><td>GCC 7+, Clang 5+, or MSVC 2017+</td></tr>
+          <tr><td>CMake</td><td>&ge; 3.10</td><td></td></tr>
+          <tr><td>Make / Ninja</td><td>any</td><td>Build tool (Make is default)</td></tr>
+          <tr><td>Git</td><td>any</td><td>To clone the repo</td></tr>
+        </tbody>
+      </table>
+
+      <p><strong>macOS:</strong> <code>xcode-select --install</code> provides everything. <strong>Ubuntu:</strong> <code>sudo apt install cmake g++</code>.</p>
+    </section>
+
+    <section id="building">
+      <h2>Building from Source</h2>
+
+      <h3>Clone and Build (Release)</h3>
+      <pre><code>git clone https://github.com/LevyMatan/2048-bot.git
+cd 2048-bot/cpp
+mkdir -p build &amp;&amp; cd build
+cmake .. -DCMAKE_BUILD_TYPE=Release
+make 2048</code></pre>
+      <p>The binary is created at <code>cpp/build/2048</code>.</p>
+
+      <h3>Debug Build (for watching games)</h3>
+      <pre><code>cmake .. -DCMAKE_BUILD_TYPE=Debug
+make 2048</code></pre>
+      <div class="callout">
+        <strong>Why Debug?</strong> In Release mode, all logging is compiled out (<code>NDEBUG</code> is defined), so <code>--wait</code> and <code>--log-level debug</code> have no effect. Use a Debug build when you want to watch the bot play step-by-step.
+      </div>
+
+      <h3>Running Tests</h3>
+      <pre><code>cd cpp/build
+make              # builds everything including tests
+ctest --output-on-failure</code></pre>
+    </section>
+
+    <section id="running">
+      <h2>Running Games</h2>
+      <p>All commands assume you are in <code>cpp/build/</code>.</p>
+
+      <h3>Quick Start: Heuristic Player</h3>
+      <pre><code># Play 10 games with the default heuristic player
+./2048 -n 10 -p heuristic</code></pre>
+
+      <h3>Expectimax Player</h3>
+      <pre><code># Play with expectimax, depth 4, time limit 100ms
+./2048 -n 5 -p expectimax --depth 4 --time 100</code></pre>
+
+      <h3>TDL Player (Trained Network)</h3>
+      <p>The TDL player requires a trained weights file. See <a href="#training">Training the Network</a> to create one, then:</p>
+      <pre><code># Play 100 games using the trained TDL player, 4 threads
+./2048 -n 100 -t 4 --player-config ../configurations/tdl_config.json</code></pre>
+      <p>The <code>tdl_config.json</code> file tells the player where to find the weights:</p>
+      <pre><code>{
   "playerType": "TDL",
   "weightsPath": "weights.bin"
 }</code></pre>
-        <p>Play without a config file (weights path empty = untrained, effectively random):</p>
-        <pre><code>./2048 -n 10 -p tdl --output none</code></pre>
-      </section>
-    </main>
-  </div>
-  <script>
-    mermaid.initialize({ startOnLoad: true, theme: 'base', themeVariables: { primaryColor: '#dbeafe', primaryTextColor: '#1e293b', primaryBorderColor: '#93c5fd', lineColor: '#64748b', secondaryColor: '#e0f2fe', tertiaryColor: '#f8fafc' } });
-  </script>
+
+      <h3>Watching a Game (Debug Build)</h3>
+      <pre><code># Build in Debug mode first, then:
+./2048 -n 1 -p tdl --player-config ../configurations/tdl_config.json \
+       --log-level debug --wait</code></pre>
+      <p>This prints the board after every move and waits for you to press Enter before continuing.</p>
+
+      <h3>Benchmarking</h3>
+      <pre><code># Run 1000 games, write stats as JSON
+./2048 -n 1000 -t 4 --player-config ../configurations/tdl_config.json \
+       --benchmark-output results.json</code></pre>
+      <p>The output JSON includes average score, P95 score, 4K/8K hit rates, and timing.</p>
+    </section>
+
+    <section id="cli-reference">
+      <h2>CLI Reference</h2>
+      <table>
+        <thead><tr><th>Flag</th><th>Description</th><th>Default</th></tr></thead>
+        <tbody>
+          <tr><td><code>-n, --games &lt;N&gt;</code></td><td>Number of games to play</td><td>1</td></tr>
+          <tr><td><code>-t, --threads &lt;N&gt;</code></td><td>Number of parallel threads</td><td>1</td></tr>
+          <tr><td><code>-p, --player &lt;type&gt;</code></td><td>Player: <code>random</code>, <code>heuristic</code>, <code>expectimax</code>, <code>tdl</code></td><td>heuristic</td></tr>
+          <tr><td><code>-d, --depth &lt;N&gt;</code></td><td>Search depth (expectimax)</td><td>3</td></tr>
+          <tr><td><code>-c, --chance &lt;N&gt;</code></td><td>Chance node coverage (expectimax)</td><td>1</td></tr>
+          <tr><td><code>--time &lt;ms&gt;</code></td><td>Time limit per move</td><td>1000</td></tr>
+          <tr><td><code>--adaptive</code></td><td>Enable adaptive search depth</td><td>off</td></tr>
+          <tr><td><code>--player-config &lt;file&gt;</code></td><td>Load player settings from JSON</td><td>&mdash;</td></tr>
+          <tr><td colspan="3" style="background: var(--code-bg); font-weight: 600;">Training</td></tr>
+          <tr><td><code>--train</code></td><td>Run TD(0) training mode</td><td>&mdash;</td></tr>
+          <tr><td><code>--episodes &lt;N&gt;</code></td><td>Training episodes</td><td>100000</td></tr>
+          <tr><td><code>--alpha &lt;rate&gt;</code></td><td>Learning rate</td><td>0.1</td></tr>
+          <tr><td><code>--weights &lt;path&gt;</code></td><td>Weights file (load/save)</td><td>weights.bin</td></tr>
+          <tr><td colspan="3" style="background: var(--code-bg); font-weight: 600;">Logging &amp; Debug</td></tr>
+          <tr><td><code>-l, --log-level &lt;lvl&gt;</code></td><td>Log level: error, warn, info, debug</td><td>error</td></tr>
+          <tr><td><code>-o, --output &lt;dest&gt;</code></td><td>Output: none, console, file, both</td><td>none</td></tr>
+          <tr><td><code>--wait</code></td><td>Pause between moves (press Enter)</td><td>off</td></tr>
+          <tr><td><code>--benchmark-output &lt;path&gt;</code></td><td>Write benchmark stats as JSON</td><td>&mdash;</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <!-- ==================== TDL DEEP DIVE ==================== -->
+
+    <section id="tdl-overview">
+      <h2>TDL Player &mdash; Deep Dive</h2>
+      <p>The TDL (Temporal-Difference Learning) player is the strongest strategy in this project. It learns a <strong>value function</strong> from self-play using <strong>n-tuple networks</strong> &mdash; a pattern-based function approximator that maps board states to expected future rewards.</p>
+
+      <p>The key ideas:</p>
+      <ol>
+        <li><strong>N-tuple networks</strong> provide a fast, compact way to evaluate board positions</li>
+        <li><strong>Isomorphic symmetry</strong> exploits the board&rsquo;s 8-fold symmetry to generalize across equivalent positions</li>
+        <li><strong>Afterstate values</strong> decouple the player&rsquo;s move from the random tile placement</li>
+        <li><strong>TD(0) learning</strong> updates the value function from the difference between consecutive predictions</li>
+      </ol>
+
+      <p>This approach is based on the seminal work by Szubert &amp; Ja&#347;kowski (2014) and subsequent improvements in the literature.</p>
+    </section>
+
+    <section id="ntuple">
+      <h2>N-Tuple Networks</h2>
+      <p>An <strong>n-tuple network</strong> is a set of pattern-based features. Each pattern is a fixed set of board positions (e.g., six specific cells). For a given board state, we:</p>
+      <ol>
+        <li>Read the tile values at the pattern&rsquo;s positions (each 0&ndash;15 in log<sub>2</sub> form)</li>
+        <li>Pack them into a single index: <code>index = tile[0] | (tile[1] &lt;&lt; 4) | ... | (tile[5] &lt;&lt; 20)</code></li>
+        <li>Look up a learned weight in a table using that index</li>
+        <li>Sum the weights across all patterns and all symmetric views</li>
+      </ol>
+
+      <h3>The Four 6-Tuple Patterns</h3>
+      <p>We use four <strong>6-tuples</strong>. Each has 16<sup>6</sup> = 16,777,216 entries (one float per possible 6-tile configuration). Total: 4 patterns &times; 64 MB &asymp; <strong>256 MB</strong>.</p>
+      <p>Board positions are numbered row-major:</p>
+      <pre><code> 0  1  2  3
+ 4  5  6  7
+ 8  9 10 11
+12 13 14 15</code></pre>
+
+      <table>
+        <thead><tr><th>Pattern</th><th>Positions</th><th>Shape</th></tr></thead>
+        <tbody>
+          <tr><td><strong>A</strong></td><td>{0, 1, 2, 3, 4, 5}</td><td>Top row + start of 2nd row</td></tr>
+          <tr><td><strong>B</strong></td><td>{4, 5, 6, 7, 8, 9}</td><td>2nd row + start of 3rd row</td></tr>
+          <tr><td><strong>C</strong></td><td>{0, 1, 2, 4, 5, 6}</td><td>L-shaped, top-left block</td></tr>
+          <tr><td><strong>D</strong></td><td>{4, 5, 6, 8, 9, 10}</td><td>L-shaped, middle block</td></tr>
+        </tbody>
+      </table>
+
+      <p>Pattern coverage on the board (highlighted cells):</p>
+      <svg class="board-svg" viewBox="0 0 340 200" xmlns="http://www.w3.org/2000/svg">
+        <!-- Pattern A: 0,1,2,3,4,5 -->
+        <text x="0" y="14" font-size="12" font-weight="bold" fill="currentColor">A</text>
+        <g transform="translate(0,18)"><rect x="0" y="0" width="36" height="36" rx="4" fill="var(--code-bg)" stroke="var(--border)"/><rect x="2" y="2" width="32" height="32" rx="3" fill="#3b82f6" opacity="0.8"/></g>
+        <g transform="translate(40,18)"><rect x="0" y="0" width="36" height="36" rx="4" fill="var(--code-bg)" stroke="var(--border)"/><rect x="2" y="2" width="32" height="32" rx="3" fill="#3b82f6" opacity="0.8"/></g>
+        <g transform="translate(80,18)"><rect x="0" y="0" width="36" height="36" rx="4" fill="var(--code-bg)" stroke="var(--border)"/><rect x="2" y="2" width="32" height="32" rx="3" fill="#3b82f6" opacity="0.8"/></g>
+        <g transform="translate(120,18)"><rect x="0" y="0" width="36" height="36" rx="4" fill="var(--code-bg)" stroke="var(--border)"/><rect x="2" y="2" width="32" height="32" rx="3" fill="#3b82f6" opacity="0.8"/></g>
+        <g transform="translate(0,58)"><rect x="0" y="0" width="36" height="36" rx="4" fill="var(--code-bg)" stroke="var(--border)"/><rect x="2" y="2" width="32" height="32" rx="3" fill="#3b82f6" opacity="0.8"/></g>
+        <g transform="translate(40,58)"><rect x="0" y="0" width="36" height="36" rx="4" fill="var(--code-bg)" stroke="var(--border)"/><rect x="2" y="2" width="32" height="32" rx="3" fill="#3b82f6" opacity="0.8"/></g>
+        <g transform="translate(80,58)"><rect x="0" y="0" width="36" height="36" rx="4" fill="var(--code-bg)" stroke="var(--border)"/></g>
+        <g transform="translate(120,58)"><rect x="0" y="0" width="36" height="36" rx="4" fill="var(--code-bg)" stroke="var(--border)"/></g>
+        <!-- Pattern B: 4,5,6,7,8,9 -->
+        <text x="172" y="14" font-size="12" font-weight="bold" fill="currentColor">B</text>
+        <g transform="translate(160,18)"><rect x="0" y="0" width="36" height="36" rx="4" fill="var(--code-bg)" stroke="var(--border)"/></g>
+        <g transform="translate(200,18)"><rect x="0" y="0" width="36" height="36" rx="4" fill="var(--code-bg)" stroke="var(--border)"/><rect x="2" y="2" width="32" height="32" rx="3" fill="#22c55e" opacity="0.8"/></g>
+        <g transform="translate(240,18)"><rect x="0" y="0" width="36" height="36" rx="4" fill="var(--code-bg)" stroke="var(--border)"/><rect x="2" y="2" width="32" height="32" rx="3" fill="#22c55e" opacity="0.8"/></g>
+        <g transform="translate(280,18)"><rect x="0" y="0" width="36" height="36" rx="4" fill="var(--code-bg)" stroke="var(--border)"/><rect x="2" y="2" width="32" height="32" rx="3" fill="#22c55e" opacity="0.8"/></g>
+        <g transform="translate(160,58)"><rect x="0" y="0" width="36" height="36" rx="4" fill="var(--code-bg)" stroke="var(--border)"/><rect x="2" y="2" width="32" height="32" rx="3" fill="#22c55e" opacity="0.8"/></g>
+        <g transform="translate(200,58)"><rect x="0" y="0" width="36" height="36" rx="4" fill="var(--code-bg)" stroke="var(--border)"/><rect x="2" y="2" width="32" height="32" rx="3" fill="#22c55e" opacity="0.8"/></g>
+        <g transform="translate(240,58)"><rect x="0" y="0" width="36" height="36" rx="4" fill="var(--code-bg)" stroke="var(--border)"/><rect x="2" y="2" width="32" height="32" rx="3" fill="#22c55e" opacity="0.8"/></g>
+        <g transform="translate(280,58)"><rect x="0" y="0" width="36" height="36" rx="4" fill="var(--code-bg)" stroke="var(--border)"/></g>
+        <!-- Pattern C: 0,1,2,4,5,6 -->
+        <text x="0" y="114" font-size="12" font-weight="bold" fill="currentColor">C</text>
+        <g transform="translate(0,118)"><rect x="0" y="0" width="36" height="36" rx="4" fill="var(--code-bg)" stroke="var(--border)"/><rect x="2" y="2" width="32" height="32" rx="3" fill="#eab308" opacity="0.8"/></g>
+        <g transform="translate(40,118)"><rect x="0" y="0" width="36" height="36" rx="4" fill="var(--code-bg)" stroke="var(--border)"/><rect x="2" y="2" width="32" height="32" rx="3" fill="#eab308" opacity="0.8"/></g>
+        <g transform="translate(80,118)"><rect x="0" y="0" width="36" height="36" rx="4" fill="var(--code-bg)" stroke="var(--border)"/><rect x="2" y="2" width="32" height="32" rx="3" fill="#eab308" opacity="0.8"/></g>
+        <g transform="translate(120,118)"><rect x="0" y="0" width="36" height="36" rx="4" fill="var(--code-bg)" stroke="var(--border)"/></g>
+        <g transform="translate(0,158)"><rect x="0" y="0" width="36" height="36" rx="4" fill="var(--code-bg)" stroke="var(--border)"/><rect x="2" y="2" width="32" height="32" rx="3" fill="#eab308" opacity="0.8"/></g>
+        <g transform="translate(40,158)"><rect x="0" y="0" width="36" height="36" rx="4" fill="var(--code-bg)" stroke="var(--border)"/><rect x="2" y="2" width="32" height="32" rx="3" fill="#eab308" opacity="0.8"/></g>
+        <g transform="translate(80,158)"><rect x="0" y="0" width="36" height="36" rx="4" fill="var(--code-bg)" stroke="var(--border)"/><rect x="2" y="2" width="32" height="32" rx="3" fill="#eab308" opacity="0.8"/></g>
+        <g transform="translate(120,158)"><rect x="0" y="0" width="36" height="36" rx="4" fill="var(--code-bg)" stroke="var(--border)"/></g>
+        <!-- Pattern D: 4,5,6,8,9,10 -->
+        <text x="172" y="114" font-size="12" font-weight="bold" fill="currentColor">D</text>
+        <g transform="translate(160,118)"><rect x="0" y="0" width="36" height="36" rx="4" fill="var(--code-bg)" stroke="var(--border)"/></g>
+        <g transform="translate(200,118)"><rect x="0" y="0" width="36" height="36" rx="4" fill="var(--code-bg)" stroke="var(--border)"/><rect x="2" y="2" width="32" height="32" rx="3" fill="#a855f7" opacity="0.8"/></g>
+        <g transform="translate(240,118)"><rect x="0" y="0" width="36" height="36" rx="4" fill="var(--code-bg)" stroke="var(--border)"/><rect x="2" y="2" width="32" height="32" rx="3" fill="#a855f7" opacity="0.8"/></g>
+        <g transform="translate(280,118)"><rect x="0" y="0" width="36" height="36" rx="4" fill="var(--code-bg)" stroke="var(--border)"/></g>
+        <g transform="translate(160,158)"><rect x="0" y="0" width="36" height="36" rx="4" fill="var(--code-bg)" stroke="var(--border)"/><rect x="2" y="2" width="32" height="32" rx="3" fill="#a855f7" opacity="0.8"/></g>
+        <g transform="translate(200,158)"><rect x="0" y="0" width="36" height="36" rx="4" fill="var(--code-bg)" stroke="var(--border)"/><rect x="2" y="2" width="32" height="32" rx="3" fill="#a855f7" opacity="0.8"/></g>
+        <g transform="translate(240,158)"><rect x="0" y="0" width="36" height="36" rx="4" fill="var(--code-bg)" stroke="var(--border)"/><rect x="2" y="2" width="32" height="32" rx="3" fill="#a855f7" opacity="0.8"/></g>
+        <g transform="translate(280,158)"><rect x="0" y="0" width="36" height="36" rx="4" fill="var(--code-bg)" stroke="var(--border)"/></g>
+      </svg>
+
+      <h3>Why These Patterns?</h3>
+      <p>The patterns are chosen to capture <strong>local spatial structure</strong>: row continuations (A, B) and rectangular blocks (C, D). Together they cover the most important tile arrangements for strategic play &mdash; keeping large tiles in corners, maintaining monotonic rows, and building merge chains. The 8-way symmetry (below) ensures full board coverage from just these four patterns.</p>
+    </section>
+
+    <section id="symmetry">
+      <h2>Isomorphic Symmetry</h2>
+      <p>A 4&times;4 board has <strong>8 symmetric forms</strong>: 4 rotations &times; 2 (identity + mirror). The same board configuration rotated or reflected should have the same value. Rather than storing separate weights for each orientation, we <strong>share weights</strong> by evaluating the board in all 8 views and summing:</p>
+
+      <div class="mermaid">
+flowchart LR
+  B["Board state"]
+  T1["Identity"]
+  T2["Rot 90&deg;"]
+  T3["Rot 180&deg;"]
+  T4["Rot 270&deg;"]
+  T5["Mirror"]
+  T6["Mirror + 90&deg;"]
+  T7["Mirror + 180&deg;"]
+  T8["Mirror + 270&deg;"]
+  S["&Sigma; weights"]
+  B --> T1 --> S
+  B --> T2 --> S
+  B --> T3 --> S
+  B --> T4 --> S
+  B --> T5 --> S
+  B --> T6 --> S
+  B --> T7 --> S
+  B --> T8 --> S
+      </div>
+
+      <p>Implementation uses an <strong>index board</strong> (<code>0xFEDCBA9876543210</code>) where cell <em>i</em> contains value <em>i</em>. We apply each of the 8 transforms to this index board, then read the pattern positions from the transformed result. The values we read are the <em>original cell indices</em> that map to each pattern position under that symmetry.</p>
+
+      <p>This means for each pattern we do <strong>8 table lookups</strong> (one per symmetric view) instead of 1, but we only need <strong>one weight table</strong> per pattern. The total evaluation is:</p>
+      <div class="formula">
+        V(state) = &Sigma;<sub>pattern</sub> &Sigma;<sub>sym=1..8</sub> weights[index(state, pattern, sym)]
+      </div>
+      <p>With 4 patterns &times; 8 symmetries = <strong>32 table lookups</strong> per evaluation &mdash; extremely fast.</p>
+    </section>
+
+    <section id="afterstate">
+      <h2>Afterstate Value Function</h2>
+      <p>We learn the value of <strong>afterstates</strong>: the board <em>after</em> the player&rsquo;s move but <em>before</em> the random tile appears. This is more stable than valuing states after the random tile, because the same afterstate can lead to many next states depending on where the random tile lands.</p>
+
+      <div class="mermaid">
+flowchart LR
+  S["State s"] -->|"player move"| A["Afterstate s'"]
+  A -->|"random tile"| S2["Next state s''"]
+  style A fill:#dbeafe,stroke:#2563eb,color:#1e293b
+      </div>
+
+      <h3>Move Selection</h3>
+      <p>At each turn, for every legal move we compute the afterstate and evaluate:</p>
+      <div class="formula">
+        best move = argmax<sub>move</sub> [ reward(move) + V(afterstate(move)) ]
+      </div>
+      <p>The policy is <strong>greedy</strong>: pick the move with the highest immediate reward plus estimated future value. No search tree is needed &mdash; just one evaluation per legal move.</p>
+    </section>
+
+    <section id="td-learning">
+      <h2>TD(0) Learning</h2>
+      <p>Training is done by <strong>self-play</strong>. Each episode is one complete game. We collect a trajectory of (afterstate, reward) pairs, then perform a <strong>backward pass</strong> to update weights using the temporal-difference error.</p>
+
+      <h3>The Update Rule</h3>
+      <p>Let <em>r<sub>t</sub></em> be the reward at step <em>t</em>, <em>s'<sub>t</sub></em> the afterstate, and &alpha; the learning rate. The TD(0) update is:</p>
+      <div class="formula">
+        V(s'<sub>t</sub>) &larr; V(s'<sub>t</sub>) + &alpha; &middot; [ r<sub>t</sub> + V(s'<sub>t+1</sub>) &minus; V(s'<sub>t</sub>) ]
+      </div>
+      <p>At the terminal state, the future value is 0. We iterate <strong>backwards</strong> so that when updating step <em>t</em>, step <em>t+1</em> has already been updated.</p>
+
+      <h3>Weight Distribution</h3>
+      <p>The adjustment is distributed evenly across all contributing lookups:</p>
+      <ul>
+        <li>Split by 4 across patterns (each pattern gets &frac14; of the adjustment)</li>
+        <li>Within each pattern, split by 8 across isomorphic views (each lookup gets &frac18;)</li>
+        <li>Total: each individual weight entry receives <code>&alpha; &middot; error / 32</code></li>
+      </ul>
+
+      <h3>Training Pseudocode</h3>
+      <pre><code>for episode = 1 to N:
+    path = []
+    state = new_game()            # two random tiles
+
+    while has_legal_move(state):
+        move = argmax(reward + V(afterstate))
+        path.append( (afterstate, reward) )
+        state = afterstate
+        state = add_random_tile(state)
+
+    # Backward TD(0) pass
+    target = 0
+    for t = len(path)-1 down to 0:
+        (s', r) = path[t]
+        error  = target - V(s')
+        V(s') += alpha * error      # distributed over 32 lookups
+        target  = r + V(s')</code></pre>
+
+      <div class="mermaid">
+flowchart TB
+  subgraph episode ["One Training Episode"]
+    direction TB
+    Init["Init board<br>(2 random tiles)"]
+    Loop["For each step:<br>pick best move,<br>record (afterstate, reward),<br>add random tile"]
+    Term["Game over"]
+    Back["Backward pass:<br>TD(0) weight updates"]
+    Init --> Loop --> Term --> Back
+  end
+      </div>
+    </section>
+
+    <section id="architecture">
+      <h2>Architecture</h2>
+      <p>The implementation consists of three main components:</p>
+
+      <div class="mermaid">
+flowchart TB
+  subgraph network ["NTupleNetwork"]
+    P1["NTuplePattern A<br>weights: 16^6 floats"]
+    P2["NTuplePattern B<br>weights: 16^6 floats"]
+    P3["NTuplePattern C<br>weights: 16^6 floats"]
+    P4["NTuplePattern D<br>weights: 16^6 floats"]
+  end
+  TDL["TDLPlayer"]
+  TDL --> network
+  TDL -->|"chooseAction(state)"| eval["For each legal move:<br>reward + estimate(afterstate)"]
+  eval --> network
+  eval --> best["Return best move"]
+
+  style TDL fill:#dbeafe,stroke:#2563eb,color:#1e293b
+  style network fill:#f0fdf4,stroke:#22c55e,color:#1e293b
+      </div>
+
+      <h3><code>NTuplePattern</code></h3>
+      <ul>
+        <li>Holds one weight table of size 16<sup>6</sup> (16,777,216 floats)</li>
+        <li>Precomputes the 8 isomorphic index mappings at construction time</li>
+        <li><code>estimate(state)</code> &rarr; sum of 8 table lookups</li>
+        <li><code>update(state, adjust)</code> &rarr; add <code>adjust/8</code> to each of the 8 entries</li>
+      </ul>
+
+      <h3><code>NTupleNetwork</code></h3>
+      <ul>
+        <li>Holds 4 <code>NTuplePattern</code> instances</li>
+        <li><code>estimate(state)</code> &rarr; sum across all 4 patterns (32 lookups total)</li>
+        <li><code>update(state, adjust)</code> &rarr; distributes <code>adjust/4</code> to each pattern</li>
+        <li><code>save(path)</code> / <code>load(path)</code> for binary serialization of weights</li>
+      </ul>
+
+      <h3><code>TDLPlayer</code></h3>
+      <ul>
+        <li>Holds a <code>shared_ptr&lt;NTupleNetwork&gt;</code></li>
+        <li><code>chooseAction(state)</code>: enumerates legal moves, evaluates each as <code>score + network.estimate(afterstate)</code>, returns the best</li>
+        <li><code>trainNetwork()</code>: static method that runs self-play episodes and updates the network with TD(0)</li>
+        <li>Supports loading pre-trained weights for instant play</li>
+      </ul>
+    </section>
+
+    <section id="training">
+      <h2>Training the Network</h2>
+
+      <h3>Basic Training</h3>
+      <pre><code># From cpp/build/ (Release build recommended for speed)
+./2048 --train --episodes 100000 --alpha 0.1 --weights weights.bin</code></pre>
+
+      <h3>Training Options</h3>
+      <table>
+        <thead><tr><th>Flag</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>--episodes &lt;N&gt;</code></td><td>Number of self-play games. More = stronger. 100K is a good start; 1M for maximum strength.</td></tr>
+          <tr><td><code>--alpha &lt;rate&gt;</code></td><td>Learning rate. 0.1 works well. Lower values (0.01) for fine-tuning after initial training.</td></tr>
+          <tr><td><code>--weights &lt;path&gt;</code></td><td>Path to weights file. If it exists, training <strong>resumes</strong> from it. Saved at the end.</td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout">
+        <strong>Resume training:</strong> Running the same command again will load the existing <code>weights.bin</code> and continue training. This lets you incrementally improve the network without restarting from scratch.
+      </div>
+
+      <h3>Training Output</h3>
+      <p>Stats are printed every 1,000 episodes (or every 100 for short runs):</p>
+      <pre><code>1000    avg = 4523      max = 18244
+        2       100%    (0%)
+        4       100%    (0%)
+        ...
+        2048    42.3%   (25.1%)
+        4096    17.2%   (17.2%)
+...
+100000  avg = 78432     max = 289012
+        2048    100%    (3.2%)
+        4096    96.8%   (18.5%)
+        8192    78.3%   (78.3%)</code></pre>
+      <p>Each line shows: tile value, cumulative reach rate, and (terminal rate &mdash; fraction of games where that was the highest tile).</p>
+
+      <h3>Training Progression</h3>
+      <div class="mermaid">
+xychart-beta
+  title "Approximate Average Score vs Training Episodes"
+  x-axis ["1K", "10K", "50K", "100K", "500K", "1M"]
+  y-axis "Average Score" 0 --> 160000
+  bar [4000, 30000, 65000, 80000, 120000, 140000]
+      </div>
+    </section>
+
+    <section id="results">
+      <h2>Results</h2>
+      <p>Approximate performance after training (single run, 4&times;6-tuple, &alpha;=0.1):</p>
+
+      <table>
+        <thead>
+          <tr><th>Episodes</th><th>Avg Score</th><th>Reach 2048</th><th>Reach 4096</th><th>Reach 8192</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>1K</td><td>~4,000</td><td>~40%</td><td>~10%</td><td>~0%</td></tr>
+          <tr><td>10K</td><td>~30,000</td><td>~100%</td><td>~80%</td><td>~5&ndash;15%</td></tr>
+          <tr><td>100K</td><td>~80,000</td><td>~100%</td><td>~95%</td><td>~15&ndash;25%</td></tr>
+          <tr><td>1M</td><td>~135,000</td><td>~100%</td><td>~93%</td><td>~70&ndash;75%</td></tr>
+        </tbody>
+      </table>
+
+      <p>After 1M episodes, the TDL player reaches the <strong>8192 tile in about 70&ndash;75% of games</strong> and occasionally achieves the <strong>16384 tile</strong> (~3&ndash;4% of games). Training 1M episodes takes approximately 15&ndash;30 minutes depending on hardware.</p>
+
+      <h3>Comparison Across Players</h3>
+      <table>
+        <thead>
+          <tr><th>Player</th><th>Avg Score</th><th>4096 Rate</th><th>8192 Rate</th><th>Speed (games/sec)</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Random</td><td>~1,000</td><td>&lt;1%</td><td>0%</td><td>very fast</td></tr>
+          <tr><td>Heuristic</td><td>~8,000</td><td>~15%</td><td>0%</td><td>fast</td></tr>
+          <tr><td>Expectimax (d=4)</td><td>~20,000</td><td>~60%</td><td>&lt;1%</td><td>~5&ndash;20</td></tr>
+          <tr><td>TDL (1M trained)</td><td>~135,000</td><td>~93%</td><td>~70&ndash;75%</td><td>~100&ndash;300</td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout">
+        The TDL player is not only <strong>much stronger</strong> than other players but also <strong>faster</strong> at inference time &mdash; each move requires only 32 table lookups (no tree search), making it highly suitable for real-time play and large-scale benchmarking.
+      </div>
+    </section>
+
+    <div class="back-top">
+      <a href="#intro">&uarr; Back to top</a>
+    </div>
+
+  </main>
+</div>
+
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'base',
+    themeVariables: {
+      primaryColor: '#dbeafe',
+      primaryTextColor: '#1e293b',
+      primaryBorderColor: '#93c5fd',
+      lineColor: '#64748b',
+      secondaryColor: '#e0f2fe',
+      tertiaryColor: '#f8fafc'
+    }
+  });
+</script>
 </body>
 </html>
