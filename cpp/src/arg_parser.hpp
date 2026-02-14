@@ -32,6 +32,12 @@ public:
     /** If non-empty, write benchmark stats (8K rate, scores, etc.) to this path as JSON. */
     std::string getBenchmarkOutputPath() const { return benchmarkOutputPath; }
 
+    /** Training mode: run TD(0) n-tuple network training instead of playing games. */
+    bool isTrainMode() const { return trainMode; }
+    int getTrainEpisodes() const { return trainEpisodes; }
+    float getTrainAlpha() const { return trainAlpha; }
+    std::string getTrainWeightsPath() const { return trainWeightsPath; }
+
 private:
     void parseArguments(int argc, char* argv[]);
     void parseShortFlag(const std::string& flag, const std::string& value);
@@ -57,6 +63,11 @@ private:
     const std::string defaultPlayerConfigPath = "configurations/player_config.json";
 
     std::string benchmarkOutputPath;
+
+    bool trainMode = false;
+    int trainEpisodes = 100000;
+    float trainAlpha = 0.1f;
+    std::string trainWeightsPath = "weights.bin";
 };
 
 

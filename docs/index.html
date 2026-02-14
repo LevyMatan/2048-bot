@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>2048 Bot — N-Tuple TD-Learning Player</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    :root {
+      --bg: #f5f5f5;
+      --surface: #fff;
+      --text: #1a1a1a;
+      --text-muted: #555;
+      --accent: #2563eb;
+      --accent-soft: #dbeafe;
+      --border: #e5e7eb;
+      --code-bg: #f1f5f9;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0f172a;
+        --surface: #1e293b;
+        --text: #e2e8f0;
+        --text-muted: #94a3b8;
+        --accent: #60a5fa;
+        --accent-soft: #1e3a5f;
+        --border: #334155;
+        --code-bg: #0f172a;
+      }
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      line-height: 1.6;
+      color: var(--text);
+      background: var(--bg);
+      margin: 0;
+      padding: 0;
+    }
+    .layout {
+      display: grid;
+      grid-template-columns: 200px 1fr;
+      gap: 2rem;
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 1rem 2rem 3rem;
+    }
+    @media (max-width: 768px) {
+      .layout { grid-template-columns: 1fr; }
+      nav { position: static !important; }
+    }
+    nav {
+      position: sticky;
+      top: 1rem;
+      height: fit-content;
+      padding: 0.5rem 0;
+    }
+    nav a {
+      display: block;
+      color: var(--text-muted);
+      text-decoration: none;
+      padding: 0.35rem 0;
+      font-size: 0.9rem;
+    }
+    nav a:hover { color: var(--accent); }
+    main { min-width: 0; }
+    h1 { font-size: 1.75rem; margin-top: 0; }
+    h2 { font-size: 1.35rem; margin-top: 2rem; padding-top: 0.5rem; border-top: 1px solid var(--border); }
+    h2:first-of-type { margin-top: 1rem; border-top: none; padding-top: 0; }
+    h3 { font-size: 1.1rem; margin-top: 1.25rem; }
+    p { margin: 0.75rem 0; }
+    a { color: var(--accent); }
+    pre, code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, monospace;
+      font-size: 0.875rem;
+    }
+    pre {
+      background: var(--code-bg);
+      padding: 1rem;
+      border-radius: 6px;
+      overflow-x: auto;
+      border: 1px solid var(--border);
+    }
+    code { padding: 0.15em 0.4em; border-radius: 4px; background: var(--code-bg); }
+    pre code { padding: 0; background: none; }
+    .hero {
+      background: var(--surface);
+      padding: 2rem;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      margin-bottom: 2rem;
+    }
+    .hero h1 { margin-top: 0; }
+    .hero p:last-child { margin-bottom: 0; }
+    .board-svg { width: 100%; max-width: 280px; height: auto; }
+    .mermaid { margin: 1rem 0; }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+      max-width: 420px;
+      margin: 1rem 0;
+    }
+    th, td { padding: 0.5rem 0.75rem; text-align: left; border: 1px solid var(--border); }
+    th { background: var(--code-bg); }
+    section { margin-bottom: 2rem; }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <nav>
+      <a href="#intro">Intro</a>
+      <a href="#problem">The Problem</a>
+      <a href="#ntuple">N-Tuple Networks</a>
+      <a href="#symmetry">Isomorphic Symmetry</a>
+      <a href="#afterstate">Afterstate Value</a>
+      <a href="#td">TD(0) Learning</a>
+      <a href="#architecture">Architecture</a>
+      <a href="#results">Training & Results</a>
+      <a href="#usage">Usage</a>
+    </nav>
+    <main>
+      <section id="intro" class="hero">
+        <h1>2048 Bot — N-Tuple TD-Learning Player</h1>
+        <p>This repo implements a strong 2048 AI using <strong>n-tuple networks</strong> and <strong>temporal-difference (TD) learning</strong>. The TDL player learns a value function from self-play and can reach the 8192 tile in a large fraction of games after training.</p>
+        <p><a href="https://github.com/LevyMatan/2048-bot">View on GitHub</a></p>
+      </section>
+
+      <section id="problem">
+        <h2>The Problem</h2>
+        <p>2048 is a single-player puzzle: slide tiles on a 4×4 grid, merge equal numbers, and try to reach 2048 and beyond. The game is stochastic (a random 2 or 4 appears after each move), so planning must account for uncertainty.</p>
+        <p>Hand-crafted heuristics (monotonicity, smoothness, corner value, etc.) with tuned weights power an expectimax search, but they hit a ceiling: the evaluation cannot capture the complex patterns that matter. In practice, expectimax with heuristic evaluation rarely reaches the 8192 tile. Strong play requires a <em>learned</em> value function.</p>
+      </section>
+
+      <section id="ntuple">
+        <h2>N-Tuple Networks</h2>
+        <p>An <strong>n-tuple network</strong> is a set of pattern-based features. Each &ldquo;pattern&rdquo; is a fixed set of board positions (e.g. six cells). For a given board state, we read the tile values at those positions (each value 0–15 in log₂ form), concatenate them into a single index, and look up a weight in a table. The value of the state is the sum of the looked-up weights over all patterns (and over all symmetric views; see below).</p>
+        <p>We use four <strong>6-tuples</strong>. Each 6-tuple has 16<sup>6</sup> = 16,777,216 entries (one float per possible 6-tile configuration). Four patterns × 64 MB ≈ 256 MB total. The board layout (positions 0–15) is:</p>
+        <p><strong>Board positions (row-major):</strong></p>
+        <pre><code> 0  1  2  3
+ 4  5  6  7
+ 8  9 10 11
+12 13 14 15</code></pre>
+        <p>The four patterns in this implementation are:</p>
+        <ul>
+          <li><strong>Pattern A:</strong> {0, 1, 2, 3, 4, 5} — top row + start of second row</li>
+          <li><strong>Pattern B:</strong> {4, 5, 6, 7, 8, 9} — second and third rows (left to middle)</li>
+          <li><strong>Pattern C:</strong> {0, 1, 2, 4, 5, 6} — L-shaped (top-left block)</li>
+          <li><strong>Pattern D:</strong> {4, 5, 6, 8, 9, 10} — L-shaped (middle block)</li>
+        </ul>
+        <p>Which cells each pattern covers (highlighted in each grid):</p>
+        <svg class="board-svg" viewBox="0 0 340 200" xmlns="http://www.w3.org/2000/svg">
+          <!-- Pattern A: 0,1,2,3,4,5 -->
+          <text x="0" y="14" font-size="12" fill="currentColor">A</text>
+          <g transform="translate(0,18)"><rect x="0" y="0" width="36" height="36" rx="3" fill="var(--code-bg)" stroke="var(--border)"/><rect x="2" y="2" width="32" height="32" rx="2" fill="#3b82f6" opacity="0.8"/></g>
+          <g transform="translate(40,18)"><rect x="0" y="0" width="36" height="36" rx="3" fill="var(--code-bg)" stroke="var(--border)"/><rect x="2" y="2" width="32" height="32" rx="2" fill="#3b82f6" opacity="0.8"/></g>
+          <g transform="translate(80,18)"><rect x="0" y="0" width="36" height="36" rx="3" fill="var(--code-bg)" stroke="var(--border)"/><rect x="2" y="2" width="32" height="32" rx="2" fill="#3b82f6" opacity="0.8"/></g>
+          <g transform="translate(120,18)"><rect x="0" y="0" width="36" height="36" rx="3" fill="var(--code-bg)" stroke="var(--border)"/><rect x="2" y="2" width="32" height="32" rx="2" fill="#3b82f6" opacity="0.8"/></g>
+          <g transform="translate(0,58)"><rect x="0" y="0" width="36" height="36" rx="3" fill="var(--code-bg)" stroke="var(--border)"/><rect x="2" y="2" width="32" height="32" rx="2" fill="#3b82f6" opacity="0.8"/></g>
+          <g transform="translate(40,58)"><rect x="0" y="0" width="36" height="36" rx="3" fill="var(--code-bg)" stroke="var(--border)"/><rect x="2" y="2" width="32" height="32" rx="2" fill="#3b82f6" opacity="0.8"/></g>
+          <g transform="translate(80,58)"><rect x="0" y="0" width="36" height="36" rx="3" fill="var(--code-bg)" stroke="var(--border)"/></g>
+          <g transform="translate(120,58)"><rect x="0" y="0" width="36" height="36" rx="3" fill="var(--code-bg)" stroke="var(--border)"/></g>
+          <!-- Pattern B: 4,5,6,7,8,9 -->
+          <text x="160" y="14" font-size="12" fill="currentColor">B</text>
+          <g transform="translate(160,18)"><rect x="0" y="0" width="36" height="36" rx="3" fill="var(--code-bg)" stroke="var(--border)"/></g>
+          <g transform="translate(200,18)"><rect x="0" y="0" width="36" height="36" rx="3" fill="var(--code-bg)" stroke="var(--border)"/><rect x="2" y="2" width="32" height="32" rx="2" fill="#22c55e" opacity="0.8"/></g>
+          <g transform="translate(240,18)"><rect x="0" y="0" width="36" height="36" rx="3" fill="var(--code-bg)" stroke="var(--border)"/><rect x="2" y="2" width="32" height="32" rx="2" fill="#22c55e" opacity="0.8"/></g>
+          <g transform="translate(280,18)"><rect x="0" y="0" width="36" height="36" rx="3" fill="var(--code-bg)" stroke="var(--border)"/><rect x="2" y="2" width="32" height="32" rx="2" fill="#22c55e" opacity="0.8"/></g>
+          <g transform="translate(160,58)"><rect x="0" y="0" width="36" height="36" rx="3" fill="var(--code-bg)" stroke="var(--border)"/><rect x="2" y="2" width="32" height="32" rx="2" fill="#22c55e" opacity="0.8"/></g>
+          <g transform="translate(200,58)"><rect x="0" y="0" width="36" height="36" rx="3" fill="var(--code-bg)" stroke="var(--border)"/><rect x="2" y="2" width="32" height="32" rx="2" fill="#22c55e" opacity="0.8"/></g>
+          <g transform="translate(240,58)"><rect x="0" y="0" width="36" height="36" rx="3" fill="var(--code-bg)" stroke="var(--border)"/><rect x="2" y="2" width="32" height="32" rx="2" fill="#22c55e" opacity="0.8"/></g>
+          <g transform="translate(280,58)"><rect x="0" y="0" width="36" height="36" rx="3" fill="var(--code-bg)" stroke="var(--border)"/></g>
+          <!-- Pattern C: 0,1,2,4,5,6 -->
+          <text x="0" y="114" font-size="12" fill="currentColor">C</text>
+          <g transform="translate(0,118)"><rect x="0" y="0" width="36" height="36" rx="3" fill="var(--code-bg)" stroke="var(--border)"/><rect x="2" y="2" width="32" height="32" rx="2" fill="#eab308" opacity="0.8"/></g>
+          <g transform="translate(40,118)"><rect x="0" y="0" width="36" height="36" rx="3" fill="var(--code-bg)" stroke="var(--border)"/><rect x="2" y="2" width="32" height="32" rx="2" fill="#eab308" opacity="0.8"/></g>
+          <g transform="translate(80,118)"><rect x="0" y="0" width="36" height="36" rx="3" fill="var(--code-bg)" stroke="var(--border)"/><rect x="2" y="2" width="32" height="32" rx="2" fill="#eab308" opacity="0.8"/></g>
+          <g transform="translate(120,118)"><rect x="0" y="0" width="36" height="36" rx="3" fill="var(--code-bg)" stroke="var(--border)"/></g>
+          <g transform="translate(0,158)"><rect x="0" y="0" width="36" height="36" rx="3" fill="var(--code-bg)" stroke="var(--border)"/><rect x="2" y="2" width="32" height="32" rx="2" fill="#eab308" opacity="0.8"/></g>
+          <g transform="translate(40,158)"><rect x="0" y="0" width="36" height="36" rx="3" fill="var(--code-bg)" stroke="var(--border)"/><rect x="2" y="2" width="32" height="32" rx="2" fill="#eab308" opacity="0.8"/></g>
+          <g transform="translate(80,158)"><rect x="0" y="0" width="36" height="36" rx="3" fill="var(--code-bg)" stroke="var(--border)"/><rect x="2" y="2" width="32" height="32" rx="2" fill="#eab308" opacity="0.8"/></g>
+          <g transform="translate(120,158)"><rect x="0" y="0" width="36" height="36" rx="3" fill="var(--code-bg)" stroke="var(--border)"/></g>
+          <!-- Pattern D: 4,5,6,8,9,10 -->
+          <text x="160" y="114" font-size="12" fill="currentColor">D</text>
+          <g transform="translate(160,118)"><rect x="0" y="0" width="36" height="36" rx="3" fill="var(--code-bg)" stroke="var(--border)"/></g>
+          <g transform="translate(200,118)"><rect x="0" y="0" width="36" height="36" rx="3" fill="var(--code-bg)" stroke="var(--border)"/><rect x="2" y="2" width="32" height="32" rx="2" fill="#a855f7" opacity="0.8"/></g>
+          <g transform="translate(240,118)"><rect x="0" y="0" width="36" height="36" rx="3" fill="var(--code-bg)" stroke="var(--border)"/><rect x="2" y="2" width="32" height="32" rx="2" fill="#a855f7" opacity="0.8"/></g>
+          <g transform="translate(280,118)"><rect x="0" y="0" width="36" height="36" rx="3" fill="var(--code-bg)" stroke="var(--border)"/></g>
+          <g transform="translate(160,158)"><rect x="0" y="0" width="36" height="36" rx="3" fill="var(--code-bg)" stroke="var(--border)"/><rect x="2" y="2" width="32" height="32" rx="2" fill="#a855f7" opacity="0.8"/></g>
+          <g transform="translate(200,158)"><rect x="0" y="0" width="36" height="36" rx="3" fill="var(--code-bg)" stroke="var(--border)"/><rect x="2" y="2" width="32" height="32" rx="2" fill="#a855f7" opacity="0.8"/></g>
+          <g transform="translate(240,158)"><rect x="0" y="0" width="36" height="36" rx="3" fill="var(--code-bg)" stroke="var(--border)"/><rect x="2" y="2" width="32" height="32" rx="2" fill="#a855f7" opacity="0.8"/></g>
+          <g transform="translate(280,158)"><rect x="0" y="0" width="36" height="36" rx="3" fill="var(--code-bg)" stroke="var(--border)"/></g>
+        </svg>
+        <p>Index computation: for one pattern and one symmetric view, we read tiles at the pattern&rsquo;s positions (after mapping through that view), pack them into a 24-bit index: <code>index = tile[0] | (tile[1] &lt;&lt; 4) | ... | (tile[5] &lt;&lt; 20)</code>, and add <code>weights[index]</code> to the state value.</p>
+      </section>
+
+      <section id="symmetry">
+        <h2>Isomorphic Symmetry</h2>
+        <p>The same board configuration can appear in 8 equivalent forms: 4 rotations and 4 reflections. We share weights across these views by evaluating the board in all 8 symmetric forms and summing the looked-up weights. That way we need only one weight table per pattern, and the policy is rotation/reflection invariant.</p>
+        <p>To get the &ldquo;canonical&rdquo; positions for each symmetric view we use an <strong>index board</strong>: a fixed 64-bit state where cell <em>i</em> contains the value <em>i</em> (so we can see where each original cell moved after a transform). In code this is <code>0xFEDCBA9876543210</code> (nibbles 0–15 in row-major order). We apply each of the 8 transforms (4 rotations of the identity, then 4 rotations of the mirrored board) to this index board; for each transformed board, we read the values at the pattern positions. Those values are the original cell indices we should sample. So for symmetry <em>s</em> and pattern position <em>j</em>, <code>isom[s][j]</code> = which cell to read from the current board to get the &ldquo;logical&rdquo; tile at <em>j</em> in view <em>s</em>.</p>
+        <p>Evaluation: for each of the 4 patterns, we do 8 lookups (one per symmetric view), sum them, and add to the total. So <code>V(state) = sum over patterns of (sum over 8 isomorphisms of weights[index])</code>.</p>
+      </section>
+
+      <section id="afterstate">
+        <h2>Afterstate Value Function</h2>
+        <p>We learn the value of <strong>afterstates</strong>: the board <em>after</em> the player&rsquo;s move but <em>before</em> the random tile is placed. That is more stable than valuing &ldquo;raw&rdquo; states (after the random tile), because the same afterstate can lead to many possible next states (one per possible tile placement).</p>
+        <p>Flow in one step:</p>
+        <div class="mermaid">
+flowchart LR
+  S0["state s"]
+  A["move"]
+  S1["afterstate s'"]
+  R["random tile"]
+  S2["next state s''"]
+  S0 --> A --> S1 --> R --> S2
+        </div>
+        <p>At move time we have state <em>s</em>. For each legal move we get afterstate <em>s'</em> and immediate reward <em>r</em>. We choose the move that maximizes <code>r + V(s')</code>. So the policy is greedy with respect to reward plus afterstate value.</p>
+      </section>
+
+      <section id="td">
+        <h2>TD(0) Learning</h2>
+        <p>We train by self-play. Each episode is one game. We collect a trajectory of (afterstate, reward) pairs. After the game ends we perform a <strong>backward pass</strong> and update weights with the temporal-difference error.</p>
+        <p>Let <em>r<sub>t</sub></em> be the reward for the move at step <em>t</em>, and <em>s'<sub>t</sub></em> the afterstate after that move. The next afterstate in the trajectory is <em>s'<sub>t+1</sub></em> (or we treat the terminal as having value 0). TD(0) update:</p>
+        <p><code>V(s'<sub>t</sub>) += α · (r<sub>t</sub> + V(s'<sub>t+1</sub>) − V(s'<sub>t</sub>))</code></p>
+        <p>We iterate backwards over the trajectory so that when we update <em>s'<sub>t</sub></em>, we use the already-updated value of <em>s'<sub>t+1</sub></em> (or 0 for the last step). The adjustment <code>α · (r + V(s'') − V(s'))</code> is distributed evenly across all pattern lookups that contributed to <code>V(s')</code> (i.e. each of the 4 patterns gets one quarter, and within each pattern the 8 isomorphic lookups get one eighth each).</p>
+        <p>Pseudocode:</p>
+        <pre><code>for episode = 1 to N:
+  path = []
+  state = initial_board()
+  while has_valid_move(state):
+    move = argmax over legal moves of (reward(move) + V(afterstate(move)))
+    path.append((afterstate(move), reward(move)))
+    state = afterstate(move)
+    state = add_random_tile(state)
+  target = 0
+  for t = len(path)-1 down to 0:
+    (s', r) = path[t]
+    error = target - V(s')
+    V(s') += alpha * error   // distributed over pattern lookups
+    target = r + V(s')</code></pre>
+      </section>
+
+      <section id="architecture">
+        <h2>Architecture</h2>
+        <p>Class structure and data flow:</p>
+        <div class="mermaid">
+flowchart TB
+  subgraph network [NTupleNetwork]
+    P1[NTuplePattern 1]
+    P2[NTuplePattern 2]
+    P3[NTuplePattern 3]
+    P4[NTuplePattern 4]
+    P1 --> W1["weights 16^6"]
+    P2 --> W2["weights 16^6"]
+    P3 --> W3["weights 16^6"]
+    P4 --> W4["weights 16^6"]
+  end
+  TDL[TDLPlayer]
+  TDL --> network
+  TDL -->|chooseAction| moves["getValidMoves"]
+  moves -->|for each move| eval["reward + estimate(afterstate)"]
+  eval --> network
+  TDL -->|argmax| best["best move"]
+        </div>
+        <p><strong>NTuplePattern</strong>: holds one weight table (size 16<sup>6</sup>), the 8 isomorphic index rows for this pattern, and implements <code>estimate(state)</code> (sum of 8 table lookups) and <code>update(state, adjust)</code> (add <code>adjust/8</code> to each of the 8 entries).</p>
+        <p><strong>NTupleNetwork</strong>: holds 4 <code>NTuplePattern</code>s, implements <code>estimate(state)</code> and <code>update(state, adjust)</code> by delegating to each pattern (splitting <code>adjust</code> by 4). Provides <code>save(path)</code> and <code>load(path)</code> for binary serialization.</p>
+        <p><strong>TDLPlayer</strong>: holds a shared <code>NTupleNetwork</code>. <code>chooseAction(state)</code> enumerates legal moves, computes <code>score(move) + network.estimate(afterstate)</code> for each, and returns the move with the highest value. Training is a static method that runs episodes and calls <code>network.update</code> in the backward pass.</p>
+      </section>
+
+      <section id="results">
+        <h2>Training & Results</h2>
+        <p>Training runs for a fixed number of episodes (e.g. 100,000). Each episode is one game to termination. Stats (average score, max score, tile distribution) are printed every 1,000 episodes (or every 100 for shorter runs). Weights are saved at the end; if the weights file already exists at the start, it is loaded so you can resume training.</p>
+        <p>Rough expectations (single run, 4×6-tuple, α=0.1):</p>
+        <table>
+          <thead>
+            <tr><th>Episodes</th><th>Avg score (approx)</th><th>Reach 2048</th><th>Reach 4096</th><th>Reach 8192</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>1K</td><td>~4k</td><td>~100%</td><td>~50%</td><td>~0%</td></tr>
+            <tr><td>10K</td><td>~20k–40k</td><td>~100%</td><td>~80%</td><td>~5–15%</td></tr>
+            <tr><td>100K</td><td>~60k–80k</td><td>~100%</td><td>~95%</td><td>~15–25%</td></tr>
+          </tbody>
+        </table>
+        <p>Exact numbers depend on hardware and random seed. Training 100K episodes typically takes on the order of a few minutes.</p>
+      </section>
+
+      <section id="usage">
+        <h2>Usage</h2>
+        <p>Build (from repo root):</p>
+        <pre><code>cd cpp && mkdir -p build && cd build
+cmake .. -DCMAKE_BUILD_TYPE=Release && make 2048</code></pre>
+        <p>Train (creates or resumes <code>weights.bin</code>):</p>
+        <pre><code>./2048 --train --episodes 100000 --alpha 0.1 --weights weights.bin --output none</code></pre>
+        <p>Play with the trained network (e.g. 100 games, 4 threads, write benchmark JSON):</p>
+        <pre><code>./2048 -n 100 -t 4 --player-config ../configurations/tdl_config.json --benchmark-output results.json</code></pre>
+        <p><code>tdl_config.json</code> should contain:</p>
+        <pre><code>{
+  "playerType": "TDL",
+  "weightsPath": "weights.bin"
+}</code></pre>
+        <p>Play without a config file (weights path empty = untrained, effectively random):</p>
+        <pre><code>./2048 -n 10 -p tdl --output none</code></pre>
+      </section>
+    </main>
+  </div>
+  <script>
+    mermaid.initialize({ startOnLoad: true, theme: 'base', themeVariables: { primaryColor: '#dbeafe', primaryTextColor: '#1e293b', primaryBorderColor: '#93c5fd', lineColor: '#64748b', secondaryColor: '#e0f2fe', tertiaryColor: '#f8fafc' } });
+  </script>
+</body>
+</html>

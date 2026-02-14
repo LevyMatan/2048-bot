@@ -19,7 +19,8 @@
 enum class PlayerType {
     Random,
     Heuristic,
-    Expectimax
+    Expectimax,
+    TDL
 };
 
 /**
@@ -37,9 +38,11 @@ public:
     int chanceCovering;
     double timeLimit;
     bool adaptiveDepth;
+    /** Path to n-tuple network weights file (for TDL player). */
+    std::string weightsPath;
 
     PlayerConfigurations(PlayerType type, Evaluation::EvalParams params, int d, int chance, double time, bool adaptive)
-        : playerType(type), evalParams(params), depth(d), chanceCovering(chance), timeLimit(time), adaptiveDepth(adaptive) {}
+        : playerType(type), evalParams(params), depth(d), chanceCovering(chance), timeLimit(time), adaptiveDepth(adaptive), weightsPath("") {}
 
     // Default constructor with default values
     PlayerConfigurations()
@@ -56,6 +59,8 @@ public:
             return PlayerType::Heuristic;
         } else if (normalized == "e" || normalized == "expectimax") {
             return PlayerType::Expectimax;
+        } else if (normalized == "tdl") {
+            return PlayerType::TDL;
         } else {
             throw std::invalid_argument("Invalid player type");
         }
@@ -69,6 +74,8 @@ public:
                 return "Heuristic";
             case PlayerType::Expectimax:
                 return "Expectimax";
+            case PlayerType::TDL:
+                return "TDL";
             default:
                 return "Unknown";
         }
@@ -129,6 +136,8 @@ public:
                     config.playerType = PlayerType::Heuristic;
                 } else if (typeStr == "Expectimax") {
                     config.playerType = PlayerType::Expectimax;
+                } else if (typeStr == "TDL") {
+                    config.playerType = PlayerType::TDL;
                 } else {
                     throw std::runtime_error("Invalid player type: " + typeStr);
                 }
@@ -173,6 +182,18 @@ public:
             size_t endPos = jsonContent.find_first_of(",}", pos);
             std::string valueStr = jsonContent.substr(pos, endPos - pos);
             config.adaptiveDepth = (valueStr == "true");
+        }
+
+        // Find the weightsPath (for TDL player)
+        pos = jsonContent.find("\"weightsPath\"");
+        if (pos != std::string::npos) {
+            pos = jsonContent.find(":", pos);
+            pos = jsonContent.find_first_not_of(" \t\n\r", pos + 1);
+            if (pos < jsonContent.size() && jsonContent[pos] == '"') {
+                pos++;
+                size_t endPos = jsonContent.find("\"", pos);
+                config.weightsPath = jsonContent.substr(pos, endPos - pos);
+            }
         }
 
         // Find the evaluation parameters

@@ -109,6 +109,10 @@ void ArgParser::parseArguments(int argc, char* argv[]) {
                     playerConfig.adaptiveDepth = true;
                     continue;
                 }
+                if (arg == "--train") {
+                    trainMode = true;
+                    continue;
+                }
 
                 // For all other flags, require a value
                 if (i + 1 >= argc) {
@@ -133,6 +137,15 @@ void ArgParser::parseArguments(int argc, char* argv[]) {
                         simConfig.progressInterval = std::stoi(value);
                     } else if (arg == "--log-level") {
                         loggerConfig.level = parseLogLevel(value);
+                        // When log level is set from CLI, enable all groups
+                        // so the user actually sees output without needing a
+                        // logger config JSON file.
+                        for (size_t g = 0; g < static_cast<size_t>(Logger2048::Group::COUNT); g++) {
+                            loggerConfig.groupsEnabled[g] = true;
+                        }
+                        if (loggerConfig.outputDestination == LogOutput::None) {
+                            loggerConfig.outputDestination = LogOutput::Console;
+                        }
                     } else if (arg == "--log-file" || arg == "--file") {
                         loggerConfig.logFile = value;
                         loggerConfig.outputDestination = (loggerConfig.outputDestination == LogOutput::Console ||
@@ -149,6 +162,12 @@ void ArgParser::parseArguments(int argc, char* argv[]) {
                         loggerConfig.outputDestination = Logger2048::Logger::stringToLogOutput(value);
                     } else if (arg == "--benchmark-output") {
                         benchmarkOutputPath = value;
+                    } else if (arg == "--episodes") {
+                        trainEpisodes = std::stoi(value);
+                    } else if (arg == "--alpha") {
+                        trainAlpha = std::stof(value);
+                    } else if (arg == "--weights") {
+                        trainWeightsPath = value;
                     } else {
                         throw std::runtime_error("Unknown flag: " + arg);
                     }
@@ -190,6 +209,13 @@ void ArgParser::parseShortFlag(const std::string& flag, const std::string& value
             else if (normalized == "i" || normalized == "info") loggerConfig.level = Logger2048::Level::Info;
             else if (normalized == "d" || normalized == "debug") loggerConfig.level = Logger2048::Level::Debug;
             else throw std::runtime_error("Invalid log level: " + value);
+            // When log level is set from CLI, enable all groups
+            for (size_t g = 0; g < static_cast<size_t>(Logger2048::Group::COUNT); g++) {
+                loggerConfig.groupsEnabled[g] = true;
+            }
+            if (loggerConfig.outputDestination == LogOutput::None) {
+                loggerConfig.outputDestination = LogOutput::Console;
+            }
         } else if (flag == "f" || flag == "lf") {
             loggerConfig.logFile = value;
             loggerConfig.outputDestination = (loggerConfig.outputDestination == LogOutput::Console ||
@@ -388,6 +414,10 @@ void ArgParser::printHelp() {
               << "\n"
               << "GENERAL OPTIONS:\n"
               << "  --benchmark-output <path> Write benchmark stats (8K rate, scores) as JSON\n"
+              << "  --train                 Run n-tuple network TD(0) training instead of playing\n"
+              << "  --episodes <n>          Training episodes (default: 100000)\n"
+              << "  --alpha <rate>          Learning rate for training (default: 0.1)\n"
+              << "  --weights <path>        Path to save/load weights (default: weights.bin)\n"
               << "  -h, --help             Show this help message\n"
               << "  -v, --version          Show version information\n"
               << "\n"

@@ -17,6 +17,8 @@
 #include "arg_parser.hpp"
 #include "logger.hpp"
 #include "score_types.hpp"
+#include "ntuple_network.hpp"
+#include "tdl_player.hpp"
 
 Logger2048::Logger &logger = Logger2048::Logger::getInstance();
 
@@ -114,6 +116,8 @@ std::unique_ptr<Player> createPlayer(PlayerConfigurations config) {
                                                     config.evalParams);
                 return player;
             }
+        case PlayerType::TDL:
+            return std::make_unique<TDLPlayer>(config.weightsPath);
         default:
             throw std::invalid_argument("Invalid player type");
     }
@@ -124,6 +128,21 @@ int main(int argc, char* argv[]) {
         ArgParser parser(argc, argv);
         auto loggerConfig = parser.getLoggerConfig();
         logger.configure(loggerConfig);
+
+        if (parser.isTrainMode()) {
+            auto network = std::make_shared<NTuple::NTupleNetwork>();
+            // Resume from existing weights if the file exists
+            network->load(parser.getTrainWeightsPath());
+            int episodes = parser.getTrainEpisodes();
+            int statsInterval = (episodes >= 10000) ? 1000 : std::min(100, episodes);
+            if (statsInterval < 1) statsInterval = 1;
+            TDLPlayer::trainNetwork(network,
+                                    episodes,
+                                    parser.getTrainAlpha(),
+                                    parser.getTrainWeightsPath(),
+                                    statsInterval);
+            return 0;
+        }
 
         auto simConfig = parser.getSimConfig();
         auto playerConfig = parser.getPlayerConfig();

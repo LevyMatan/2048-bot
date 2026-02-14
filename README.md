@@ -4,6 +4,8 @@ A bot to play the 2048 game using various AI strategies. The project explores di
 
 This project contains both C++ and Python implementations of the 2048 game bot, each with different optimization strategies and features.
 
+**Documentation:** A [technical explanation of the N-Tuple TD-Learning (TDL) player](docs/index.html) (how it works, training, and usage) is available in the repo and can be viewed on GitHub Pages if enabled.
+
 ## Project Structure
 
 ```bash

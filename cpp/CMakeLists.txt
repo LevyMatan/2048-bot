@@ -48,6 +48,7 @@ set(MAIN_SOURCES
     src/random_player.cpp
     src/heuristic_player.cpp
     src/expectimax_player.cpp
+    src/tdl_player.cpp
     src/evaluation.cpp
     src/arg_parser.cpp
     src/logger.cpp
