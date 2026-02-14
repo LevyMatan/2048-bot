@@ -1,0 +1,2439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>2048 Bot — Play</title>
+  <style>
+    /* ───────── CSS Variables / Theming ───────── */
+    :root {
+      --bg: #faf8ef;
+      --surface: #bbada0;
+      --text: #776e65;
+      --text-light: #f9f6f2;
+      --accent: #8f7a66;
+      --accent-hover: #7a6a5a;
+      --btn-bg: #8f7a66;
+      --btn-text: #f9f6f2;
+      --btn-hover: #7a6a5a;
+      --card-bg: #fff;
+      --card-border: #e0d6cc;
+      --cell-bg: rgba(238,228,218,0.35);
+      --overlay: rgba(238,228,218,0.73);
+      --shadow: 0 4px 20px rgba(0,0,0,0.08);
+      --radius: 8px;
+      --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      --mono: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #1a1a2e;
+        --surface: #3d3552;
+        --text: #e0d6f0;
+        --text-light: #f0ecff;
+        --accent: #7c6f9b;
+        --accent-hover: #9b8fc0;
+        --btn-bg: #5a4f7a;
+        --btn-text: #f0ecff;
+        --btn-hover: #7c6f9b;
+        --card-bg: #252040;
+        --card-border: #3d3552;
+        --cell-bg: rgba(60,52,85,0.5);
+        --overlay: rgba(26,26,46,0.8);
+        --shadow: 0 4px 20px rgba(0,0,0,0.3);
+      }
+    }
+
+    /* ───────── Reset & Base ───────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 16px; }
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 16px;
+      overflow-x: hidden;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* ───────── Header ───────── */
+    .header {
+      text-align: center;
+      margin-bottom: 16px;
+      width: 100%;
+      max-width: 500px;
+    }
+    .header h1 {
+      font-size: 2.4rem;
+      font-weight: 800;
+      letter-spacing: -1px;
+      margin-bottom: 2px;
+    }
+    .header p {
+      font-size: 0.85rem;
+      opacity: 0.7;
+    }
+    .header p a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+    .header p a:hover { text-decoration: underline; }
+
+    /* ───────── Score Bar ───────── */
+    .score-bar {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      margin-bottom: 12px;
+      width: 100%;
+      max-width: 500px;
+    }
+    .score-card {
+      flex: 1;
+      background: var(--surface);
+      color: var(--text-light);
+      border-radius: var(--radius);
+      padding: 8px 12px;
+      text-align: center;
+      min-width: 0;
+    }
+    .score-card .label {
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      opacity: 0.8;
+    }
+    .score-card .value {
+      font-size: 1.4rem;
+      font-weight: 700;
+      margin-top: 2px;
+      white-space: nowrap;
+    }
+
+    /* ───────── Board Container ───────── */
+    .board-wrapper {
+      position: relative;
+      width: 100%;
+      max-width: 500px;
+      aspect-ratio: 1;
+      margin-bottom: 12px;
+    }
+    .board {
+      width: 100%;
+      height: 100%;
+      background: var(--surface);
+      border-radius: calc(var(--radius) + 4px);
+      padding: 2.4%;
+      display: grid;
+      grid-template: repeat(4, 1fr) / repeat(4, 1fr);
+      gap: 2.2%;
+      position: relative;
+      box-shadow: var(--shadow);
+    }
+
+    /* Grid background cells */
+    .cell {
+      background: var(--cell-bg);
+      border-radius: var(--radius);
+    }
+
+    /* ───────── Tiles ───────── */
+    .tile-layer {
+      position: absolute;
+      inset: 2.4%;
+      pointer-events: none;
+    }
+    .tile {
+      position: absolute;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      border-radius: var(--radius);
+      transition: top 120ms ease-in-out, left 120ms ease-in-out;
+      z-index: 1;
+      user-select: none;
+    }
+    .tile.merged {
+      z-index: 2;
+      animation: pop 200ms ease 100ms;
+    }
+    .tile.new-tile {
+      animation: appear 200ms ease;
+    }
+    @keyframes pop {
+      0%   { transform: scale(1); }
+      50%  { transform: scale(1.15); }
+      100% { transform: scale(1); }
+    }
+    @keyframes appear {
+      0%   { transform: scale(0); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    /* Tile colors */
+    .tile-2    { background: #eee4da; color: #776e65; }
+    .tile-4    { background: #ede0c8; color: #776e65; }
+    .tile-8    { background: #f2b179; color: #f9f6f2; }
+    .tile-16   { background: #f59563; color: #f9f6f2; }
+    .tile-32   { background: #f67c5f; color: #f9f6f2; }
+    .tile-64   { background: #f65e3b; color: #f9f6f2; }
+    .tile-128  { background: #edcf72; color: #f9f6f2; font-size: 0.9em; }
+    .tile-256  { background: #edcc61; color: #f9f6f2; font-size: 0.9em; }
+    .tile-512  { background: #edc850; color: #f9f6f2; font-size: 0.9em; }
+    .tile-1024 { background: #edc53f; color: #f9f6f2; font-size: 0.8em; }
+    .tile-2048 { background: #edc22e; color: #f9f6f2; font-size: 0.8em; }
+    .tile-4096 { background: #3c3a32; color: #f9f6f2; font-size: 0.75em; }
+    .tile-8192 { background: #3c3a32; color: #f9f6f2; font-size: 0.75em; }
+    .tile-super { background: #3c3a32; color: #f9f6f2; font-size: 0.65em; }
+
+    @media (prefers-color-scheme: dark) {
+      .tile-2    { background: #4a4268; color: #e0d6f0; }
+      .tile-4    { background: #5a4f7a; color: #e0d6f0; }
+      .tile-8    { background: #b07040; color: #f0ecff; }
+      .tile-16   { background: #c06030; color: #f0ecff; }
+      .tile-32   { background: #d04828; color: #f0ecff; }
+      .tile-64   { background: #e03020; color: #f0ecff; }
+      .tile-128  { background: #c0a030; color: #f0ecff; }
+      .tile-256  { background: #c09820; color: #f0ecff; }
+      .tile-512  { background: #c09010; color: #f0ecff; }
+      .tile-1024 { background: #c08800; color: #f0ecff; }
+      .tile-2048 { background: #d0a000; color: #f0ecff; }
+      .tile-4096 { background: #2a2548; color: #f0ecff; }
+      .tile-8192 { background: #2a2548; color: #f0ecff; }
+      .tile-super { background: #1e1a38; color: #f0ecff; }
+    }
+
+    /* ───────── Game Over / Win Overlay ───────── */
+    .overlay {
+      position: absolute;
+      inset: 0;
+      background: var(--overlay);
+      border-radius: calc(var(--radius) + 4px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 300ms;
+    }
+    .overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .overlay h2 {
+      font-size: 2rem;
+      margin-bottom: 12px;
+    }
+    .overlay button {
+      padding: 10px 28px;
+      font-size: 1rem;
+      font-weight: 600;
+      border: none;
+      border-radius: var(--radius);
+      background: var(--btn-bg);
+      color: var(--btn-text);
+      cursor: pointer;
+      transition: background 150ms;
+    }
+    .overlay button:hover { background: var(--btn-hover); }
+
+    /* ───────── Controls ───────── */
+    .controls {
+      width: 100%;
+      max-width: 500px;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      padding: 14px;
+      box-shadow: var(--shadow);
+    }
+    .controls-row {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+    .controls-row:last-child { margin-bottom: 0; }
+
+    .controls label {
+      font-size: 0.78rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      white-space: nowrap;
+    }
+
+    select, input[type="range"] {
+      font-family: var(--font);
+      font-size: 0.85rem;
+    }
+    select {
+      padding: 6px 10px;
+      border: 1px solid var(--card-border);
+      border-radius: 6px;
+      background: var(--bg);
+      color: var(--text);
+      cursor: pointer;
+      outline: none;
+    }
+    select:focus { border-color: var(--accent); }
+
+    .speed-control {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex: 1;
+      min-width: 0;
+    }
+    .speed-control input[type="range"] {
+      flex: 1;
+      min-width: 60px;
+      accent-color: var(--accent);
+    }
+    .speed-control .speed-label {
+      font-size: 0.75rem;
+      font-family: var(--mono);
+      min-width: 40px;
+      text-align: right;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .btn {
+      padding: 7px 14px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 150ms, transform 80ms;
+      background: var(--btn-bg);
+      color: var(--btn-text);
+      white-space: nowrap;
+    }
+    .btn:hover { background: var(--btn-hover); }
+    .btn:active { transform: scale(0.96); }
+    .btn.secondary {
+      background: var(--bg);
+      color: var(--text);
+      border: 1px solid var(--card-border);
+    }
+    .btn.secondary:hover { background: var(--card-border); }
+    .btn.active {
+      background: #4caf50;
+      color: #fff;
+    }
+    .btn.active:hover { background: #43a047; }
+
+    /* ───────── AI Status ───────── */
+    .ai-status {
+      text-align: center;
+      font-size: 0.75rem;
+      margin-top: 8px;
+      opacity: 0.7;
+      font-family: var(--mono);
+      min-height: 1.2em;
+    }
+
+    /* ───────── TDL Weight Upload ───────── */
+    .tdl-upload-row {
+      display: none;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+    .tdl-upload-row.visible { display: flex; }
+    .tdl-upload-row .file-btn {
+      padding: 6px 12px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      border: 1px dashed var(--accent);
+      border-radius: 6px;
+      background: transparent;
+      color: var(--accent);
+      cursor: pointer;
+      transition: background 150ms, border-style 150ms;
+    }
+    .tdl-upload-row .file-btn:hover {
+      background: var(--accent);
+      color: var(--btn-text);
+      border-style: solid;
+    }
+    .tdl-upload-row .file-btn.loaded {
+      background: #4caf50;
+      color: #fff;
+      border-color: #4caf50;
+      border-style: solid;
+    }
+    .tdl-info {
+      font-size: 0.72rem;
+      opacity: 0.6;
+      font-family: var(--mono);
+    }
+    .tdl-progress {
+      width: 100%;
+      height: 4px;
+      background: var(--cell-bg);
+      border-radius: 2px;
+      overflow: hidden;
+      display: none;
+    }
+    .tdl-progress.visible { display: block; }
+    .tdl-progress-bar {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 2px;
+      width: 0%;
+      transition: width 200ms;
+    }
+
+    /* ───────── Teacher Panel ───────── */
+    .teach-panel {
+      width: 100%;
+      max-width: 500px;
+      margin-top: 12px;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      display: none;
+    }
+    .teach-panel.visible { display: block; }
+    .teach-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--card-border);
+      cursor: pointer;
+      user-select: none;
+    }
+    .teach-header h3 {
+      font-size: 0.85rem;
+      font-weight: 700;
+    }
+    .teach-header .tag {
+      font-size: 0.65rem;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 99px;
+      background: var(--accent);
+      color: var(--btn-text);
+    }
+    .teach-body { padding: 12px 14px; }
+
+    /* Explanation text */
+    .teach-explain {
+      font-size: 0.76rem;
+      line-height: 1.6;
+      margin-bottom: 12px;
+      padding: 10px 12px;
+      background: var(--bg);
+      border-radius: 6px;
+      border-left: 3px solid var(--accent);
+    }
+    .teach-explain code {
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      background: var(--card-border);
+      padding: 1px 4px;
+      border-radius: 3px;
+    }
+    .teach-formula {
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      text-align: center;
+      padding: 8px;
+      margin: 8px 0;
+      background: var(--bg);
+      border-radius: 6px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+    }
+
+    /* Move cards row */
+    .teach-moves {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(105px, 1fr));
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .teach-move {
+      border: 2px solid var(--card-border);
+      border-radius: var(--radius);
+      padding: 8px;
+      text-align: center;
+      transition: border-color 200ms, box-shadow 200ms;
+      position: relative;
+    }
+    .teach-move.best {
+      border-color: #4caf50;
+      box-shadow: 0 0 0 1px #4caf50, 0 2px 8px rgba(76,175,80,0.2);
+    }
+    .teach-move.invalid {
+      opacity: 0.3;
+      pointer-events: none;
+    }
+    .teach-move .dir-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+    }
+    .teach-move .dir-arrow {
+      font-size: 1rem;
+      line-height: 1;
+    }
+    .teach-move .best-badge {
+      position: absolute;
+      top: -6px;
+      right: -6px;
+      background: #4caf50;
+      color: #fff;
+      font-size: 0.6rem;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 99px;
+      display: none;
+    }
+    .teach-move.best .best-badge { display: block; }
+
+    /* Mini board inside move card */
+    .mini-board {
+      display: grid;
+      grid-template: repeat(4, 1fr) / repeat(4, 1fr);
+      gap: 2px;
+      width: 76px;
+      height: 76px;
+      margin: 0 auto 8px;
+      background: var(--surface);
+      border-radius: 4px;
+      padding: 3px;
+    }
+    .mini-cell {
+      border-radius: 2px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.42rem;
+      font-weight: 700;
+      font-family: var(--mono);
+      line-height: 1;
+    }
+    .mini-cell.empty { background: var(--cell-bg); }
+
+    /* Value breakdown rows */
+    .teach-vals {
+      font-size: 0.7rem;
+      font-family: var(--mono);
+      text-align: left;
+      line-height: 1.7;
+    }
+    .teach-vals .val-row {
+      display: flex;
+      justify-content: space-between;
+    }
+    .teach-vals .val-label { opacity: 0.7; }
+    .teach-vals .val-num { font-weight: 700; }
+    .teach-vals .val-total {
+      border-top: 1px solid var(--card-border);
+      margin-top: 2px;
+      padding-top: 2px;
+      font-weight: 700;
+    }
+
+    /* TDL per-pattern breakdown table */
+    .teach-patterns-section { margin-top: 12px; }
+    .teach-patterns-section h4 {
+      font-size: 0.75rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .pattern-breakdown {
+      width: 100%;
+      font-size: 0.7rem;
+      font-family: var(--mono);
+      border-collapse: collapse;
+    }
+    .pattern-breakdown th, .pattern-breakdown td {
+      padding: 4px 6px;
+      text-align: right;
+      border-bottom: 1px solid var(--card-border);
+    }
+    .pattern-breakdown th {
+      text-align: left;
+      font-weight: 700;
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      opacity: 0.7;
+    }
+    .pattern-breakdown td:first-child {
+      text-align: left;
+      font-weight: 600;
+    }
+    .pattern-breakdown .row-total td {
+      font-weight: 700;
+      border-top: 2px solid var(--card-border);
+    }
+
+    /* Pattern position visualization */
+    .teach-pattern-viz {
+      margin-top: 12px;
+    }
+    .teach-pattern-viz h4 {
+      font-size: 0.75rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .teach-pattern-viz p {
+      font-size: 0.7rem;
+      opacity: 0.7;
+      margin-top: 6px;
+      line-height: 1.5;
+    }
+    .pattern-grids {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .pattern-grid-item {
+      text-align: center;
+    }
+    .pattern-grid-item .pg-label {
+      font-size: 0.62rem;
+      font-weight: 700;
+      font-family: var(--mono);
+      margin-bottom: 3px;
+      opacity: 0.7;
+    }
+    .pattern-grid {
+      display: grid;
+      grid-template: repeat(4, 18px) / repeat(4, 18px);
+      gap: 2px;
+      background: var(--surface);
+      border-radius: 4px;
+      padding: 3px;
+    }
+    .pg-cell {
+      border-radius: 2px;
+      background: var(--cell-bg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.5rem;
+      font-weight: 700;
+      font-family: var(--mono);
+      color: #fff;
+    }
+    .pg-cell.pg-active { opacity: 1; }
+    .pg-cell.pg-inactive { opacity: 0.2; }
+    .pg-c0 { background: #e74c3c; }
+    .pg-c1 { background: #3498db; }
+    .pg-c2 { background: #2ecc71; }
+    .pg-c3 { background: #f39c12; }
+
+    /* Heuristic component bars */
+    .heur-bars { margin-top: 4px; }
+    .heur-bar-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 4px;
+      font-size: 0.68rem;
+      font-family: var(--mono);
+    }
+    .heur-bar-label {
+      width: 100px;
+      text-align: right;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .heur-bar {
+      flex: 1;
+      height: 14px;
+      background: var(--cell-bg);
+      border-radius: 3px;
+      overflow: hidden;
+      position: relative;
+    }
+    .heur-bar-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 200ms;
+    }
+    .heur-bar-val {
+      width: 60px;
+      text-align: right;
+      font-weight: 700;
+      font-size: 0.65rem;
+    }
+
+    /* ───────── Keyboard Hints ───────── */
+    .hints {
+      margin-top: 12px;
+      text-align: center;
+      font-size: 0.72rem;
+      opacity: 0.5;
+      line-height: 1.6;
+    }
+    kbd {
+      display: inline-block;
+      padding: 2px 6px;
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: 4px;
+      box-shadow: 0 1px 0 var(--card-border);
+    }
+
+    /* ───────── Responsive ───────── */
+    @media (max-width: 540px) {
+      body { padding: 10px; }
+      .header h1 { font-size: 1.8rem; }
+      .score-card .value { font-size: 1.1rem; }
+      .controls { padding: 10px; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <h1>2048 Bot</h1>
+    <p>Play manually or watch AI strategies in action &middot; <a href="index.html">Documentation</a></p>
+  </div>
+
+  <div class="score-bar">
+    <div class="score-card">
+      <div class="label">Score</div>
+      <div class="value" id="score">0</div>
+    </div>
+    <div class="score-card">
+      <div class="label">Best</div>
+      <div class="value" id="best-score">0</div>
+    </div>
+    <div class="score-card">
+      <div class="label">Moves</div>
+      <div class="value" id="moves">0</div>
+    </div>
+    <div class="score-card">
+      <div class="label">Max Tile</div>
+      <div class="value" id="max-tile">0</div>
+    </div>
+  </div>
+
+  <div class="board-wrapper" id="board-wrapper">
+    <div class="board" id="board">
+      <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+      <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+      <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+      <div class="cell"></div><div class="cell"></div><div class="cell"></div><div class="cell"></div>
+      <div class="tile-layer" id="tile-layer"></div>
+    </div>
+    <div class="overlay" id="game-over-overlay">
+      <h2 id="overlay-message">Game Over!</h2>
+      <button onclick="game.restart()">Try Again</button>
+    </div>
+  </div>
+
+  <div class="controls">
+    <div class="controls-row">
+      <label>Player:</label>
+      <select id="player-select">
+        <option value="human">Human (Keyboard / Swipe)</option>
+        <option value="random">AI: Random</option>
+        <option value="heuristic">AI: Heuristic</option>
+        <option value="expectimax">AI: Expectimax (Depth 3)</option>
+        <option value="expectimax-deep">AI: Expectimax (Depth 5)</option>
+        <option value="tdl">AI: TDL (N-Tuple Network)</option>
+      </select>
+    </div>
+    <div class="controls-row tdl-upload-row" id="tdl-upload-row">
+      <input type="file" id="weights-file" accept=".bin" style="display:none">
+      <button class="file-btn" id="btn-load-weights" onclick="document.getElementById('weights-file').click()">Load weights.bin</button>
+      <span class="tdl-info" id="tdl-info">No weights loaded</span>
+      <div class="tdl-progress" id="tdl-progress">
+        <div class="tdl-progress-bar" id="tdl-progress-bar"></div>
+      </div>
+    </div>
+    <div class="controls-row">
+      <div class="speed-control">
+        <label>Speed:</label>
+        <input type="range" id="speed-slider" min="0" max="100" value="70">
+        <span class="speed-label" id="speed-label">50ms</span>
+      </div>
+    </div>
+    <div class="controls-row">
+      <div class="btn-group">
+        <button class="btn" id="btn-play" onclick="game.toggleAI()">&#9654; Play AI</button>
+        <button class="btn secondary" id="btn-step" onclick="game.stepAI()">Step</button>
+        <button class="btn secondary" onclick="game.restart()">New Game</button>
+        <button class="btn secondary" onclick="game.undo()">Undo</button>
+        <button class="btn secondary" id="btn-teacher" onclick="game.toggleTeacher()">Teacher</button>
+      </div>
+    </div>
+    <div class="ai-status" id="ai-status"></div>
+  </div>
+
+  <div class="teach-panel" id="teach-panel">
+    <div class="teach-header" onclick="game.toggleTeacher()">
+      <h3>Move Analysis</h3>
+      <span class="tag" id="teach-player-tag">—</span>
+    </div>
+    <div class="teach-body" id="teach-body">
+      <div class="teach-explain" id="teach-explain"></div>
+      <div class="teach-formula" id="teach-formula" style="display:none"></div>
+      <div class="teach-moves" id="teach-moves"></div>
+      <div class="teach-patterns-section" id="teach-patterns-section" style="display:none">
+        <h4>Per-Pattern Breakdown (best move afterstate)</h4>
+        <table class="pattern-breakdown" id="pattern-table"></table>
+      </div>
+      <div class="teach-pattern-viz" id="teach-pattern-viz" style="display:none">
+        <h4>N-Tuple Pattern Positions</h4>
+        <div class="pattern-grids" id="pattern-grids"></div>
+        <p>Each pattern is evaluated under <strong>8 symmetric transformations</strong> (4 rotations &times; 2 mirrors), so the network sees all board orientations. Total: 4 patterns &times; 8 symmetries = <strong>32 weight lookups</strong> per board evaluation.</p>
+      </div>
+      <div id="teach-heuristic-detail" style="display:none"></div>
+    </div>
+  </div>
+
+  <div class="hints">
+    <kbd>&uarr;</kbd> <kbd>&darr;</kbd> <kbd>&larr;</kbd> <kbd>&rarr;</kbd> or <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> to move
+    &middot; <kbd>Space</kbd> play/pause AI &middot; <kbd>N</kbd> new game &middot; <kbd>Z</kbd> undo &middot; <kbd>T</kbd> teacher mode
+  </div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+//  2048 GAME ENGINE — Mirrors the C++ board representation
+// ═══════════════════════════════════════════════════════════
+
+const DIRECTIONS = { LEFT: 0, RIGHT: 1, UP: 2, DOWN: 3 };
+const DIR_NAMES = ['Left', 'Right', 'Up', 'Down'];
+
+/**
+ * The board is a 4x4 grid stored as a flat array of 16 integers.
+ * Each value is the log2 of the tile value (0 = empty, 1 = 2, 2 = 4, ...).
+ * Index mapping: board[row * 4 + col]
+ */
+class Board2048 {
+  constructor(grid) {
+    // grid: flat array of 16 values (log2 representation)
+    this.grid = grid ? grid.slice() : new Array(16).fill(0);
+  }
+
+  clone() {
+    return new Board2048(this.grid);
+  }
+
+  getTile(row, col) {
+    return this.grid[row * 4 + col];
+  }
+
+  setTile(row, col, val) {
+    this.grid[row * 4 + col] = val;
+  }
+
+  /** Returns display value (2, 4, 8, ...) or 0 for empty */
+  displayValue(row, col) {
+    const v = this.getTile(row, col);
+    return v === 0 ? 0 : (1 << v);
+  }
+
+  getEmptyTiles() {
+    const empty = [];
+    for (let i = 0; i < 16; i++) {
+      if (this.grid[i] === 0) {
+        empty.push({ row: Math.floor(i / 4), col: i % 4 });
+      }
+    }
+    return empty;
+  }
+
+  getMaxTile() {
+    let max = 0;
+    for (let i = 0; i < 16; i++) {
+      if (this.grid[i] > max) max = this.grid[i];
+    }
+    return max === 0 ? 0 : (1 << max);
+  }
+
+  addRandomTile() {
+    const empty = this.getEmptyTiles();
+    if (empty.length === 0) return null;
+    const pos = empty[Math.floor(Math.random() * empty.length)];
+    const val = Math.random() < 0.9 ? 1 : 2; // 90% -> 2, 10% -> 4
+    this.setTile(pos.row, pos.col, val);
+    return { row: pos.row, col: pos.col, val };
+  }
+
+  equals(other) {
+    for (let i = 0; i < 16; i++) {
+      if (this.grid[i] !== other.grid[i]) return false;
+    }
+    return true;
+  }
+
+  /**
+   * Move the board in the given direction.
+   * Returns { board, score, moved } where:
+   *   board = new Board2048 after the move
+   *   score = points earned from merges
+   *   moved = whether the board changed
+   */
+  static move(board, direction) {
+    const b = board.clone();
+    let score = 0;
+    let moved = false;
+
+    // We always operate on rows left-to-right; rotate as needed
+    const getLine = (b, i, dir) => {
+      switch (dir) {
+        case DIRECTIONS.LEFT:  return [b.getTile(i,0), b.getTile(i,1), b.getTile(i,2), b.getTile(i,3)];
+        case DIRECTIONS.RIGHT: return [b.getTile(i,3), b.getTile(i,2), b.getTile(i,1), b.getTile(i,0)];
+        case DIRECTIONS.UP:    return [b.getTile(0,i), b.getTile(1,i), b.getTile(2,i), b.getTile(3,i)];
+        case DIRECTIONS.DOWN:  return [b.getTile(3,i), b.getTile(2,i), b.getTile(1,i), b.getTile(0,i)];
+      }
+    };
+
+    const setLine = (b, i, dir, line) => {
+      switch (dir) {
+        case DIRECTIONS.LEFT:  b.setTile(i,0,line[0]); b.setTile(i,1,line[1]); b.setTile(i,2,line[2]); b.setTile(i,3,line[3]); break;
+        case DIRECTIONS.RIGHT: b.setTile(i,3,line[0]); b.setTile(i,2,line[1]); b.setTile(i,1,line[2]); b.setTile(i,0,line[3]); break;
+        case DIRECTIONS.UP:    b.setTile(0,i,line[0]); b.setTile(1,i,line[1]); b.setTile(2,i,line[2]); b.setTile(3,i,line[3]); break;
+        case DIRECTIONS.DOWN:  b.setTile(3,i,line[0]); b.setTile(2,i,line[1]); b.setTile(1,i,line[2]); b.setTile(0,i,line[3]); break;
+      }
+    };
+
+    for (let i = 0; i < 4; i++) {
+      const line = getLine(b, i, direction);
+      const original = line.slice();
+
+      // Compact: slide non-zero tiles to the left
+      const compacted = line.filter(v => v !== 0);
+      while (compacted.length < 4) compacted.push(0);
+
+      // Merge
+      for (let j = 0; j < 3; j++) {
+        if (compacted[j] !== 0 && compacted[j] === compacted[j + 1]) {
+          compacted[j]++;
+          score += (1 << compacted[j]); // merged tile value
+          compacted[j + 1] = 0;
+        }
+      }
+
+      // Compact again after merges
+      const result = compacted.filter(v => v !== 0);
+      while (result.length < 4) result.push(0);
+
+      // Check if line changed
+      for (let j = 0; j < 4; j++) {
+        if (original[j] !== result[j]) moved = true;
+      }
+
+      setLine(b, i, direction, result);
+    }
+
+    return { board: b, score, moved };
+  }
+
+  /** Get all valid moves */
+  static getValidMoves(board) {
+    const moves = [];
+    for (let dir = 0; dir < 4; dir++) {
+      const result = Board2048.move(board, dir);
+      if (result.moved) {
+        moves.push({ direction: dir, board: result.board, score: result.score });
+      }
+    }
+    return moves;
+  }
+
+  /** Check if the game is over */
+  isGameOver() {
+    return Board2048.getValidMoves(this).length === 0;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  AI PLAYERS — Mirrors the C++ implementations
+// ═══════════════════════════════════════════════════════════
+
+const AI = {
+  /** Random player: picks a random valid move */
+  random(board) {
+    const moves = Board2048.getValidMoves(board);
+    if (moves.length === 0) return null;
+    return moves[Math.floor(Math.random() * moves.length)];
+  },
+
+  /**
+   * Heuristic evaluation functions (matching C++ evaluation.cpp)
+   * Uses the "best" preset weights: emptyTiles: 427, monotonicity: 12,
+   * smoothness: 29, cornerValue: 67, patternMatching: 186
+   */
+  _evalWeights: {
+    emptyTiles: 427,
+    monotonicity: 12,
+    smoothness: 29,
+    cornerValue: 67,
+    patternMatching: 186,
+  },
+
+  _emptyTiles(grid) {
+    let count = 0;
+    for (let i = 0; i < 16; i++) if (grid[i] === 0) count++;
+    return count;
+  },
+
+  _monotonicity(grid) {
+    // Improved monotonicity from C++ (using log2 differences)
+    const get = (r, c) => grid[r * 4 + c];
+    const totals = [0, 0, 0, 0];
+
+    for (let i = 0; i < 4; i++) {
+      for (let j = 0; j < 3; j++) {
+        if (get(i, j) > 0 && get(i, j + 1) > 0) {
+          const current = Math.log2(get(i, j));
+          const next = Math.log2(get(i, j + 1));
+          if (current > next) totals[0] += current - next;
+          else totals[1] += next - current;
+        }
+      }
+    }
+
+    for (let j = 0; j < 4; j++) {
+      for (let i = 0; i < 3; i++) {
+        if (get(i, j) > 0 && get(i + 1, j) > 0) {
+          const current = Math.log2(get(i, j));
+          const next = Math.log2(get(i + 1, j));
+          if (current > next) totals[2] += current - next;
+          else totals[3] += next - current;
+        }
+      }
+    }
+
+    return -(Math.min(totals[0], totals[1]) + Math.min(totals[2], totals[3]));
+  },
+
+  _smoothness(grid) {
+    const get = (r, c) => grid[r * 4 + c];
+    let score = 0, totalWeight = 0;
+
+    for (let r = 0; r < 4; r++) {
+      for (let c = 0; c < 4; c++) {
+        if (get(r, c) === 0) continue;
+        // Right neighbor
+        if (c < 3 && get(r, c + 1) > 0) {
+          const diff = Math.abs(get(r, c) - get(r, c + 1));
+          const maxLog2 = Math.max(get(r, c), get(r, c + 1));
+          const w = 1 << maxLog2;
+          score += w * (1.0 / (1.0 + diff));
+          totalWeight += w;
+        }
+        // Bottom neighbor
+        if (r < 3 && get(r + 1, c) > 0) {
+          const diff = Math.abs(get(r, c) - get(r + 1, c));
+          const maxLog2 = Math.max(get(r, c), get(r + 1, c));
+          const w = 1 << maxLog2;
+          score += w * (1.0 / (1.0 + diff));
+          totalWeight += w;
+        }
+      }
+    }
+
+    return totalWeight > 0 ? (score / totalWeight) * 1000 : 0;
+  },
+
+  _cornerValue(grid) {
+    const get = (r, c) => grid[r * 4 + c];
+    let maxTile = 0;
+    for (let i = 0; i < 16; i++) if (grid[i] > maxTile) maxTile = grid[i];
+    if (maxTile === 0) return 0;
+
+    const corners = [[0,0],[0,3],[3,0],[3,3]];
+    let score = 0;
+
+    for (let r = 0; r < 4; r++) {
+      for (let c = 0; c < 4; c++) {
+        if (get(r, c) === 0) continue;
+        let minDist = 6;
+        for (const [cr, cc] of corners) {
+          minDist = Math.min(minDist, Math.abs(r - cr) + Math.abs(c - cc));
+        }
+        const tileW = 1 << get(r, c);
+        score += tileW * ((6 - minDist) / 6);
+      }
+    }
+
+    const maxPossible = (1 << maxTile) * 4;
+    return Math.min(1000, (score * 1000) / maxPossible);
+  },
+
+  _patternMatching(grid) {
+    const snakeWeights = [
+      [15, 14, 13, 12],
+      [8, 9, 10, 11],
+      [7, 6, 5, 4],
+      [0, 1, 2, 3]
+    ];
+    const get = (r, c) => grid[r * 4 + c];
+    let maxTile = 0;
+    for (let i = 0; i < 16; i++) if (grid[i] > maxTile) maxTile = grid[i];
+
+    let sumWeights = 0;
+    for (let r = 0; r < 4; r++)
+      for (let c = 0; c < 4; c++)
+        sumWeights += snakeWeights[r][c];
+
+    const maxScore = maxTile > 1 ? (1 << maxTile) * sumWeights : 2048;
+
+    let score = 0;
+    for (let r = 0; r < 4; r++) {
+      for (let c = 0; c < 4; c++) {
+        if (get(r, c) > 0) {
+          score += (1 << get(r, c)) * snakeWeights[r][c];
+        }
+      }
+    }
+
+    return Math.min(1000, (score * 1000) / maxScore);
+  },
+
+  /** Composite evaluation using the "best" weights */
+  evaluate(board) {
+    const g = board.grid;
+    const w = AI._evalWeights;
+    return (
+      AI._emptyTiles(g) * w.emptyTiles +
+      AI._monotonicity(g) * w.monotonicity +
+      AI._smoothness(g) * w.smoothness +
+      AI._cornerValue(g) * w.cornerValue +
+      AI._patternMatching(g) * w.patternMatching
+    );
+  },
+
+  /** Heuristic player: evaluates all valid moves, picks the best */
+  heuristic(board) {
+    const moves = Board2048.getValidMoves(board);
+    if (moves.length === 0) return null;
+
+    let best = moves[0];
+    let bestEval = AI.evaluate(moves[0].board);
+    for (let i = 1; i < moves.length; i++) {
+      const ev = AI.evaluate(moves[i].board);
+      if (ev > bestEval) {
+        bestEval = ev;
+        best = moves[i];
+      }
+    }
+    return best;
+  },
+
+  /**
+   * Expectimax player (matching C++ expectimax_player.cpp)
+   * With chance nodes for random tile placement
+   */
+  _expectimaxChance(board, depth, prob, evalFn) {
+    if (depth <= 0 || prob < 0.001) {
+      return evalFn(board);
+    }
+
+    const empty = board.getEmptyTiles();
+    if (empty.length === 0) return evalFn(board);
+
+    const perTileProb = prob / empty.length;
+    let result = 0;
+
+    for (const { row, col } of empty) {
+      // 90% chance of 2 (val=1), 10% chance of 4 (val=2)
+      const b2 = board.clone();
+      b2.setTile(row, col, 1);
+      const v2 = AI._expectimaxMax(b2, depth - 1, perTileProb * 0.9, evalFn) * 0.9;
+
+      const b4 = board.clone();
+      b4.setTile(row, col, 2);
+      const v4 = AI._expectimaxMax(b4, depth - 1, perTileProb * 0.1, evalFn) * 0.1;
+
+      result += v2 + v4;
+    }
+
+    return result / empty.length;
+  },
+
+  _expectimaxMax(board, depth, prob, evalFn) {
+    if (depth <= 0) return evalFn(board);
+
+    const moves = Board2048.getValidMoves(board);
+    if (moves.length === 0) return evalFn(board);
+
+    let best = -Infinity;
+    for (const move of moves) {
+      const value = AI._expectimaxChance(move.board, depth - 1, prob, evalFn);
+      if (value > best) best = value;
+    }
+    return best;
+  },
+
+  expectimax(board, maxDepth = 3) {
+    const moves = Board2048.getValidMoves(board);
+    if (moves.length === 0) return null;
+
+    const evalFn = (b) => AI.evaluate(b);
+    let best = moves[0];
+    let bestValue = -Infinity;
+
+    for (const move of moves) {
+      const value = AI._expectimaxChance(move.board, maxDepth, 1.0, evalFn);
+      if (value > bestValue) {
+        bestValue = value;
+        best = move;
+      }
+    }
+    return best;
+  },
+};
+
+// ═══════════════════════════════════════════════════════════
+//  N-TUPLE NETWORK — Mirrors ntuple_network.hpp
+// ═══════════════════════════════════════════════════════════
+
+/**
+ * Board symmetry transformations operating on flat 16-element arrays.
+ * Position layout:  0  1  2  3
+ *                   4  5  6  7
+ *                   8  9 10 11
+ *                  12 13 14 15
+ */
+const NTuple = (() => {
+  /** Transpose: (r,c) -> (c,r) */
+  function transpose(arr) {
+    const out = new Array(16);
+    for (let r = 0; r < 4; r++)
+      for (let c = 0; c < 4; c++)
+        out[c * 4 + r] = arr[r * 4 + c];
+    return out;
+  }
+
+  /** Mirror horizontally: (r,c) -> (r, 3-c) */
+  function mirror(arr) {
+    const out = new Array(16);
+    for (let r = 0; r < 4; r++)
+      for (let c = 0; c < 4; c++)
+        out[r * 4 + c] = arr[r * 4 + (3 - c)];
+    return out;
+  }
+
+  /** Rotate 90° clockwise = mirror(transpose(x)) */
+  function rotateCW(arr) {
+    return mirror(transpose(arr));
+  }
+
+  /**
+   * Build the 8 symmetric index boards (matching C++ getSymmetricIndexBoards).
+   * The index board has value i at position i.
+   * Returns an array of 8 arrays, each of length 16.
+   */
+  function getSymmetricIndexBoards() {
+    const identity = [];
+    for (let i = 0; i < 16; i++) identity.push(i);
+
+    const out = new Array(8);
+    let b = identity;
+    for (let i = 0; i < 4; i++) {
+      out[i] = b;
+      b = rotateCW(b);
+    }
+    b = mirror(identity);
+    for (let i = 4; i < 8; i++) {
+      out[i] = b;
+      b = rotateCW(b);
+    }
+    return out;
+  }
+
+  const SYM_BOARDS = getSymmetricIndexBoards();
+
+  /**
+   * A single N-Tuple pattern with 8-way isomorphic lookups.
+   * Mirrors NTuplePattern from ntuple_network.hpp.
+   */
+  class NTuplePattern {
+    /**
+     * @param {number[]} pattern - positions 0-15 to sample (e.g. [0,1,2,3,4,5])
+     * @param {number} isoCount - number of isomorphic views (default 8)
+     */
+    constructor(pattern, isoCount = 8) {
+      this.pattern = pattern;
+      this.isoCount = isoCount;
+      this.tableSize = Math.pow(16, pattern.length);
+
+      // Weight table — Float32Array for memory efficiency
+      this.weights = new Float32Array(this.tableSize);
+
+      // Precompute isomorphic position mappings
+      // isom[sym][j] = the position to read from the actual board
+      // for pattern position j under symmetry sym
+      this.isom = new Array(isoCount);
+      for (let i = 0; i < isoCount; i++) {
+        this.isom[i] = new Int32Array(pattern.length);
+        for (let j = 0; j < pattern.length; j++) {
+          this.isom[i][j] = SYM_BOARDS[i][pattern[j]];
+        }
+      }
+    }
+
+    /**
+     * Compute lookup index from one isomorphic view.
+     * Reads tile values from grid at the remapped positions.
+     * @param {Int32Array} isomRow - remapped positions for this symmetry
+     * @param {number[]} grid - flat 16-element array of log2 tile values
+     * @returns {number} index into weight table
+     */
+    indexOf(isomRow, grid) {
+      let index = 0;
+      for (let i = 0; i < isomRow.length; i++) {
+        index |= (grid[isomRow[i]] << (4 * i));
+      }
+      return index;
+    }
+
+    /**
+     * Estimate board value: sum of weights over all isomorphic lookups.
+     * @param {number[]} grid - flat 16-element grid
+     * @returns {number}
+     */
+    estimate(grid) {
+      let value = 0;
+      for (let i = 0; i < this.isoCount; i++) {
+        value += this.weights[this.indexOf(this.isom[i], grid)];
+      }
+      return value;
+    }
+  }
+
+  /**
+   * Network of N-Tuple patterns. Default: 4 six-tuples from the literature.
+   * Mirrors NTupleNetwork from ntuple_network.hpp.
+   */
+  class NTupleNetwork {
+    constructor() {
+      this.patterns = [];
+      this.loaded = false;
+      this._addDefaultPatterns();
+    }
+
+    _addDefaultPatterns() {
+      this.patterns = [
+        new NTuplePattern([0, 1, 2, 3, 4, 5]),
+        new NTuplePattern([4, 5, 6, 7, 8, 9]),
+        new NTuplePattern([0, 1, 2, 4, 5, 6]),
+        new NTuplePattern([4, 5, 6, 8, 9, 10]),
+      ];
+    }
+
+    /**
+     * Estimate board value by summing all pattern evaluations.
+     * @param {number[]} grid - flat 16-element grid (log2 values)
+     * @returns {number}
+     */
+    estimate(grid) {
+      let value = 0;
+      for (const p of this.patterns) {
+        value += p.estimate(grid);
+      }
+      return value;
+    }
+
+    /**
+     * Load weights from an ArrayBuffer (binary format matching C++ save).
+     *
+     * Binary format (little-endian, compiled on 64-bit):
+     *   8 bytes: size_t numPatterns
+     *   For each pattern:
+     *     8 bytes: size_t patternLength
+     *     patternLength * 4 bytes: int[] positions (skipped)
+     *     16^patternLength * 4 bytes: float[] weights
+     *
+     * @param {ArrayBuffer} buffer
+     * @param {function} onProgress - callback(fraction) for progress
+     * @returns {boolean} success
+     */
+    loadFromBuffer(buffer, onProgress) {
+      const view = new DataView(buffer);
+      let offset = 0;
+
+      // Read number of patterns (size_t = 8 bytes on 64-bit)
+      if (buffer.byteLength < 8) return false;
+
+      // Read as two 32-bit values (little-endian)
+      const numPatternsLow = view.getUint32(offset, true);
+      const numPatternsHigh = view.getUint32(offset + 4, true);
+      offset += 8;
+
+      // Sanity check: numPatternsHigh should be 0 for reasonable counts
+      if (numPatternsHigh !== 0 || numPatternsLow !== this.patterns.length) {
+        console.error(`Expected ${this.patterns.length} patterns, got ${numPatternsLow} (high: ${numPatternsHigh})`);
+        return false;
+      }
+
+      const numPatterns = numPatternsLow;
+
+      for (let p = 0; p < numPatterns; p++) {
+        // Read pattern length (size_t = 8 bytes)
+        const lenLow = view.getUint32(offset, true);
+        offset += 8; // skip full 8-byte size_t
+
+        const expectedLen = this.patterns[p].pattern.length;
+        if (lenLow !== expectedLen) {
+          console.error(`Pattern ${p}: expected length ${expectedLen}, got ${lenLow}`);
+          return false;
+        }
+
+        // Skip pattern positions (int[] = 4 bytes each)
+        offset += lenLow * 4;
+
+        // Read weights (float[] = 4 bytes each)
+        const tableSize = this.patterns[p].tableSize;
+        const weightBytes = tableSize * 4;
+
+        if (offset + weightBytes > buffer.byteLength) {
+          console.error(`Pattern ${p}: not enough data (need ${offset + weightBytes}, have ${buffer.byteLength})`);
+          return false;
+        }
+
+        // Create Float32Array view directly from the buffer
+        this.patterns[p].weights = new Float32Array(buffer, offset, tableSize);
+        offset += weightBytes;
+
+        if (onProgress) {
+          onProgress((p + 1) / numPatterns);
+        }
+      }
+
+      this.loaded = true;
+      console.log(`Loaded ${numPatterns} patterns, ${(offset / 1024 / 1024).toFixed(1)} MB`);
+      return true;
+    }
+  }
+
+  return { NTupleNetwork };
+})();
+
+
+// ═══════════════════════════════════════════════════════════
+//  TDL PLAYER — Mirrors tdl_player.cpp
+// ═══════════════════════════════════════════════════════════
+
+/** Global N-Tuple network instance (shared across games) */
+const tdlNetwork = new NTuple.NTupleNetwork();
+
+/**
+ * TDL player: for each valid move, compute (moveScore + network.estimate(afterstate))
+ * and pick the move with the highest value.
+ * This exactly mirrors TDLPlayer::chooseAction from tdl_player.cpp.
+ */
+AI.tdl = function(board) {
+  if (!tdlNetwork.loaded) return null;
+
+  const moves = Board2048.getValidMoves(board);
+  if (moves.length === 0) return null;
+
+  let best = moves[0];
+  let bestVal = best.score + tdlNetwork.estimate(best.board.grid);
+
+  for (let i = 1; i < moves.length; i++) {
+    const m = moves[i];
+    const val = m.score + tdlNetwork.estimate(m.board.grid);
+    if (val > bestVal) {
+      bestVal = val;
+      best = m;
+    }
+  }
+  return best;
+};
+
+
+// ═══════════════════════════════════════════════════════════
+//  TEACHER MODE — Analysis Engine
+// ═══════════════════════════════════════════════════════════
+
+const Teacher = {
+  DIR_ARROWS: ['\u2190', '\u2192', '\u2191', '\u2193'], // ← → ↑ ↓
+
+  TILE_COLORS: {
+    0: ['var(--cell-bg)', 'transparent'],
+    1: ['#eee4da', '#776e65'],   // 2
+    2: ['#ede0c8', '#776e65'],   // 4
+    3: ['#f2b179', '#f9f6f2'],   // 8
+    4: ['#f59563', '#f9f6f2'],   // 16
+    5: ['#f67c5f', '#f9f6f2'],   // 32
+    6: ['#f65e3b', '#f9f6f2'],   // 64
+    7: ['#edcf72', '#f9f6f2'],   // 128
+    8: ['#edcc61', '#f9f6f2'],   // 256
+    9: ['#edc850', '#f9f6f2'],   // 512
+    10: ['#edc53f', '#f9f6f2'],  // 1024
+    11: ['#edc22e', '#f9f6f2'],  // 2048
+    12: ['#3c3a32', '#f9f6f2'],  // 4096+
+  },
+
+  PATTERN_COLORS: ['#e74c3c', '#3498db', '#2ecc71', '#f39c12'],
+
+  HEUR_COLORS: {
+    emptyTiles: '#3498db',
+    monotonicity: '#e74c3c',
+    smoothness: '#2ecc71',
+    cornerValue: '#f39c12',
+    patternMatching: '#9b59b6',
+  },
+
+  /** Get tile background + text color for a log2 value */
+  tileStyle(log2val) {
+    const key = log2val > 12 ? 12 : log2val;
+    return Teacher.TILE_COLORS[key] || Teacher.TILE_COLORS[12];
+  },
+
+  /** Build a mini board HTML for a given Board2048 */
+  miniBoard(board) {
+    let html = '<div class="mini-board">';
+    for (let r = 0; r < 4; r++) {
+      for (let c = 0; c < 4; c++) {
+        const v = board.getTile(r, c);
+        if (v === 0) {
+          html += '<div class="mini-cell empty"></div>';
+        } else {
+          const [bg, fg] = Teacher.tileStyle(v);
+          const display = (1 << v);
+          html += `<div class="mini-cell" style="background:${bg};color:${fg}">${display}</div>`;
+        }
+      }
+    }
+    html += '</div>';
+    return html;
+  },
+
+  /** Format a number nicely */
+  fmt(n, decimals = 0) {
+    if (Math.abs(n) >= 1e6) return (n / 1e6).toFixed(1) + 'M';
+    if (Math.abs(n) >= 1e4) return (n / 1e3).toFixed(1) + 'K';
+    return decimals > 0 ? n.toFixed(decimals) : Math.round(n).toLocaleString();
+  },
+
+  /** Analyze moves for TDL player */
+  analyzeTDL(board) {
+    const allDirs = [0, 1, 2, 3];
+    const results = allDirs.map(dir => {
+      const r = Board2048.move(board, dir);
+      if (!r.moved) return { dir, valid: false };
+
+      const afterGrid = r.board.grid;
+      const networkVal = tdlNetwork.estimate(afterGrid);
+      const perPattern = tdlNetwork.patterns.map((p, idx) => ({
+        index: idx,
+        positions: p.pattern,
+        value: p.estimate(afterGrid),
+      }));
+
+      return {
+        dir,
+        valid: true,
+        afterstate: r.board,
+        moveScore: r.score,
+        networkVal,
+        total: r.score + networkVal,
+        perPattern,
+      };
+    });
+
+    // Find best
+    let bestIdx = -1, bestTotal = -Infinity;
+    for (let i = 0; i < results.length; i++) {
+      if (results[i].valid && results[i].total > bestTotal) {
+        bestTotal = results[i].total;
+        bestIdx = i;
+      }
+    }
+    if (bestIdx >= 0) results[bestIdx].isBest = true;
+
+    return { type: 'tdl', results, bestIdx };
+  },
+
+  /** Analyze moves for Heuristic player */
+  analyzeHeuristic(board) {
+    const w = AI._evalWeights;
+    const componentNames = ['emptyTiles', 'monotonicity', 'smoothness', 'cornerValue', 'patternMatching'];
+    const evalFns = {
+      emptyTiles: AI._emptyTiles,
+      monotonicity: AI._monotonicity,
+      smoothness: AI._smoothness,
+      cornerValue: AI._cornerValue,
+      patternMatching: AI._patternMatching,
+    };
+
+    const allDirs = [0, 1, 2, 3];
+    const results = allDirs.map(dir => {
+      const r = Board2048.move(board, dir);
+      if (!r.moved) return { dir, valid: false };
+
+      const g = r.board.grid;
+      const components = componentNames.map(name => ({
+        name,
+        raw: evalFns[name](g),
+        weight: w[name],
+        weighted: evalFns[name](g) * w[name],
+      }));
+      const total = components.reduce((s, c) => s + c.weighted, 0);
+
+      return { dir, valid: true, afterstate: r.board, components, total };
+    });
+
+    let bestIdx = -1, bestTotal = -Infinity;
+    for (let i = 0; i < results.length; i++) {
+      if (results[i].valid && results[i].total > bestTotal) {
+        bestTotal = results[i].total;
+        bestIdx = i;
+      }
+    }
+    if (bestIdx >= 0) results[bestIdx].isBest = true;
+
+    return { type: 'heuristic', results, bestIdx };
+  },
+
+  /** Analyze moves for Expectimax player */
+  analyzeExpectimax(board, depth) {
+    const evalFn = (b) => AI.evaluate(b);
+    const allDirs = [0, 1, 2, 3];
+    const results = allDirs.map(dir => {
+      const r = Board2048.move(board, dir);
+      if (!r.moved) return { dir, valid: false };
+
+      const t0 = performance.now();
+      const expectedVal = AI._expectimaxChance(r.board, depth, 1.0, evalFn);
+      const elapsed = performance.now() - t0;
+
+      return { dir, valid: true, afterstate: r.board, moveScore: r.score, expectedVal, total: expectedVal, elapsed };
+    });
+
+    let bestIdx = -1, bestTotal = -Infinity;
+    for (let i = 0; i < results.length; i++) {
+      if (results[i].valid && results[i].total > bestTotal) {
+        bestTotal = results[i].total;
+        bestIdx = i;
+      }
+    }
+    if (bestIdx >= 0) results[bestIdx].isBest = true;
+
+    return { type: 'expectimax', results, bestIdx, depth };
+  },
+
+  /** Analyze for Random player */
+  analyzeRandom(board) {
+    const allDirs = [0, 1, 2, 3];
+    const results = allDirs.map(dir => {
+      const r = Board2048.move(board, dir);
+      if (!r.moved) return { dir, valid: false };
+      return { dir, valid: true, afterstate: r.board, moveScore: r.score };
+    });
+    const validCount = results.filter(r => r.valid).length;
+    results.forEach(r => { if (r.valid) r.probability = (100 / validCount).toFixed(0) + '%'; });
+    return { type: 'random', results, validCount };
+  },
+
+  // ── Rendering ──
+
+  renderMoveCards(analysis) {
+    const container = document.getElementById('teach-moves');
+    let html = '';
+    const results = analysis.results;
+
+    for (const r of results) {
+      const cls = !r.valid ? 'teach-move invalid' : (r.isBest ? 'teach-move best' : 'teach-move');
+      html += `<div class="${cls}">`;
+      html += `<span class="best-badge">BEST</span>`;
+      html += `<div class="dir-label"><span class="dir-arrow">${Teacher.DIR_ARROWS[r.dir]}</span> ${DIR_NAMES[r.dir]}</div>`;
+
+      if (!r.valid) {
+        html += '<div style="font-size:0.65rem;opacity:0.5;padding:20px 0">Invalid</div>';
+      } else {
+        html += Teacher.miniBoard(r.afterstate);
+        html += '<div class="teach-vals">';
+
+        if (analysis.type === 'tdl') {
+          html += `<div class="val-row"><span class="val-label">R(s,a)</span><span class="val-num">+${Teacher.fmt(r.moveScore)}</span></div>`;
+          html += `<div class="val-row"><span class="val-label">V(s')</span><span class="val-num">${Teacher.fmt(r.networkVal, 1)}</span></div>`;
+          html += `<div class="val-row val-total"><span class="val-label">Total</span><span class="val-num">${Teacher.fmt(r.total, 1)}</span></div>`;
+        } else if (analysis.type === 'heuristic') {
+          html += `<div class="val-row val-total"><span class="val-label">Eval</span><span class="val-num">${Teacher.fmt(r.total, 1)}</span></div>`;
+        } else if (analysis.type === 'expectimax') {
+          html += `<div class="val-row"><span class="val-label">E[V]</span><span class="val-num">${Teacher.fmt(r.total, 1)}</span></div>`;
+          html += `<div class="val-row"><span class="val-label">Time</span><span class="val-num">${r.elapsed.toFixed(0)}ms</span></div>`;
+        } else if (analysis.type === 'random') {
+          html += `<div class="val-row"><span class="val-label">P(pick)</span><span class="val-num">${r.probability}</span></div>`;
+          html += `<div class="val-row"><span class="val-label">Score</span><span class="val-num">+${Teacher.fmt(r.moveScore)}</span></div>`;
+        }
+
+        html += '</div>';
+      }
+
+      html += '</div>';
+    }
+
+    container.innerHTML = html;
+  },
+
+  renderTDLPatternBreakdown(analysis) {
+    const section = document.getElementById('teach-patterns-section');
+    const table = document.getElementById('pattern-table');
+
+    const bestResult = analysis.results[analysis.bestIdx];
+    if (!bestResult || !bestResult.perPattern) {
+      section.style.display = 'none';
+      return;
+    }
+
+    section.style.display = 'block';
+
+    let html = '<tr><th>Pattern</th><th>Positions</th><th>V contrib.</th></tr>';
+    let totalV = 0;
+    for (const pp of bestResult.perPattern) {
+      const posStr = '[' + pp.positions.join(',') + ']';
+      html += `<tr>
+        <td><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${Teacher.PATTERN_COLORS[pp.index]};margin-right:4px"></span>P${pp.index + 1}</td>
+        <td style="font-size:0.62rem;opacity:0.7">${posStr}</td>
+        <td>${Teacher.fmt(pp.value, 1)}</td>
+      </tr>`;
+      totalV += pp.value;
+    }
+    html += `<tr class="row-total">
+      <td>Total V(s')</td>
+      <td></td>
+      <td>${Teacher.fmt(totalV, 1)}</td>
+    </tr>`;
+
+    table.innerHTML = html;
+  },
+
+  renderPatternViz() {
+    const viz = document.getElementById('teach-pattern-viz');
+    const grids = document.getElementById('pattern-grids');
+    viz.style.display = 'block';
+
+    const patterns = [[0,1,2,3,4,5],[4,5,6,7,8,9],[0,1,2,4,5,6],[4,5,6,8,9,10]];
+    let html = '';
+
+    patterns.forEach((pat, pIdx) => {
+      const posSet = new Set(pat);
+      html += '<div class="pattern-grid-item">';
+      html += `<div class="pg-label" style="color:${Teacher.PATTERN_COLORS[pIdx]}">P${pIdx + 1}</div>`;
+      html += '<div class="pattern-grid">';
+      for (let pos = 0; pos < 16; pos++) {
+        const active = posSet.has(pos);
+        const cls = active ? `pg-cell pg-active pg-c${pIdx}` : 'pg-cell pg-inactive';
+        const label = active ? pos : '';
+        html += `<div class="${cls}">${label}</div>`;
+      }
+      html += '</div></div>';
+    });
+
+    grids.innerHTML = html;
+  },
+
+  renderHeuristicDetail(analysis) {
+    const container = document.getElementById('teach-heuristic-detail');
+    const bestResult = analysis.results[analysis.bestIdx];
+    if (!bestResult) {
+      container.style.display = 'none';
+      return;
+    }
+
+    container.style.display = 'block';
+
+    const maxWeighted = Math.max(...bestResult.components.map(c => Math.abs(c.weighted)), 1);
+
+    let html = '<div style="margin-top:12px"><h4 style="font-size:0.75rem;font-weight:700;margin-bottom:8px">Component Breakdown (best move)</h4>';
+    html += '<div class="heur-bars">';
+
+    for (const comp of bestResult.components) {
+      const pct = Math.max(0, Math.min(100, (Math.abs(comp.weighted) / maxWeighted) * 100));
+      const color = Teacher.HEUR_COLORS[comp.name] || '#999';
+      html += `<div class="heur-bar-row">
+        <span class="heur-bar-label">${comp.name}</span>
+        <div class="heur-bar"><div class="heur-bar-fill" style="width:${pct}%;background:${color}"></div></div>
+        <span class="heur-bar-val">${Teacher.fmt(comp.weighted, 0)}</span>
+      </div>`;
+    }
+
+    html += '</div>';
+    html += `<div style="font-size:0.65rem;opacity:0.5;margin-top:4px;font-family:var(--mono)">
+      Raw values are multiplied by weights: ${bestResult.components.map(c => c.name + '×' + c.weight).join(', ')}
+    </div>`;
+    html += '</div>';
+    container.innerHTML = html;
+  },
+
+  /** Main render entry point */
+  render(board, playerType) {
+    const panel = document.getElementById('teach-panel');
+    const explain = document.getElementById('teach-explain');
+    const formula = document.getElementById('teach-formula');
+    const tag = document.getElementById('teach-player-tag');
+    const patternsSection = document.getElementById('teach-patterns-section');
+    const patternViz = document.getElementById('teach-pattern-viz');
+    const heurDetail = document.getElementById('teach-heuristic-detail');
+
+    // Hide optional sections
+    patternsSection.style.display = 'none';
+    patternViz.style.display = 'none';
+    heurDetail.style.display = 'none';
+    formula.style.display = 'none';
+
+    let analysis;
+
+    switch (playerType) {
+      case 'tdl':
+        tag.textContent = 'TDL';
+        explain.innerHTML = `The <strong>TDL player</strong> uses a learned value function <code>V(s)</code> to evaluate board positions. For each valid move, it simulates the move to get the <strong>afterstate</strong> <code>s'</code> (board after sliding, before random tile), then picks the move maximizing the total value.`;
+        formula.style.display = 'block';
+        formula.innerHTML = 'Choose a* = argmax<sub>a</sub> [ R(s,a) + V(s\') ]';
+
+        if (!tdlNetwork.loaded) {
+          explain.innerHTML += '<br><br><strong style="color:#e74c3c">Load weights.bin to see TDL analysis.</strong>';
+          document.getElementById('teach-moves').innerHTML = '';
+          return;
+        }
+
+        analysis = Teacher.analyzeTDL(board);
+        Teacher.renderMoveCards(analysis);
+        Teacher.renderTDLPatternBreakdown(analysis);
+        Teacher.renderPatternViz();
+        break;
+
+      case 'heuristic':
+        tag.textContent = 'Heuristic';
+        explain.innerHTML = `The <strong>Heuristic player</strong> evaluates each afterstate using a weighted combination of hand-crafted features. It picks the move whose afterstate has the highest evaluation score.`;
+        formula.style.display = 'block';
+        formula.innerHTML = 'Eval(s\') = &Sigma; weight<sub>i</sub> &times; feature<sub>i</sub>(s\')';
+        analysis = Teacher.analyzeHeuristic(board);
+        Teacher.renderMoveCards(analysis);
+        Teacher.renderHeuristicDetail(analysis);
+        break;
+
+      case 'expectimax':
+      case 'expectimax-deep':
+        const depth = playerType === 'expectimax-deep' ? 5 : 3;
+        tag.textContent = `Expectimax d=${depth}`;
+        explain.innerHTML = `The <strong>Expectimax player</strong> searches a game tree with alternating <strong>MAX</strong> nodes (player picks best move) and <strong>CHANCE</strong> nodes (random tile: 90% &ldquo;2&rdquo;, 10% &ldquo;4&rdquo;). It computes the expected value of each move by averaging over all possible random tile placements, searching <strong>${depth} levels</strong> deep.`;
+        analysis = Teacher.analyzeExpectimax(board, depth);
+        Teacher.renderMoveCards(analysis);
+        break;
+
+      case 'random':
+        tag.textContent = 'Random';
+        explain.innerHTML = `The <strong>Random player</strong> picks uniformly at random among all valid moves. No evaluation, no strategy &mdash; just pure luck. A useful baseline to compare smarter players against.`;
+        analysis = Teacher.analyzeRandom(board);
+        Teacher.renderMoveCards(analysis);
+        break;
+
+      case 'human':
+        tag.textContent = 'Human';
+        explain.innerHTML = `You're playing manually! The analysis below shows how a <strong>Heuristic AI</strong> would evaluate each possible move from this position, so you can compare your intuition against the AI.`;
+        formula.style.display = 'block';
+        formula.innerHTML = 'Eval(s\') = &Sigma; weight<sub>i</sub> &times; feature<sub>i</sub>(s\')';
+        analysis = Teacher.analyzeHeuristic(board);
+        Teacher.renderMoveCards(analysis);
+        Teacher.renderHeuristicDetail(analysis);
+        break;
+
+      default:
+        tag.textContent = '—';
+        explain.textContent = 'Select a player to see move analysis.';
+        document.getElementById('teach-moves').innerHTML = '';
+    }
+  },
+};
+
+
+// ═══════════════════════════════════════════════════════════
+//  GAME UI
+// ═══════════════════════════════════════════════════════════
+
+class GameUI {
+  constructor() {
+    this.board = new Board2048();
+    this.score = 0;
+    this.bestScore = parseInt(localStorage.getItem('2048-best') || '0');
+    this.moveCount = 0;
+    this.aiRunning = false;
+    this.aiTimer = null;
+    this.gameOver = false;
+    this.won = false;
+    this.keepPlaying = false;
+    this.history = []; // undo stack
+    this.maxHistorySize = 50;
+    this.teacherMode = false;
+
+    // DOM
+    this.boardEl = document.getElementById('board');
+    this.tileLayer = document.getElementById('tile-layer');
+    this.scoreEl = document.getElementById('score');
+    this.bestScoreEl = document.getElementById('best-score');
+    this.movesEl = document.getElementById('moves');
+    this.maxTileEl = document.getElementById('max-tile');
+    this.overlayEl = document.getElementById('game-over-overlay');
+    this.overlayMsg = document.getElementById('overlay-message');
+    this.statusEl = document.getElementById('ai-status');
+    this.playerSelect = document.getElementById('player-select');
+    this.speedSlider = document.getElementById('speed-slider');
+    this.speedLabel = document.getElementById('speed-label');
+    this.btnPlay = document.getElementById('btn-play');
+    this.teachPanel = document.getElementById('teach-panel');
+    this.btnTeacher = document.getElementById('btn-teacher');
+
+    this.tileElements = new Map(); // id -> DOM element
+    this.nextTileId = 0;
+    this.tileData = []; // { id, row, col, val, merged }
+
+    this.init();
+  }
+
+  init() {
+    this.board.addRandomTile();
+    this.board.addRandomTile();
+    this.updateDisplay();
+    this.renderTiles();
+    this.bindEvents();
+    this.updateSpeedLabel();
+  }
+
+  bindEvents() {
+    // Keyboard
+    document.addEventListener('keydown', (e) => this.handleKey(e));
+
+    // Touch / swipe
+    let startX, startY;
+    const wrapper = document.getElementById('board-wrapper');
+    wrapper.addEventListener('touchstart', (e) => {
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+    }, { passive: true });
+    wrapper.addEventListener('touchend', (e) => {
+      if (startX == null) return;
+      const dx = e.changedTouches[0].clientX - startX;
+      const dy = e.changedTouches[0].clientY - startY;
+      const absDx = Math.abs(dx), absDy = Math.abs(dy);
+      if (Math.max(absDx, absDy) < 20) return;
+      if (absDx > absDy) {
+        this.humanMove(dx > 0 ? DIRECTIONS.RIGHT : DIRECTIONS.LEFT);
+      } else {
+        this.humanMove(dy > 0 ? DIRECTIONS.DOWN : DIRECTIONS.UP);
+      }
+      startX = startY = null;
+    }, { passive: true });
+
+    // Speed slider
+    this.speedSlider.addEventListener('input', () => {
+      this.updateSpeedLabel();
+      if (this.aiRunning) {
+        this.stopAI();
+        this.startAI();
+      }
+    });
+
+    // Player select — show/hide TDL upload row & update teacher
+    this.playerSelect.addEventListener('change', () => {
+      this.updateTDLUploadVisibility();
+      this.updateTeacher();
+    });
+    this.updateTDLUploadVisibility();
+
+    // TDL weight file upload
+    document.getElementById('weights-file').addEventListener('change', (e) => {
+      this.loadWeightsFile(e.target.files[0]);
+    });
+  }
+
+  updateTDLUploadVisibility() {
+    const row = document.getElementById('tdl-upload-row');
+    if (this.getSelectedPlayer() === 'tdl') {
+      row.classList.add('visible');
+    } else {
+      row.classList.remove('visible');
+    }
+  }
+
+  loadWeightsFile(file) {
+    if (!file) return;
+
+    const info = document.getElementById('tdl-info');
+    const progress = document.getElementById('tdl-progress');
+    const progressBar = document.getElementById('tdl-progress-bar');
+    const btn = document.getElementById('btn-load-weights');
+
+    info.textContent = `Loading ${file.name} (${(file.size / 1024 / 1024).toFixed(0)} MB)...`;
+    progress.classList.add('visible');
+    progressBar.style.width = '0%';
+
+    const reader = new FileReader();
+
+    reader.onprogress = (e) => {
+      if (e.lengthComputable) {
+        progressBar.style.width = `${(e.loaded / e.total * 100).toFixed(0)}%`;
+      }
+    };
+
+    reader.onload = (e) => {
+      progressBar.style.width = '100%';
+      const buffer = e.target.result;
+
+      try {
+        const success = tdlNetwork.loadFromBuffer(buffer, (frac) => {
+          progressBar.style.width = `${(frac * 100).toFixed(0)}%`;
+        });
+
+        if (success) {
+          const numWeights = tdlNetwork.patterns.reduce((s, p) => s + p.tableSize, 0);
+          info.textContent = `Loaded: ${tdlNetwork.patterns.length} patterns, ${(numWeights / 1e6).toFixed(1)}M weights`;
+          btn.textContent = 'Weights loaded';
+          btn.classList.add('loaded');
+          this.setStatus('TDL weights loaded — ready to play!');
+        } else {
+          info.textContent = 'Error: invalid weight file format';
+          this.setStatus('Failed to load weights');
+        }
+      } catch (err) {
+        console.error('Weight loading error:', err);
+        info.textContent = `Error: ${err.message}`;
+        this.setStatus('Failed to load weights');
+      }
+
+      setTimeout(() => progress.classList.remove('visible'), 1000);
+    };
+
+    reader.onerror = () => {
+      info.textContent = 'Error reading file';
+      progress.classList.remove('visible');
+    };
+
+    reader.readAsArrayBuffer(file);
+  }
+
+  handleKey(e) {
+    const key = e.key;
+    let dir = null;
+
+    switch (key) {
+      case 'ArrowLeft': case 'a': case 'A': dir = DIRECTIONS.LEFT; break;
+      case 'ArrowRight': case 'd': case 'D': dir = DIRECTIONS.RIGHT; break;
+      case 'ArrowUp': case 'w': case 'W': dir = DIRECTIONS.UP; break;
+      case 'ArrowDown': case 's': case 'S': dir = DIRECTIONS.DOWN; break;
+      case ' ':
+        e.preventDefault();
+        this.toggleAI();
+        return;
+      case 'n': case 'N':
+        this.restart();
+        return;
+      case 'z': case 'Z':
+        if (e.ctrlKey || e.metaKey) {
+          e.preventDefault();
+          this.undo();
+        } else {
+          this.undo();
+        }
+        return;
+      case 't': case 'T':
+        this.toggleTeacher();
+        return;
+    }
+
+    if (dir !== null) {
+      e.preventDefault();
+      this.humanMove(dir);
+    }
+  }
+
+  getDelay() {
+    // Map slider 0-100 to delay 1000ms - 1ms (log scale)
+    const val = parseInt(this.speedSlider.value);
+    const minLog = Math.log(1);
+    const maxLog = Math.log(1000);
+    const delay = Math.exp(maxLog - (val / 100) * (maxLog - minLog));
+    return Math.round(delay);
+  }
+
+  updateSpeedLabel() {
+    const delay = this.getDelay();
+    this.speedLabel.textContent = delay >= 1000 ? `${(delay/1000).toFixed(1)}s` :
+                                   delay + 'ms';
+  }
+
+  pushHistory() {
+    this.history.push({
+      grid: this.board.grid.slice(),
+      score: this.score,
+      moveCount: this.moveCount,
+      gameOver: this.gameOver,
+      won: this.won,
+      keepPlaying: this.keepPlaying,
+      tileData: JSON.parse(JSON.stringify(this.tileData)),
+    });
+    if (this.history.length > this.maxHistorySize) this.history.shift();
+  }
+
+  undo() {
+    if (this.history.length === 0) return;
+    if (this.aiRunning) this.stopAI();
+
+    const state = this.history.pop();
+    this.board.grid = state.grid;
+    this.score = state.score;
+    this.moveCount = state.moveCount;
+    this.gameOver = state.gameOver;
+    this.won = state.won;
+    this.keepPlaying = state.keepPlaying;
+    this.tileData = state.tileData;
+
+    this.overlayEl.classList.remove('active');
+    this.rebuildTileElements();
+    this.updateDisplay();
+    this.updateTeacher();
+  }
+
+  humanMove(direction) {
+    if (this.gameOver && !this.keepPlaying) return;
+    if (this.aiRunning) return;
+    this.makeMove(direction);
+  }
+
+  makeMove(direction) {
+    if (this.gameOver && !this.keepPlaying) return;
+
+    const result = Board2048.move(this.board, direction);
+    if (!result.moved) return;
+
+    this.pushHistory();
+
+    // Track tile movement for rendering
+    this.board = result.board;
+    this.score += result.score;
+    this.moveCount++;
+
+    if (this.score > this.bestScore) {
+      this.bestScore = this.score;
+      localStorage.setItem('2048-best', this.bestScore.toString());
+    }
+
+    // Add random tile
+    const newTile = this.board.addRandomTile();
+
+    // Check win
+    if (!this.won && this.board.getMaxTile() >= 2048) {
+      this.won = true;
+      // Don't stop - let user keep playing or AI continue
+    }
+
+    // Check game over
+    if (this.board.isGameOver()) {
+      this.gameOver = true;
+      this.showOverlay('Game Over!');
+      this.stopAI();
+    }
+
+    this.renderTiles(newTile);
+    this.updateDisplay();
+    this.updateTeacher();
+  }
+
+  renderTiles(newTilePos) {
+    // Clear old tile elements
+    this.tileLayer.innerHTML = '';
+    this.tileElements.clear();
+
+    const layerRect = this.tileLayer.getBoundingClientRect();
+    const cellSize = layerRect.width / 4;
+    const gap = layerRect.width * 0.022 / (1 - 0.022 * 3) * 0; // gap handled by grid
+
+    // Calculate positions based on percentage
+    const cellPercent = (100 - 2.2 * 3) / 4; // subtract gaps
+    const gapPercent = 2.2;
+
+    // Build new tile data
+    this.tileData = [];
+    for (let r = 0; r < 4; r++) {
+      for (let c = 0; c < 4; c++) {
+        const val = this.board.getTile(r, c);
+        if (val === 0) continue;
+        const id = this.nextTileId++;
+        const isNew = newTilePos && newTilePos.row === r && newTilePos.col === c;
+        const isMerged = false;
+        this.tileData.push({ id, row: r, col: c, val, isNew, isMerged });
+      }
+    }
+
+    for (const td of this.tileData) {
+      const el = document.createElement('div');
+      const displayVal = 1 << td.val;
+      const tileClass = displayVal <= 8192 ? `tile-${displayVal}` : 'tile-super';
+
+      // Font size based on digit count
+      const digits = displayVal.toString().length;
+      let fontSize;
+      if (digits <= 2) fontSize = '2rem';
+      else if (digits === 3) fontSize = '1.7rem';
+      else if (digits === 4) fontSize = '1.35rem';
+      else fontSize = '1.1rem';
+
+      // Position using percentages
+      const left = td.col * (cellPercent + gapPercent);
+      const top = td.row * (cellPercent + gapPercent);
+
+      el.className = `tile ${tileClass}${td.isNew ? ' new-tile' : ''}`;
+      el.style.cssText = `
+        width: ${cellPercent}%;
+        height: ${cellPercent}%;
+        left: ${left}%;
+        top: ${top}%;
+        font-size: ${fontSize};
+        line-height: 1;
+      `;
+      el.textContent = displayVal;
+
+      this.tileLayer.appendChild(el);
+    }
+  }
+
+  rebuildTileElements() {
+    this.tileLayer.innerHTML = '';
+    const cellPercent = (100 - 2.2 * 3) / 4;
+    const gapPercent = 2.2;
+
+    for (const td of this.tileData) {
+      const el = document.createElement('div');
+      const displayVal = 1 << td.val;
+      const tileClass = displayVal <= 8192 ? `tile-${displayVal}` : 'tile-super';
+
+      const digits = displayVal.toString().length;
+      let fontSize;
+      if (digits <= 2) fontSize = '2rem';
+      else if (digits === 3) fontSize = '1.7rem';
+      else if (digits === 4) fontSize = '1.35rem';
+      else fontSize = '1.1rem';
+
+      const left = td.col * (cellPercent + gapPercent);
+      const top = td.row * (cellPercent + gapPercent);
+
+      el.className = `tile ${tileClass}`;
+      el.style.cssText = `
+        width: ${cellPercent}%;
+        height: ${cellPercent}%;
+        left: ${left}%;
+        top: ${top}%;
+        font-size: ${fontSize};
+        line-height: 1;
+      `;
+      el.textContent = displayVal;
+      this.tileLayer.appendChild(el);
+    }
+  }
+
+  updateDisplay() {
+    this.scoreEl.textContent = this.score.toLocaleString();
+    this.bestScoreEl.textContent = this.bestScore.toLocaleString();
+    this.movesEl.textContent = this.moveCount.toLocaleString();
+    this.maxTileEl.textContent = this.board.getMaxTile().toLocaleString();
+  }
+
+  showOverlay(message) {
+    this.overlayMsg.textContent = message;
+    this.overlayEl.classList.add('active');
+  }
+
+  hideOverlay() {
+    this.overlayEl.classList.remove('active');
+  }
+
+  restart() {
+    this.stopAI();
+    this.board = new Board2048();
+    this.score = 0;
+    this.moveCount = 0;
+    this.gameOver = false;
+    this.won = false;
+    this.keepPlaying = false;
+    this.history = [];
+    this.tileData = [];
+    this.nextTileId = 0;
+    this.hideOverlay();
+
+    this.board.addRandomTile();
+    this.board.addRandomTile();
+
+    this.renderTiles();
+    this.updateDisplay();
+    this.setStatus('');
+    this.updateTeacher();
+  }
+
+  // ── AI Controls ──
+
+  getSelectedPlayer() {
+    return this.playerSelect.value;
+  }
+
+  chooseAIMove() {
+    const player = this.getSelectedPlayer();
+    switch (player) {
+      case 'random':
+        return AI.random(this.board);
+      case 'heuristic':
+        return AI.heuristic(this.board);
+      case 'expectimax':
+        return AI.expectimax(this.board, 3);
+      case 'expectimax-deep':
+        return AI.expectimax(this.board, 5);
+      case 'tdl':
+        return AI.tdl(this.board);
+      default:
+        return null;
+    }
+  }
+
+  toggleAI() {
+    if (this.aiRunning) {
+      this.stopAI();
+    } else {
+      this.startAI();
+    }
+  }
+
+  startAI() {
+    const player = this.getSelectedPlayer();
+    if (player === 'human') {
+      this.setStatus('Select an AI player first');
+      return;
+    }
+    if (player === 'tdl' && !tdlNetwork.loaded) {
+      this.setStatus('Load weights.bin first (use the button above)');
+      return;
+    }
+    if (this.gameOver) {
+      this.setStatus('Game is over — start a new game');
+      return;
+    }
+
+    this.aiRunning = true;
+    this.btnPlay.textContent = '⏸ Pause';
+    this.btnPlay.classList.add('active');
+    this.setStatus(`Running: ${this.playerSelect.selectedOptions[0].text}`);
+    this.aiStep();
+  }
+
+  stopAI() {
+    this.aiRunning = false;
+    if (this.aiTimer) {
+      clearTimeout(this.aiTimer);
+      this.aiTimer = null;
+    }
+    this.btnPlay.textContent = '▶ Play AI';
+    this.btnPlay.classList.remove('active');
+    this.setStatus('');
+  }
+
+  aiStep() {
+    if (!this.aiRunning || this.gameOver) {
+      this.stopAI();
+      return;
+    }
+
+    const t0 = performance.now();
+    const move = this.chooseAIMove();
+    const elapsed = (performance.now() - t0).toFixed(1);
+
+    if (move) {
+      this.makeMove(move.direction);
+      this.setStatus(`${DIR_NAMES[move.direction]} — ${elapsed}ms`);
+    } else {
+      this.stopAI();
+      return;
+    }
+
+    if (this.aiRunning && !this.gameOver) {
+      this.aiTimer = setTimeout(() => this.aiStep(), this.getDelay());
+    }
+  }
+
+  stepAI() {
+    if (this.aiRunning) this.stopAI();
+    const player = this.getSelectedPlayer();
+    if (player === 'human') {
+      this.setStatus('Select an AI player first');
+      return;
+    }
+    if (player === 'tdl' && !tdlNetwork.loaded) {
+      this.setStatus('Load weights.bin first');
+      return;
+    }
+    if (this.gameOver) {
+      this.setStatus('Game is over — start a new game');
+      return;
+    }
+
+    const t0 = performance.now();
+    const move = this.chooseAIMove();
+    const elapsed = (performance.now() - t0).toFixed(1);
+
+    if (move) {
+      this.makeMove(move.direction);
+      this.setStatus(`Step: ${DIR_NAMES[move.direction]} — ${elapsed}ms`);
+    }
+  }
+
+  setStatus(msg) {
+    this.statusEl.textContent = msg;
+  }
+
+  // ── Teacher Mode ──
+
+  toggleTeacher() {
+    this.teacherMode = !this.teacherMode;
+    this.teachPanel.classList.toggle('visible', this.teacherMode);
+    this.btnTeacher.classList.toggle('active', this.teacherMode);
+    if (this.teacherMode) {
+      this.updateTeacher();
+    }
+  }
+
+  updateTeacher() {
+    if (!this.teacherMode) return;
+    if (this.gameOver) return;
+    const player = this.getSelectedPlayer();
+    Teacher.render(this.board, player);
+  }
+}
+
+// ── Start ──
+const game = new GameUI();
+</script>
+</body>
+</html>

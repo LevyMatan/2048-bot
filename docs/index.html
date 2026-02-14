@@ -272,6 +272,10 @@
   <!-- Sidebar Navigation -->
   <nav class="sidebar">
     <div class="nav-group">
+      <div class="nav-label">Play</div>
+      <a href="play.html">Play in Browser</a>
+    </div>
+    <div class="nav-group">
       <div class="nav-label">Overview</div>
       <a href="#intro">Introduction</a>
       <a href="#project-structure">Project Structure</a>
@@ -304,7 +308,7 @@
     <section class="hero" id="intro">
       <h1>2048 Bot</h1>
       <p>A high-performance 2048 AI exploring multiple strategies &mdash; from simple heuristics to a <strong>temporal-difference learning</strong> agent that regularly reaches the <strong>8192</strong> tile and beyond.</p>
-      <p><a href="https://github.com/LevyMatan/2048-bot">View on GitHub</a></p>
+      <p><a href="https://github.com/LevyMatan/2048-bot">View on GitHub</a> &middot; <a href="play.html">Play in Browser</a></p>
       <div class="tags">
         <span class="tag">C++17</span>
         <span class="tag">CMake</span>
@@ -651,13 +655,121 @@ flowchart LR
       </div>
       <p>At the terminal state, the future value is 0. We iterate <strong>backwards</strong> so that when updating step <em>t</em>, step <em>t+1</em> has already been updated.</p>
 
-      <h3>Weight Distribution</h3>
-      <p>The adjustment is distributed evenly across all contributing lookups:</p>
-      <ul>
-        <li>Split by 4 across patterns (each pattern gets &frac14; of the adjustment)</li>
-        <li>Within each pattern, split by 8 across isomorphic views (each lookup gets &frac18;)</li>
-        <li>Total: each individual weight entry receives <code>&alpha; &middot; error / 32</code></li>
-      </ul>
+      <h3>How Weights Are Updated &mdash; Step by Step</h3>
+
+      <p>The update rule says <code>V(s') += &alpha; &middot; error</code>, but <code>V(s')</code> isn&rsquo;t a single number in a table &mdash; it&rsquo;s the <strong>sum of 32 individual weight lookups</strong>. So how does the update actually reach the weights? Here is the exact cascade:</p>
+
+      <div class="mermaid">
+flowchart TB
+  ERR["TD error for afterstate s'<br><b>delta = target &minus; V(s')</b>"]
+  ADJ["Total adjustment<br><b>adj = &alpha; &middot; delta</b>"]
+  NET["NTupleNetwork.update(s', adj)<br>Splits adj by 4 patterns"]
+  PA["Pattern A<br>receives adj / 4"]
+  PB["Pattern B<br>receives adj / 4"]
+  PC["Pattern C<br>receives adj / 4"]
+  PD["Pattern D<br>receives adj / 4"]
+  ISO["Each pattern splits<br>its share by 8 symmetries"]
+  W["Each of the 8 weight entries<br>gets <b>adj / 32</b> added"]
+
+  ERR --> ADJ --> NET
+  NET --> PA
+  NET --> PB
+  NET --> PC
+  NET --> PD
+  PA --> ISO
+  PB --> ISO
+  PC --> ISO
+  PD --> ISO
+  ISO --> W
+
+  style ERR fill:#fee2e2,stroke:#ef4444,color:#1e293b
+  style ADJ fill:#fef3c7,stroke:#f59e0b,color:#1e293b
+  style NET fill:#dbeafe,stroke:#2563eb,color:#1e293b
+  style W fill:#d1fae5,stroke:#22c55e,color:#1e293b
+      </div>
+
+      <h4>1. Compute the TD error</h4>
+      <p>After the game ends, we walk backwards through the trajectory. For the <strong>last step</strong> (the afterstate before game over), the future value is 0:</p>
+      <pre><code>target = 0                          # no future after game over
+error  = target &minus; V(s'_last)        # how wrong was our estimate?</code></pre>
+      <p>For <strong>earlier steps</strong>, the target incorporates the reward from that move plus the (already-updated) value of the next afterstate:</p>
+      <pre><code>target = reward_t + V(s'_{t+1})     # what we should have predicted
+error  = target &minus; V(s'_t)           # the surprise / prediction error</code></pre>
+
+      <h4>2. Scale by learning rate</h4>
+      <p>The raw error is scaled by the learning rate &alpha; (typically 0.1) to control how aggressively we update:</p>
+      <pre><code>adj = alpha * error                 # e.g. 0.1 * error</code></pre>
+
+      <h4>3. Distribute to the network (split by 4 patterns)</h4>
+      <p>The <code>NTupleNetwork</code> holds 4 patterns. It divides the adjustment equally among them:</p>
+      <pre><code>// NTupleNetwork::update(state, adj)
+for each pattern p in {A, B, C, D}:
+    p.update(state, adj / 4)</code></pre>
+
+      <h4>4. Distribute within each pattern (split by 8 symmetries)</h4>
+      <p>Each <code>NTuplePattern</code> evaluates the board through 8 symmetric views. It divides its share equally among those 8 lookups:</p>
+      <pre><code>// NTuplePattern::update(state, adj_quarter)
+for each symmetry sym in {identity, rot90, rot180, rot270,
+                          mirror, mirror+90, mirror+180, mirror+270}:
+    idx = compute_index(state, sym)   # pack 6 tiles into 24-bit index
+    weights[idx] += adj_quarter / 8   # = original adj / 32</code></pre>
+
+      <h4>5. The actual weight entry that changes</h4>
+      <p>The index <code>idx</code> is a 24-bit integer computed by reading the 6 tile values (0&ndash;15) at the pattern&rsquo;s positions under that symmetric view and packing them:</p>
+      <pre><code>idx = tile[0] | (tile[1] &lt;&lt; 4) | (tile[2] &lt;&lt; 8)
+    | (tile[3] &lt;&lt; 12) | (tile[4] &lt;&lt; 16) | (tile[5] &lt;&lt; 20)</code></pre>
+      <p>This index selects one entry in the pattern&rsquo;s weight table (out of 16<sup>6</sup> = 16,777,216 entries). That single float gets <code>adj / 32</code> added to it.</p>
+
+      <div class="callout">
+        <strong>Summary:</strong> Each update touches exactly <strong>32 weight entries</strong> (4 patterns &times; 8 symmetries). Each entry is nudged by <code>&alpha; &middot; error / 32</code>. Over millions of episodes, the weights converge so that <code>V(s')</code> accurately predicts the expected future score from any afterstate.
+      </div>
+
+      <h3>Concrete Example</h3>
+      <p>Suppose a short game produces this 3-step trajectory (afterstate, reward):</p>
+      <table>
+        <thead><tr><th>Step</th><th>Afterstate</th><th>Reward</th><th>V(afterstate)</th></tr></thead>
+        <tbody>
+          <tr><td>0</td><td>s'<sub>0</sub></td><td>4</td><td>100.0</td></tr>
+          <tr><td>1</td><td>s'<sub>1</sub></td><td>8</td><td>80.0</td></tr>
+          <tr><td>2 (last)</td><td>s'<sub>2</sub></td><td>16</td><td>50.0</td></tr>
+        </tbody>
+      </table>
+      <p>Backward pass with &alpha; = 0.1:</p>
+
+      <div class="card">
+        <h4>Step 2 (last move, no future)</h4>
+        <pre><code>target = 0                          # game over, no future
+error  = 0 &minus; V(s'_2) = 0 &minus; 50.0 = &minus;50.0
+adj    = 0.1 &times; (&minus;50.0) = &minus;5.0
+
+# Update: each of the 32 weight entries for s'_2 gets &minus;5.0/32 = &minus;0.15625
+# After update: V(s'_2) = 50.0 + (&minus;5.0) = 45.0
+
+target = reward_2 + V(s'_2) = 16 + 45.0 = 61.0</code></pre>
+      </div>
+      <div class="card">
+        <h4>Step 1</h4>
+        <pre><code>error  = target &minus; V(s'_1) = 61.0 &minus; 80.0 = &minus;19.0
+adj    = 0.1 &times; (&minus;19.0) = &minus;1.9
+
+# Update: each of 32 entries for s'_1 gets &minus;1.9/32 &asymp; &minus;0.059
+# After update: V(s'_1) = 80.0 + (&minus;1.9) = 78.1
+
+target = reward_1 + V(s'_1) = 8 + 78.1 = 86.1</code></pre>
+      </div>
+      <div class="card">
+        <h4>Step 0</h4>
+        <pre><code>error  = target &minus; V(s'_0) = 86.1 &minus; 100.0 = &minus;13.9
+adj    = 0.1 &times; (&minus;13.9) = &minus;1.39
+
+# Update: each of 32 entries for s'_0 gets &minus;1.39/32 &asymp; &minus;0.043
+# After update: V(s'_0) = 100.0 + (&minus;1.39) = 98.61</code></pre>
+      </div>
+
+      <p>In this example, all values were adjusted <strong>downward</strong> because the game ended with less future reward than predicted. Over many games, positions that lead to high scores get pushed up and positions near game-over get pushed down &mdash; until the predictions are accurate.</p>
+
+      <h3>Why Backward?</h3>
+      <p>We iterate from the last step to the first so that when we compute <code>target = r + V(s'<sub>t+1</sub>)</code>, we use the <strong>already-updated</strong> value of <code>s'<sub>t+1</sub></code>. This creates a chain: the terminal correction (value should be 0) propagates back through the trajectory, one step at a time. Each game pushes information about the outcome back toward earlier positions.</p>
 
       <h3>Training Pseudocode</h3>
       <pre><code>for episode = 1 to N:
@@ -676,7 +788,7 @@ flowchart LR
         (s', r) = path[t]
         error  = target - V(s')
         V(s') += alpha * error      # distributed over 32 lookups
-        target  = r + V(s')</code></pre>
+        target  = r + V(s')         # use UPDATED value</code></pre>
 
       <div class="mermaid">
 flowchart TB
