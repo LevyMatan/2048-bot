@@ -1178,12 +1178,8 @@
     <div class="controls-row">
       <label>Player:</label>
       <select id="player-select">
+        <option value="tdl" selected>AI: TDL (N-Tuple Network)</option>
         <option value="human">Human (Keyboard / Swipe)</option>
-        <option value="random">AI: Random</option>
-        <option value="heuristic">AI: Heuristic</option>
-        <option value="expectimax">AI: Expectimax (Depth 3)</option>
-        <option value="expectimax-deep">AI: Expectimax (Depth 5)</option>
-        <option value="tdl">AI: TDL (N-Tuple Network)</option>
       </select>
     </div>
     <div class="controls-row tdl-upload-row" id="tdl-upload-row">
@@ -3027,7 +3023,7 @@ class GameUI {
     this.keepPlaying = false;
     this.history = []; // undo stack
     this.maxHistorySize = 50;
-    this.teacherMode = false;
+    this.teacherMode = true;
 
     // DOM
     this.boardEl = document.getElementById('board');
@@ -3060,6 +3056,11 @@ class GameUI {
     this.renderTiles();
     this.bindEvents();
     this.updateSpeedLabel();
+
+    // Teacher Mode on by default
+    this.teachPanel.classList.add('visible');
+    this.btnTeacher.classList.add('active');
+    this.updateTeacher();
   }
 
   bindEvents() {

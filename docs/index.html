@@ -314,7 +314,7 @@
     <section class="hero" id="intro">
       <h1>2048 Bot</h1>
       <p>A high-performance 2048 AI exploring multiple strategies &mdash; from simple heuristics to a <strong>temporal-difference learning</strong> agent that regularly reaches the <strong>8192</strong> tile and beyond.</p>
-      <p><a href="https://github.com/LevyMatan/2048-bot">View on GitHub</a> &middot; <a href="play.html">Play in Browser</a></p>
+      <p><a href="https://github.com/LevyMatan/2048-bot">View on GitHub</a> &middot; <a href="play.html" style="font-weight:700;font-size:1.1em">&#9654; Play in Browser</a></p>
       <div class="tags">
         <span class="tag">C++17</span>
         <span class="tag">CMake</span>
@@ -782,34 +782,164 @@ adj    = 0.1 &times; (&minus;13.9) = &minus;1.39
       <h3>Why Backward?</h3>
       <p>We iterate from the last step to the first so that when we compute <code>target = r + V(s'<sub>t+1</sub>)</code>, we use the <strong>already-updated</strong> value of <code>s'<sub>t+1</sub></code>. This creates a chain: the terminal correction (value should be 0) propagates back through the trajectory, one step at a time. Each game pushes information about the outcome back toward earlier positions.</p>
 
+      <h3>Complete Training Episode Walkthrough</h3>
+
+      <p>A training episode is one full game played from start to game-over. It has two phases: a <strong>forward pass</strong> (play the game, recording everything) and a <strong>backward pass</strong> (update the weights). Let&rsquo;s walk through both in detail.</p>
+
+      <div class="mermaid">
+flowchart LR
+  subgraph FW ["Phase 1: Forward Pass (Play the Game)"]
+    direction TB
+    F1["Start: empty board + 2 random tiles"]
+    F2["At each step:<br>1. Try all legal moves<br>2. Score each: R + V(afterstate)<br>3. Pick the best (greedy)<br>4. Record (afterstate, R)<br>5. Add random tile"]
+    F3["Game over<br>(no legal moves)"]
+    F1 --> F2 --> F3
+  end
+  subgraph BW ["Phase 2: Backward Pass (Update Weights)"]
+    direction TB
+    B1["Start from last step<br>target = 0"]
+    B2["For each step (last → first):<br>error = target &minus; V(s')<br>V(s') += &alpha; &times; error<br>target = R + V(s')"]
+    B3["Done: 32 weights nudged<br>per step in the game"]
+    B1 --> B2 --> B3
+  end
+  FW --> BW
+
+  style FW fill:#dbeafe,stroke:#2563eb,color:#1e293b
+  style BW fill:#fee2e2,stroke:#ef4444,color:#1e293b
+      </div>
+
+      <h4>Phase 1: Forward Pass &mdash; How Actions Are Chosen</h4>
+
+      <p>During training, the action is chosen <strong>exactly the same way as during play</strong>: greedily. At each step, the network tries every legal move, evaluates it, and picks the best one.</p>
+
+      <div class="callout">
+        <strong>Key point:</strong> There is no exploration (no random moves, no epsilon-greedy). The policy is always <code>argmax(R + V(afterstate))</code>. This works because the <strong>random tile placement</strong> already provides natural exploration &mdash; even with the same greedy policy, different random tiles lead to different game trajectories every time.
+      </div>
+
+      <p>Here is a concrete example. Suppose the board is:</p>
+      <pre><code>  2   4   8  16
+  _   2   4   8
+  _   _   2   4
+  _   _   _   2</code></pre>
+      <p>The network tries all 4 directions:</p>
+
+      <table>
+        <thead><tr><th>Move</th><th>Afterstate (after sliding)</th><th>R (merge score)</th><th>V(afterstate)</th><th>Total = R + V</th></tr></thead>
+        <tbody>
+          <tr><td>&larr; Left</td><td>tiles shift left, some merge</td><td>+28</td><td>12,450</td><td><strong>12,478</strong></td></tr>
+          <tr><td>&rarr; Right</td><td>tiles shift right</td><td>+0</td><td>12,890</td><td><strong>12,890</strong> &star;</td></tr>
+          <tr><td>&uarr; Up</td><td>tiles shift up, some merge</td><td>+12</td><td>11,200</td><td><strong>11,212</strong></td></tr>
+          <tr><td>&darr; Down</td><td>invalid (can&rsquo;t move)</td><td>&mdash;</td><td>&mdash;</td><td>&mdash;</td></tr>
+        </tbody>
+      </table>
+
+      <p>The network picks <strong>&rarr; Right</strong> (total 12,890) even though it scores <strong>R = 0</strong> (no merge). Why? Because <code>V(afterstate)</code> is very high &mdash; the network has learned that the afterstate of moving right leads to better future outcomes. <strong>This is a preparation move.</strong></p>
+
+      <p>The network records <code>(afterstate_of_right, reward=0)</code> in the path, applies the move, adds a random tile, and continues to the next step.</p>
+
+      <h4>Phase 2: Backward Pass &mdash; How Weights Are Updated</h4>
+
+      <p>After the game ends (no legal moves), the network walks <strong>backward</strong> through the path to update weights. Here is a 4-step game fragment showing both phases together:</p>
+
+      <table>
+        <thead><tr><th>Step</th><th>Move chosen</th><th>Reward R</th><th>V(afterstate) before update</th><th>Role</th></tr></thead>
+        <tbody>
+          <tr><td>0</td><td>&larr; Left</td><td>4</td><td>300.0</td><td>setup</td></tr>
+          <tr style="color:#e67e22;font-weight:600"><td>1</td><td>&uarr; Up</td><td>0</td><td>280.0</td><td>preparation</td></tr>
+          <tr><td>2</td><td>&rarr; Right</td><td>256</td><td>100.0</td><td>big merge</td></tr>
+          <tr><td>3 (last)</td><td>&darr; Down</td><td>8</td><td>20.0</td><td>final move</td></tr>
+        </tbody>
+      </table>
+
+      <p>Now the backward pass (&alpha; = 0.1):</p>
+
+      <div class="card">
+        <h4>Step 3 (last): target = 0 (game over)</h4>
+        <pre><code>error  = 0 &minus; V(s'_3) = 0 &minus; 20.0 = <strong>&minus;20.0</strong>
+V(s'_3) += 0.1 &times; (&minus;20.0) = &minus;2.0     →  V(s'_3) is now 18.0
+   (32 weight entries each get &minus;2.0/32 = &minus;0.0625)
+
+next target = R_3 + V(s'_3) = 8 + 18.0 = <strong>26.0</strong></code></pre>
+      </div>
+
+      <div class="card">
+        <h4>Step 2: target = 26.0 (from step 3)</h4>
+        <pre><code>error  = 26.0 &minus; V(s'_2) = 26.0 &minus; 100.0 = <strong>&minus;74.0</strong>
+V(s'_2) += 0.1 &times; (&minus;74.0) = &minus;7.4     →  V(s'_2) is now 92.6
+   (32 weight entries each get &minus;7.4/32 = &minus;0.231)
+
+next target = R_2 + V(s'_2) = 256 + 92.6 = <strong>348.6</strong></code></pre>
+        <p>The big merge reward (256) flows into the target for the next (earlier) step.</p>
+      </div>
+
+      <div class="card" style="border-left: 3px solid #e67e22;">
+        <h4 style="color:#e67e22">Step 1 (preparation move!): target = 348.6</h4>
+        <pre><code>error  = 348.6 &minus; V(s'_1) = 348.6 &minus; 280.0 = <strong>+68.6</strong>
+V(s'_1) += 0.1 &times; 68.6 = +6.86       →  V(s'_1) is now 286.86
+   (32 weight entries each get +6.86/32 = +0.214)
+
+next target = R_1 + V(s'_1) = 0 + 286.86 = <strong>286.86</strong></code></pre>
+        <p><strong>This is the key moment.</strong> Step 1 had R = 0 (no merge &mdash; it just rearranged tiles). But the target is 348.6 because steps 2 and 3 earned big rewards. The error is <strong>positive</strong>, so V goes <strong>up</strong>. The network learns: &ldquo;this board configuration is valuable because it leads to big merges later.&rdquo;</p>
+      </div>
+
+      <div class="card">
+        <h4>Step 0: target = 286.86</h4>
+        <pre><code>error  = 286.86 &minus; V(s'_0) = 286.86 &minus; 300.0 = <strong>&minus;13.14</strong>
+V(s'_0) += 0.1 &times; (&minus;13.14) = &minus;1.314 →  V(s'_0) is now 298.69
+   (32 weight entries each get &minus;1.314/32 = &minus;0.041)
+
+(no more steps — backward pass complete)</code></pre>
+      </div>
+
+      <h4>What Changed?</h4>
+      <p>In this single episode, 4 &times; 32 = <strong>128 weight entries</strong> were nudged. The net effect:</p>
+      <ul>
+        <li>Steps 2 and 3 (near game-over) had their values <strong>decreased</strong> &mdash; the network overestimated them</li>
+        <li>Step 1 (the preparation move) had its value <strong>increased</strong> &mdash; the big merge at step 2 sent credit backward</li>
+        <li>Step 0 was slightly decreased &mdash; close to correct already</li>
+      </ul>
+      <p>After thousands of episodes, these incremental adjustments converge: the 67 million weights encode an accurate map from &ldquo;what does the board look like?&rdquo; to &ldquo;how much score will I collect from here?&rdquo;</p>
+
       <h3>Training Pseudocode</h3>
       <pre><code>for episode = 1 to N:
     path = []
     state = new_game()            # two random tiles
 
+    # ── Phase 1: Forward pass (play the game greedily) ──
     while has_legal_move(state):
-        move = argmax(reward + V(afterstate))
-        path.append( (afterstate, reward) )
-        state = afterstate
-        state = add_random_tile(state)
+        # Try every legal move, evaluate afterstate
+        for each legal move m:
+            afterstate = apply_move(state, m)    # slide + merge, NO random tile
+            score[m]   = reward(m) + V(afterstate)
 
-    # Backward TD(0) pass
-    target = 0
+        best_move  = argmax(score)               # greedy: pick highest
+        afterstate = apply_move(state, best_move)
+        path.append( (afterstate, reward(best_move)) )
+
+        state = afterstate
+        state = add_random_tile(state)           # NOW add random tile
+
+    # ── Phase 2: Backward pass (update weights) ──
+    target = 0                                   # game over: no future
     for t = len(path)-1 down to 0:
         (s', r) = path[t]
-        error  = target - V(s')
-        V(s') += alpha * error      # distributed over 32 lookups
-        target  = r + V(s')         # use UPDATED value</code></pre>
+        error   = target - V(s')                 # how wrong was our estimate?
+        V(s')  += alpha * error                  # nudge 32 weight entries
+        target  = r + V(s')                      # carry value to earlier step</code></pre>
 
       <div class="mermaid">
 flowchart TB
   subgraph episode ["One Training Episode"]
     direction TB
     Init["Init board<br>(2 random tiles)"]
-    Loop["For each step:<br>pick best move,<br>record (afterstate, reward),<br>add random tile"]
-    Term["Game over"]
-    Back["Backward pass:<br>TD(0) weight updates"]
-    Init --> Loop --> Term --> Back
+    Eval["Try all legal moves<br>Score each: R + V(afterstate)"]
+    Pick["Pick best move (greedy)<br>Record (afterstate, R) in path"]
+    Rand["Add random tile to board"]
+    Check{"Legal moves<br>available?"}
+    Back["Backward pass:<br>TD(0) weight updates<br>(last step → first step)"]
+    Init --> Eval --> Pick --> Rand --> Check
+    Check -->|yes| Eval
+    Check -->|no| Back
   end
       </div>
     </section>
@@ -1030,8 +1160,8 @@ xychart-beta
       </div>
 
       <h3>Workflow</h3>
-      <pre><code>1. Open docs/play.html in your browser
-2. Select "TDL" player, click "Teacher" to enable Teacher Mode
+      <pre><code>1. Open the Play in Browser page (or docs/play.html locally)
+2. TDL player and Teacher Mode are enabled by default
 3. (Optional) Load existing weights.bin
 4. Scroll to "Train the Network" section
 5. Set episodes and alpha, click "Train"
