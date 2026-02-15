@@ -299,6 +299,12 @@
       <a href="#training">Training the Network</a>
       <a href="#results">Results</a>
     </div>
+    <div class="nav-group">
+      <div class="nav-label">Browser GUI</div>
+      <a href="#browser-gui">Overview</a>
+      <a href="#teacher-mode">Teacher Mode</a>
+      <a href="#browser-training">In-Browser Training</a>
+    </div>
   </nav>
 
   <!-- Main Content -->
@@ -316,6 +322,8 @@
         <span class="tag">TD Learning</span>
         <span class="tag">Expectimax</span>
         <span class="tag">Multi-threaded</span>
+        <span class="tag">Browser GUI</span>
+        <span class="tag">Teacher Mode</span>
       </div>
     </section>
 
@@ -336,7 +344,7 @@
 &boxv;   &boxv;   &boxvr;&boxh; random_player.cpp      <span class="comment"># Random move selection</span>
 &boxv;   &boxv;   &boxvr;&boxh; heuristic_player.cpp   <span class="comment"># Weighted heuristic eval</span>
 &boxv;   &boxv;   &boxvr;&boxh; expectimax_player.cpp  <span class="comment"># Expectimax search</span>
-&boxv;   &boxv;   &boxvr;&boxh; tdl_player.cpp/hpp     <span class="comment"># TD-Learning player</span>
+&boxv;   &boxv;   &boxvr;&boxh; tdl_player.cpp/hpp     <span class="comment"># TD-Learning player + multi-threaded training</span>
 &boxv;   &boxv;   &boxvr;&boxh; ntuple_network.hpp     <span class="comment"># N-Tuple network impl</span>
 &boxv;   &boxv;   &boxvr;&boxh; evaluation.cpp/hpp     <span class="comment"># Heuristic evaluation fns</span>
 &boxv;   &boxv;   &boxvr;&boxh; arg_parser.cpp/hpp     <span class="comment"># CLI argument parsing</span>
@@ -345,7 +353,9 @@
 &boxv;   <span class="dir">&boxvr;&boxh; tests/</span>               <span class="comment"># Google Test suite</span>
 &boxv;   &boxur;&boxh; CMakeLists.txt        <span class="comment"># Build configuration</span>
 <span class="dir">&boxvr;&boxh; python/</span>                      <span class="comment"># Python implementation</span>
-<span class="dir">&boxvr;&boxh; docs/</span>                        <span class="comment"># This documentation</span>
+<span class="dir">&boxvr;&boxh; docs/</span>                        <span class="comment"># Documentation + browser GUI</span>
+&boxv;   &boxvr;&boxh; index.html              <span class="comment"># This documentation site</span>
+&boxv;   &boxur;&boxh; play.html               <span class="comment"># Browser GUI (play, train, learn)</span>
 <span class="dir">&boxvr;&boxh; .github/workflows/</span>          <span class="comment"># CI: tests, benchmarks</span>
 &boxur;&boxh; README.md
       </div>
@@ -488,6 +498,7 @@ ctest --output-on-failure</code></pre>
           <tr><td><code>--episodes &lt;N&gt;</code></td><td>Training episodes</td><td>100000</td></tr>
           <tr><td><code>--alpha &lt;rate&gt;</code></td><td>Learning rate</td><td>0.1</td></tr>
           <tr><td><code>--weights &lt;path&gt;</code></td><td>Weights file (load/save)</td><td>weights.bin</td></tr>
+          <tr><td><code>-t, --threads &lt;N&gt;</code></td><td>Parallel training threads (Hogwild)</td><td>1</td></tr>
           <tr><td colspan="3" style="background: var(--code-bg); font-weight: 600;">Logging &amp; Debug</td></tr>
           <tr><td><code>-l, --log-level &lt;lvl&gt;</code></td><td>Log level: error, warn, info, debug</td><td>error</td></tr>
           <tr><td><code>-o, --output &lt;dest&gt;</code></td><td>Output: none, console, file, both</td><td>none</td></tr>
@@ -845,7 +856,7 @@ flowchart TB
       <ul>
         <li>Holds a <code>shared_ptr&lt;NTupleNetwork&gt;</code></li>
         <li><code>chooseAction(state)</code>: enumerates legal moves, evaluates each as <code>score + network.estimate(afterstate)</code>, returns the best</li>
-        <li><code>trainNetwork()</code>: static method that runs self-play episodes and updates the network with TD(0)</li>
+        <li><code>trainNetwork()</code>: static method that runs self-play episodes and updates the network with TD(0). Supports <strong>multi-threaded Hogwild training</strong> for near-linear speedup across cores.</li>
         <li>Supports loading pre-trained weights for instant play</li>
       </ul>
     </section>
@@ -857,6 +868,16 @@ flowchart TB
       <pre><code># From cpp/build/ (Release build recommended for speed)
 ./2048 --train --episodes 100000 --alpha 0.1 --weights weights.bin</code></pre>
 
+      <h3>Multi-Threaded Training</h3>
+      <p>Use <code>-t</code> to parallelize training across CPU cores using <strong>Hogwild-style</strong> asynchronous updates:</p>
+      <pre><code># Train with 10 threads (e.g. Apple M4)
+./2048 --train --episodes 100000 --alpha 0.1 --weights weights.bin -t 10
+
+# Continue training with lower learning rate
+./2048 --train --episodes 100000 --alpha 0.01 --weights weights.bin -t 10</code></pre>
+
+      <p>Each thread plays its own games and updates the shared weight tables without locks. This works because individual float updates are tiny (<code>&alpha; &times; error / 32</code>) and the stochastic nature of TD learning tolerates minor data races. In practice, Hogwild converges as well as sequential training and scales nearly linearly with core count.</p>
+
       <h3>Training Options</h3>
       <table>
         <thead><tr><th>Flag</th><th>Description</th></tr></thead>
@@ -864,11 +885,12 @@ flowchart TB
           <tr><td><code>--episodes &lt;N&gt;</code></td><td>Number of self-play games. More = stronger. 100K is a good start; 1M for maximum strength.</td></tr>
           <tr><td><code>--alpha &lt;rate&gt;</code></td><td>Learning rate. 0.1 works well. Lower values (0.01) for fine-tuning after initial training.</td></tr>
           <tr><td><code>--weights &lt;path&gt;</code></td><td>Path to weights file. If it exists, training <strong>resumes</strong> from it. Saved at the end.</td></tr>
+          <tr><td><code>-t, --threads &lt;N&gt;</code></td><td>Number of parallel training threads. Default: 1. Recommended: number of CPU cores.</td></tr>
         </tbody>
       </table>
 
       <div class="callout">
-        <strong>Resume training:</strong> Running the same command again will load the existing <code>weights.bin</code> and continue training. This lets you incrementally improve the network without restarting from scratch.
+        <strong>Resume training:</strong> Running the same command again will load the existing <code>weights.bin</code> and continue training. This lets you incrementally improve the network without restarting from scratch. Decrease <code>--alpha</code> in later rounds for fine-tuning.
       </div>
 
       <h3>Training Output</h3>
@@ -912,7 +934,7 @@ xychart-beta
         </tbody>
       </table>
 
-      <p>After 1M episodes, the TDL player reaches the <strong>8192 tile in about 70&ndash;75% of games</strong> and occasionally achieves the <strong>16384 tile</strong> (~3&ndash;4% of games). Training 1M episodes takes approximately 15&ndash;30 minutes depending on hardware.</p>
+      <p>After 1M episodes, the TDL player reaches the <strong>8192 tile in about 70&ndash;75% of games</strong> and occasionally achieves the <strong>16384 tile</strong> (~3&ndash;4% of games). Training 1M episodes takes approximately 15&ndash;30 minutes single-threaded, or <strong>2&ndash;5 minutes with multi-threaded Hogwild training</strong> (e.g., <code>-t 10</code> on an Apple M4).</p>
 
       <h3>Comparison Across Players</h3>
       <table>
@@ -930,6 +952,91 @@ xychart-beta
       <div class="callout">
         The TDL player is not only <strong>much stronger</strong> than other players but also <strong>faster</strong> at inference time &mdash; each move requires only 32 table lookups (no tree search), making it highly suitable for real-time play and large-scale benchmarking.
       </div>
+    </section>
+
+    <!-- ==================== BROWSER GUI ==================== -->
+
+    <section id="browser-gui">
+      <h2>Browser GUI</h2>
+      <p>The project includes a full-featured <strong><a href="play.html">browser-based GUI</a></strong> (<code>docs/play.html</code>) that runs entirely client-side &mdash; no server needed. Open it directly in any modern browser.</p>
+
+      <div class="card-grid">
+        <div class="card">
+          <h4>Manual Play</h4>
+          <p>Play 2048 with keyboard (arrow keys) or touch/swipe controls. Includes undo, score tracking, and tile animations.</p>
+        </div>
+        <div class="card">
+          <h4>AI Players</h4>
+          <p>Watch any of the four AI strategies play: Random, Heuristic, Expectimax, and TDL. Adjustable speed from slow step-by-step to max speed.</p>
+        </div>
+        <div class="card">
+          <h4>TDL Weight Loading</h4>
+          <p>Load your trained <code>weights.bin</code> file directly in the browser. The JavaScript implementation mirrors the C++ n-tuple network exactly, including the binary file format.</p>
+        </div>
+        <div class="card">
+          <h4>Weight Export</h4>
+          <p>Save trained weights back to a <code>weights.bin</code> file &mdash; compatible with the C++ program. Train in the browser, play from the CLI, or vice versa.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="teacher-mode">
+      <h2>Teacher Mode</h2>
+      <p>Teacher Mode provides a <strong>visual, step-by-step explanation</strong> of how each AI player computes its next move. Enable it by clicking the <strong>Teacher</strong> button while playing.</p>
+
+      <h3>For the TDL Player</h3>
+      <p>Teacher Mode shows the complete evaluation pipeline:</p>
+      <ol>
+        <li><strong>Afterstate simulation</strong> &mdash; each possible move produces a different afterstate board</li>
+        <li><strong>Pattern lookup visualization</strong> &mdash; see exactly which 6 board positions each pattern reads, what tile values are there, and how they pack into a 24-bit index</li>
+        <li><strong>Shared table insight</strong> &mdash; all 8 symmetries (rotations + mirrors) index into the <em>same</em> weight table per pattern (4 tables total, not 32)</li>
+        <li><strong>Per-symmetry breakdown</strong> &mdash; a table showing all 8 lookups for each pattern: positions, tile values, index, and weight</li>
+        <li><strong>Final decision</strong> &mdash; <code>R(s,a) + V(s&prime;)</code> for each move, with the best highlighted</li>
+      </ol>
+
+      <h3>TD(0) Training Explained</h3>
+      <p>Teacher Mode also includes a deep-dive into <strong>how weights are updated</strong> during training:</p>
+      <ul>
+        <li><strong>Forward pass</strong> &mdash; the game path of afterstates and rewards</li>
+        <li><strong>Backward pass</strong> &mdash; step-by-step TD(0) update with <code>target</code>, <code>error</code>, <code>old V</code>, and <code>new V</code></li>
+        <li><strong>Preparation moves</strong> &mdash; highlighted moves where <code>R = 0</code> (no merge) but value <em>increased</em>, demonstrating how TD learning assigns credit to strategic positioning</li>
+        <li><strong>Weight cascade</strong> &mdash; how the error is distributed across 4 patterns &times; 8 symmetries = 32 weight entries</li>
+      </ul>
+
+      <h3>For Other Players</h3>
+      <ul>
+        <li><strong>Heuristic</strong> &mdash; component breakdown (empty tiles, monotonicity, smoothness, corner value) with weighted bar chart</li>
+        <li><strong>Expectimax</strong> &mdash; expected value and computation time per move</li>
+        <li><strong>Random</strong> &mdash; probability distribution over legal moves</li>
+      </ul>
+    </section>
+
+    <section id="browser-training">
+      <h2>In-Browser Training</h2>
+      <p>The browser GUI includes a <strong>live training engine</strong> that runs TD(0) self-play directly in JavaScript. Select the TDL player, enable Teacher Mode, and scroll to the <strong>Train the Network</strong> section.</p>
+
+      <h3>Features</h3>
+      <ul>
+        <li><strong>Train from scratch</strong> or <strong>continue from loaded weights</strong></li>
+        <li>Configurable episodes and learning rate (&alpha;)</li>
+        <li><strong>Live statistics</strong> &mdash; average score, best score, max tile, tile distribution</li>
+        <li><strong>Backward pass replay</strong> &mdash; after each training game, see the full TD(0) backward pass with step-by-step detail</li>
+        <li><strong>Preparation move detection</strong> &mdash; automatically identifies and highlights moves that scored 0 points but gained value through the backward pass</li>
+        <li><strong>Save trained weights</strong> &mdash; download the updated <code>weights.bin</code> file to use with the C++ program</li>
+      </ul>
+
+      <div class="callout">
+        <strong>Note:</strong> Browser training is great for learning and experimentation, but for serious training (100K+ episodes), use the C++ implementation with multi-threaded training for orders-of-magnitude better performance.
+      </div>
+
+      <h3>Workflow</h3>
+      <pre><code>1. Open docs/play.html in your browser
+2. Select "TDL" player, click "Teacher" to enable Teacher Mode
+3. (Optional) Load existing weights.bin
+4. Scroll to "Train the Network" section
+5. Set episodes and alpha, click "Train"
+6. Watch live stats and the backward pass visualization
+7. Click "Save weights.bin" to export</code></pre>
     </section>
 
     <div class="back-top">

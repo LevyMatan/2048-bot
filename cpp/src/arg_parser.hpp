@@ -37,6 +37,7 @@ public:
     int getTrainEpisodes() const { return trainEpisodes; }
     float getTrainAlpha() const { return trainAlpha; }
     std::string getTrainWeightsPath() const { return trainWeightsPath; }
+    int getTrainThreads() const { return trainThreads; }
 
 private:
     void parseArguments(int argc, char* argv[]);
@@ -68,6 +69,7 @@ private:
     int trainEpisodes = 100000;
     float trainAlpha = 0.1f;
     std::string trainWeightsPath = "weights.bin";
+    int trainThreads = 1;
 };
 
 

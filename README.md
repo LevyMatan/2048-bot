@@ -1,73 +1,136 @@
 # 2048 Bot
 
-A bot to play the 2048 game using various AI strategies. The project explores different decision-making algorithms to achieve high scores, with some algorithms capable of reaching scores of 20,000 and beyond.
+A high-performance 2048 AI exploring multiple strategies — from simple heuristics to a **temporal-difference learning** agent with n-tuple networks that regularly reaches the **8192 tile** and beyond.
 
-This project contains both C++ and Python implementations of the 2048 game bot, each with different optimization strategies and features.
+This project contains both C++ and Python implementations, plus a **browser-based GUI** for playing, training, and learning how the AI works.
 
-**Documentation:** A [technical explanation of the N-Tuple TD-Learning (TDL) player](docs/index.html) (how it works, training, and usage) is available in the repo and can be viewed on GitHub Pages if enabled.
+| | |
+|---|---|
+| **[Documentation](docs/index.html)** | Technical deep-dive into the TDL player, n-tuple networks, and TD(0) learning |
+| **[Play in Browser](docs/play.html)** | Interactive GUI with all AI players, Teacher Mode, and in-browser training |
 
 ## Project Structure
 
-```bash
-2048-bot
-├── cpp/                    # C++ implementation
-│   ├── src/                # C++ source files
-│   ├── build/              # Build directory
-│   ├── CMakeLists.txt      # CMake configuration
-│   └── README.md           # C++ implementation details
-├── python/                 # Python implementation
-│   ├── src/                # Python source files
-│   ├── test/               # Python tests
-│   └── README.md           # Python implementation details
-├── LICENSE                 # MIT License
-└── README.md               # This file
+```
+2048-bot/
+├── cpp/                        # C++ implementation (primary, high-performance)
+│   ├── src/
+│   │   ├── main.cpp            # Entry point & game runner
+│   │   ├── board.cpp/hpp       # 64-bit board representation
+│   │   ├── game.cpp/hpp        # Game loop & mechanics
+│   │   ├── random_player.cpp   # Random move selection
+│   │   ├── heuristic_player.cpp# Weighted heuristic evaluation
+│   │   ├── expectimax_player.cpp# Expectimax search
+│   │   ├── tdl_player.cpp/hpp  # TD-Learning player + multi-threaded training
+│   │   ├── ntuple_network.hpp  # N-Tuple network (4×6-tuple, 8-fold symmetry)
+│   │   ├── evaluation.cpp/hpp  # Heuristic evaluation functions
+│   │   └── arg_parser.cpp/hpp  # CLI argument parsing
+│   ├── tests/                  # Google Test suite
+│   └── CMakeLists.txt          # Build configuration
+├── python/                     # Python implementation (prototyping)
+├── docs/
+│   ├── index.html              # Documentation site
+│   └── play.html               # Browser GUI (play, train, learn)
+└── README.md
 ```
 
-## Implementations
+## Player Types
 
-### [C++ Implementation](cpp/README.md)
+| Player | Strategy | Avg Score | 8192 Rate |
+|--------|----------|-----------|-----------|
+| **Random** | Random legal move | ~1,000 | 0% |
+| **Heuristic** | Weighted features (empty cells, monotonicity, smoothness, corner) | ~8,000 | 0% |
+| **Expectimax** | Depth-limited search with chance nodes | ~20,000 | <1% |
+| **TDL** | N-tuple network trained via TD(0) self-play | ~135,000 | ~70-75% |
 
-The C++ implementation provides:
-- Fast and efficient gameplay
-- Multiple AI player types (Random, Heuristic, MCTS)
-- Heuristic weight tuning using evolutionary algorithms
-- Command-line interface
-- Unit tests for core components
+## Quick Start
 
-### [Python Implementation](python/README.md)
+### Build
 
-The Python implementation prioritizes readability and ease of experimentation, making it ideal for prototyping new algorithms and strategies. It features:
+```bash
+cd cpp
+cmake -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build
+```
 
-- Clear, object-oriented design
-- Simplified API for creating new player strategies
-- Visualization tools
-- Comprehensive test suite
+### Play Games
 
-## Features
+```bash
+# 10 games with heuristic player
+./build/2048 -n 10 -p heuristic
 
-- **Multiple AI Strategies:**  
-  Both implementations offer various player types including:
-  - Random players
-  - Heuristic-based players (empty cells, monotonicity, smoothness, corner placement)
-  - Monte Carlo Tree Search players
+# 100 games with TDL player (requires trained weights)
+./build/2048 -n 100 -p tdl --weights weights.bin
+```
 
-- **Modular Design:**  
-  The project uses clearly separated modules for the game logic, board management, and player strategies, allowing easy experimentation.
+### Train the TDL Network
 
-- **Heuristic Weight Tuning:**
-  The C++ implementation includes a dedicated program for tuning the weights used by the heuristic player. This uses an evolutionary algorithm to find optimal weight combinations that maximize game scores.
+```bash
+# Train from scratch (100K games, saves to weights.bin)
+./build/2048 --train --episodes 100000 --alpha 0.1 --weights weights.bin
 
-## Getting Started
+# Continue training with lower learning rate
+./build/2048 --train --episodes 100000 --alpha 0.01 --weights weights.bin
 
-See the README files in the respective implementation directories for specific setup and usage instructions:
+# Use all CPU cores (Hogwild parallel training)
+./build/2048 --train --episodes 100000 --alpha 0.1 --weights weights.bin -t 10
+```
 
-- [C++ Setup and Usage](cpp/README.md)
-- [Python Setup and Usage](python/README.md)
+The `--weights` flag is both load and save path — if the file exists, training **resumes** from it. Use `-t` to parallelize across cores (Apple M4: `-t 10`).
+
+### Play in Browser
+
+Open `docs/play.html` in any browser. Features:
+- **Manual play** with keyboard/touch controls
+- **AI players** (Random, Heuristic, Expectimax, TDL) with speed control
+- **Load trained weights** (`weights.bin`) for the TDL player
+- **Teacher Mode** — see exactly how each AI computes its next move
+- **In-browser training** — train the network live and watch the TD(0) backward pass
+- **Save/load weights** — export trained weights compatible with the C++ program
+
+## How the TDL Player Works
+
+The TDL player uses an **n-tuple network** — a pattern-based value function that maps board states to expected future scores.
+
+### Evaluation (32 table lookups)
+
+```
+V(board) = Σ over 4 patterns × 8 symmetries of weights[index(board, pattern, symmetry)]
+```
+
+- **4 patterns**: fixed sets of 6 board positions (e.g., `[0,1,2,3,4,5]`)
+- **8 symmetries**: rotations + mirrors (one shared weight table per pattern)
+- **Each table**: 16⁶ = 16.7M entries (total: ~256 MB)
+
+### Move Selection
+
+```
+best_move = argmax over moves of [ reward(move) + V(afterstate(move)) ]
+```
+
+### Training (TD(0) backward pass)
+
+After each self-play game, walk **backward** through every move:
+
+```
+target = 0  (game over)
+for each step from last to first:
+    error = target - V(afterstate)
+    V(afterstate) += alpha × error   (updates 32 weight entries)
+    target = reward + V(afterstate)
+```
+
+This is how **preparation moves** (no immediate reward) learn to be valuable — the backward pass carries credit from future merges back to earlier states.
+
+### Multi-Threaded Training
+
+Training supports **Hogwild-style parallelism**: multiple threads play independent games and update the shared weight tables without locks. This works because individual updates are tiny (`alpha × error / 32`) and TD learning tolerates minor races. Scales nearly linearly with core count.
+
+## Documentation
+
+- **[Full Documentation](docs/index.html)** — project structure, board representation, all player types, CLI reference, and a deep dive into n-tuple networks, isomorphic symmetry, afterstate values, and TD(0) learning with worked examples.
+- **[Browser GUI](docs/play.html)** — interactive play with Teacher Mode that visualizes the TDL evaluation pipeline (pattern lookups, symmetry mappings, shared tables) and the training backward pass.
 
 ## License
 
 [MIT License](LICENSE)
-
----
-
-Happy coding, and good luck reaching those high scores! 🚀

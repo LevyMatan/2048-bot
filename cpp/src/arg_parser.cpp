@@ -168,6 +168,8 @@ void ArgParser::parseArguments(int argc, char* argv[]) {
                         trainAlpha = std::stof(value);
                     } else if (arg == "--weights") {
                         trainWeightsPath = value;
+                    } else if (arg == "--train-threads") {
+                        trainThreads = std::stoi(value);
                     } else {
                         throw std::runtime_error("Unknown flag: " + arg);
                     }
@@ -182,6 +184,10 @@ void ArgParser::parseArguments(int argc, char* argv[]) {
         }
     }
 
+    // If --threads was used in train mode, apply to trainThreads (unless --train-threads was set)
+    if (trainMode && trainThreads == 1 && simConfig.numThreads > 1) {
+        trainThreads = simConfig.numThreads;
+    }
 }
 
 void ArgParser::parseShortFlag(const std::string& flag, const std::string& value) {
@@ -418,6 +424,7 @@ void ArgParser::printHelp() {
               << "  --episodes <n>          Training episodes (default: 100000)\n"
               << "  --alpha <rate>          Learning rate for training (default: 0.1)\n"
               << "  --weights <path>        Path to save/load weights (default: weights.bin)\n"
+              << "  -t, --threads <num>     Parallel threads for training (default: 1)\n"
               << "  -h, --help             Show this help message\n"
               << "  -v, --version          Show version information\n"
               << "\n"

@@ -134,13 +134,15 @@ int main(int argc, char* argv[]) {
             // Resume from existing weights if the file exists
             network->load(parser.getTrainWeightsPath());
             int episodes = parser.getTrainEpisodes();
+            int numThreads = parser.getTrainThreads();
             int statsInterval = (episodes >= 10000) ? 1000 : std::min(100, episodes);
             if (statsInterval < 1) statsInterval = 1;
             TDLPlayer::trainNetwork(network,
                                     episodes,
                                     parser.getTrainAlpha(),
                                     parser.getTrainWeightsPath(),
-                                    statsInterval);
+                                    statsInterval,
+                                    numThreads);
             return 0;
         }
 

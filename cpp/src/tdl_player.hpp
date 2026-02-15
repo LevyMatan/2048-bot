@@ -30,16 +30,25 @@ public:
 
     /**
      * Train the network by self-play with TD(0).
-     * @param episodes Number of games to play
+     * @param network Shared network (all threads read/write the same weights)
+     * @param episodes Total number of games to play across all threads
      * @param alpha Learning rate
      * @param savePath Path to save weights (optional; can be empty)
      * @param statsInterval Print stats every N games (0 = end only)
+     * @param numThreads Number of parallel training threads (default: 1)
+     *
+     * When numThreads > 1, uses Hogwild-style asynchronous updates: each thread
+     * plays its own games and updates the shared weight tables without locks.
+     * This is safe because individual float updates are small (alpha * error / 32)
+     * and the stochastic nature of TD learning tolerates minor races. In practice,
+     * Hogwild converges as well as sequential training and scales nearly linearly.
      */
     static void trainNetwork(std::shared_ptr<NTuple::NTupleNetwork> network,
                             int episodes,
                             float alpha,
                             const std::string& savePath,
-                            int statsInterval = 1000);
+                            int statsInterval = 1000,
+                            int numThreads = 1);
 
 private:
     std::shared_ptr<NTuple::NTupleNetwork> network_;
