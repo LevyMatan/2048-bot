@@ -1248,6 +1248,7 @@
           <button class="btn" id="btn-train" onclick="game.startTraining()">Train</button>
           <button class="btn secondary" onclick="game.stopTraining()">Stop</button>
           <button class="btn secondary" onclick="game.resetNetwork()">Reset Weights</button>
+          <button class="btn secondary" onclick="game.saveWeights()">Save weights.bin</button>
         </div>
         <div class="train-progress-bar"><div class="tpb-fill" id="train-pbar"></div></div>
         <div class="train-stats" id="train-stats"></div>
@@ -1865,6 +1866,48 @@ const NTuple = (() => {
         p.weights.fill(0);
       }
       this.loaded = false;
+    }
+
+    /** Serialize weights to ArrayBuffer (same binary format as C++ save). */
+    saveToBuffer() {
+      // Calculate total size: 8 (numPatterns) + for each pattern: 8 (len) + len*4 (positions) + 16^len*4 (weights)
+      let totalSize = 8; // numPatterns as size_t (8 bytes on 64-bit)
+      for (const p of this.patterns) {
+        const len = p.pattern.length;
+        totalSize += 8;          // patternLength as size_t
+        totalSize += len * 4;    // positions as int[]
+        totalSize += p.weights.length * 4; // weights as float[]
+      }
+
+      const buffer = new ArrayBuffer(totalSize);
+      const view = new DataView(buffer);
+      let offset = 0;
+
+      // Write numPatterns (size_t = 8 bytes, little-endian)
+      view.setUint32(offset, this.patterns.length, true);
+      view.setUint32(offset + 4, 0, true);
+      offset += 8;
+
+      for (const p of this.patterns) {
+        const len = p.pattern.length;
+        // Write patternLength (size_t = 8 bytes)
+        view.setUint32(offset, len, true);
+        view.setUint32(offset + 4, 0, true);
+        offset += 8;
+
+        // Write positions (int[])
+        for (let i = 0; i < len; i++) {
+          view.setInt32(offset, p.pattern[i], true);
+          offset += 4;
+        }
+
+        // Write weights (float[])
+        const weightBytes = new Uint8Array(buffer, offset, p.weights.length * 4);
+        weightBytes.set(new Uint8Array(p.weights.buffer));
+        offset += p.weights.length * 4;
+      }
+
+      return buffer;
     }
 
     /**
@@ -3604,6 +3647,20 @@ class GameUI {
     document.getElementById('bp-section').style.display = 'none';
     document.getElementById('train-pbar').style.width = '0%';
     this.updateTeacher();
+  }
+
+  /** Save trained weights to a downloadable weights.bin file */
+  saveWeights() {
+    const buffer = tdlNetwork.saveToBuffer();
+    const blob = new Blob([buffer], { type: 'application/octet-stream' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'weights.bin';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   }
 }
 
