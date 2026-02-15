@@ -610,6 +610,79 @@
       margin-top: 6px;
       line-height: 1.5;
     }
+    .pattern-why {
+      margin-top: 14px;
+      font-size: 0.73rem;
+      line-height: 1.7;
+    }
+    .pattern-why h5 {
+      font-size: 0.75rem;
+      font-weight: 700;
+      margin: 12px 0 4px;
+    }
+    .pattern-why h5:first-child { margin-top: 0; }
+    .pattern-why .why-point {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 6px;
+      align-items: flex-start;
+    }
+    .pattern-why .why-icon {
+      flex-shrink: 0;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.6rem;
+      font-weight: 700;
+      color: #fff;
+      margin-top: 2px;
+    }
+    .pattern-why .why-text { flex: 1; }
+    .pattern-why .why-text strong { font-weight: 700; }
+    .pattern-why code {
+      font-family: var(--mono);
+      font-size: 0.68rem;
+      background: var(--card-border);
+      padding: 1px 4px;
+      border-radius: 3px;
+    }
+    .shape-compare {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin: 10px 0;
+    }
+    .shape-item {
+      text-align: center;
+    }
+    .shape-item .shape-label {
+      font-size: 0.62rem;
+      font-weight: 700;
+      font-family: var(--mono);
+      margin-bottom: 3px;
+      opacity: 0.7;
+    }
+    .shape-grid {
+      display: grid;
+      grid-template: repeat(4, 14px) / repeat(4, 14px);
+      gap: 1px;
+      background: var(--surface);
+      border-radius: 3px;
+      padding: 2px;
+    }
+    .shape-grid .sg-on {
+      background: var(--accent);
+      border-radius: 2px;
+    }
+    .shape-grid .sg-off {
+      background: var(--cell-bg);
+      border-radius: 2px;
+      opacity: 0.3;
+    }
     .pattern-grids {
       display: flex;
       gap: 10px;
@@ -689,6 +762,349 @@
       font-weight: 700;
       font-size: 0.65rem;
     }
+
+    /* ───────── Step-by-step walkthrough ───────── */
+    .teach-walkthrough { margin-top: 14px; }
+    .teach-walkthrough h4 {
+      font-size: 0.78rem;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+    .walk-step {
+      margin-bottom: 14px;
+      padding-left: 28px;
+      position: relative;
+    }
+    .walk-step::before {
+      content: attr(data-step);
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: var(--btn-text);
+      font-size: 0.62rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .walk-step h5 {
+      font-size: 0.74rem;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .walk-step p, .walk-step .walk-detail {
+      font-size: 0.7rem;
+      line-height: 1.6;
+    }
+    .walk-step code {
+      font-family: var(--mono);
+      font-size: 0.66rem;
+      background: var(--card-border);
+      padding: 1px 4px;
+      border-radius: 3px;
+    }
+
+    /* Symmetry lookup table */
+    .sym-table {
+      width: 100%;
+      font-size: 0.62rem;
+      font-family: var(--mono);
+      border-collapse: collapse;
+      margin: 8px 0;
+    }
+    .sym-table th, .sym-table td {
+      padding: 3px 5px;
+      border-bottom: 1px solid var(--card-border);
+      text-align: right;
+    }
+    .sym-table th {
+      text-align: left;
+      font-weight: 700;
+      font-size: 0.58rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      opacity: 0.7;
+    }
+    .sym-table td:first-child { text-align: left; }
+    .sym-table .sym-identity td { background: rgba(var(--accent), 0.05); }
+    .sym-total td {
+      font-weight: 700;
+      border-top: 2px solid var(--card-border);
+    }
+
+    /* Pipeline arrow */
+    .walk-pipeline {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin: 8px 0;
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      font-weight: 600;
+    }
+    .walk-pipeline .pipe-box {
+      padding: 5px 10px;
+      border-radius: 6px;
+      background: var(--bg);
+      border: 1px solid var(--card-border);
+      text-align: center;
+      line-height: 1.3;
+    }
+    .walk-pipeline .pipe-box.pipe-best {
+      border-color: #4caf50;
+      background: rgba(76,175,80,0.08);
+    }
+    .walk-pipeline .pipe-arrow {
+      font-size: 1rem;
+      opacity: 0.4;
+    }
+    .walk-pipeline .pipe-box small {
+      display: block;
+      font-size: 0.56rem;
+      opacity: 0.6;
+      font-weight: 400;
+    }
+
+    /* Tile highlight on board positions */
+    .walk-pos-grid {
+      display: inline-grid;
+      grid-template: repeat(4, 16px) / repeat(4, 16px);
+      gap: 1px;
+      background: var(--surface);
+      border-radius: 3px;
+      padding: 2px;
+      vertical-align: middle;
+      margin: 4px 4px 4px 0;
+    }
+    .walk-pos-grid .wp-cell {
+      border-radius: 2px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.45rem;
+      font-weight: 700;
+      font-family: var(--mono);
+    }
+    .walk-pos-grid .wp-active {
+      background: var(--accent);
+      color: var(--btn-text);
+    }
+    .walk-pos-grid .wp-inactive {
+      background: var(--cell-bg);
+      opacity: 0.2;
+    }
+
+    /* Collapse toggle */
+    .walk-toggle {
+      font-size: 0.68rem;
+      color: var(--accent);
+      cursor: pointer;
+      font-weight: 600;
+      user-select: none;
+      margin-top: 4px;
+      display: inline-block;
+    }
+    .walk-toggle:hover { text-decoration: underline; }
+    .walk-collapsible { display: none; }
+    .walk-collapsible.open { display: block; }
+
+    /* ───────── Training Section ───────── */
+    .train-section {
+      margin-top: 16px;
+      border-top: 2px solid var(--card-border);
+      padding-top: 14px;
+      display: none;
+    }
+    .train-section.visible { display: block; }
+    .train-section h4 {
+      font-size: 0.78rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .train-controls {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+    .train-controls label {
+      font-size: 0.7rem;
+      font-weight: 600;
+    }
+    .train-controls input[type="number"] {
+      width: 80px;
+      padding: 4px 6px;
+      font-size: 0.78rem;
+      font-family: var(--mono);
+      border: 1px solid var(--card-border);
+      border-radius: 4px;
+      background: var(--bg);
+      color: var(--text);
+    }
+    .train-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+      gap: 6px;
+      margin: 10px 0;
+    }
+    .train-stat {
+      background: var(--bg);
+      border-radius: 6px;
+      padding: 6px 10px;
+      text-align: center;
+    }
+    .train-stat .ts-label {
+      font-size: 0.58rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      opacity: 0.6;
+      font-weight: 600;
+    }
+    .train-stat .ts-value {
+      font-size: 1rem;
+      font-weight: 700;
+      font-family: var(--mono);
+    }
+    .train-progress-bar {
+      width: 100%;
+      height: 6px;
+      background: var(--cell-bg);
+      border-radius: 3px;
+      overflow: hidden;
+      margin: 8px 0;
+    }
+    .train-progress-bar .tpb-fill {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 3px;
+      transition: width 300ms;
+    }
+
+    /* ── Backward pass replay ── */
+    .bp-section {
+      margin-top: 14px;
+      border-top: 1px solid var(--card-border);
+      padding-top: 12px;
+    }
+    .bp-section h5 {
+      font-size: 0.75rem;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .bp-section > p {
+      font-size: 0.7rem;
+      line-height: 1.6;
+      margin-bottom: 10px;
+    }
+    .bp-section > p code {
+      font-family: var(--mono);
+      font-size: 0.66rem;
+      background: var(--card-border);
+      padding: 1px 4px;
+      border-radius: 3px;
+    }
+
+    /* Game path timeline */
+    .bp-timeline {
+      display: flex;
+      align-items: flex-start;
+      gap: 0;
+      overflow-x: auto;
+      padding: 8px 0 12px;
+      margin-bottom: 8px;
+    }
+    .bp-node {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-width: 56px;
+      position: relative;
+    }
+    .bp-node .bp-board {
+      display: grid;
+      grid-template: repeat(4, 10px) / repeat(4, 10px);
+      gap: 1px;
+      background: var(--surface);
+      border-radius: 2px;
+      padding: 1px;
+      border: 2px solid transparent;
+      transition: border-color 200ms;
+    }
+    .bp-node.bp-active .bp-board { border-color: var(--accent); }
+    .bp-node.bp-prep .bp-board { border-color: #ff9800; }
+    .bp-node .bp-board .bpc {
+      border-radius: 1px;
+      font-size: 0;
+    }
+    .bp-node .bp-reward {
+      font-size: 0.52rem;
+      font-family: var(--mono);
+      margin-top: 2px;
+      font-weight: 600;
+    }
+    .bp-node .bp-reward.zero { color: #ff9800; }
+    .bp-arrow {
+      display: flex;
+      align-items: center;
+      font-size: 0.6rem;
+      opacity: 0.3;
+      padding: 0 2px;
+      margin-top: 14px;
+    }
+
+    /* Backward pass step detail */
+    .bp-step-detail {
+      background: var(--bg);
+      border-radius: 6px;
+      padding: 10px 12px;
+      margin-bottom: 8px;
+      font-size: 0.68rem;
+      font-family: var(--mono);
+      line-height: 1.8;
+      border-left: 3px solid var(--accent);
+    }
+    .bp-step-detail.bp-prep-step {
+      border-left-color: #ff9800;
+      background: rgba(255, 152, 0, 0.05);
+    }
+    .bp-step-detail .bp-step-label {
+      font-weight: 700;
+      font-size: 0.72rem;
+      margin-bottom: 4px;
+      font-family: var(--font);
+    }
+    .bp-val-change {
+      display: inline-block;
+      padding: 1px 6px;
+      border-radius: 3px;
+      font-weight: 700;
+    }
+    .bp-val-up { background: rgba(76,175,80,0.15); color: #2e7d32; }
+    .bp-val-down { background: rgba(244,67,54,0.15); color: #c62828; }
+    @media (prefers-color-scheme: dark) {
+      .bp-val-up { background: rgba(76,175,80,0.2); color: #81c784; }
+      .bp-val-down { background: rgba(244,67,54,0.2); color: #ef9a9a; }
+      .bp-step-detail.bp-prep-step { background: rgba(255,152,0,0.08); }
+    }
+
+    /* Prep move callout */
+    .bp-prep-callout {
+      background: rgba(255, 152, 0, 0.08);
+      border: 1px solid rgba(255, 152, 0, 0.3);
+      border-radius: 6px;
+      padding: 10px 12px;
+      margin-top: 12px;
+      font-size: 0.72rem;
+      line-height: 1.6;
+    }
+    .bp-prep-callout strong { color: #ff9800; }
 
     /* ───────── Keyboard Hints ───────── */
     .hints {
@@ -806,6 +1222,7 @@
       <div class="teach-explain" id="teach-explain"></div>
       <div class="teach-formula" id="teach-formula" style="display:none"></div>
       <div class="teach-moves" id="teach-moves"></div>
+      <div class="teach-walkthrough" id="teach-walkthrough" style="display:none"></div>
       <div class="teach-patterns-section" id="teach-patterns-section" style="display:none">
         <h4>Per-Pattern Breakdown (best move afterstate)</h4>
         <table class="pattern-breakdown" id="pattern-table"></table>
@@ -813,9 +1230,42 @@
       <div class="teach-pattern-viz" id="teach-pattern-viz" style="display:none">
         <h4>N-Tuple Pattern Positions</h4>
         <div class="pattern-grids" id="pattern-grids"></div>
-        <p>Each pattern is evaluated under <strong>8 symmetric transformations</strong> (4 rotations &times; 2 mirrors), so the network sees all board orientations. Total: 4 patterns &times; 8 symmetries = <strong>32 weight lookups</strong> per board evaluation.</p>
+        <div id="pattern-explain"></div>
       </div>
       <div id="teach-heuristic-detail" style="display:none"></div>
+      <div class="train-section" id="train-section">
+        <h4>Train the Network</h4>
+        <div class="teach-explain">
+          The network learns by <strong>playing games against itself</strong> and updating weights via <strong>TD(0) (Temporal Difference)</strong>.
+          After each game, it walks <em>backward</em> through every move and adjusts <code>V(s')</code> so it better predicts the future.
+          This is how "preparation moves" (no immediate reward) learn to be valuable &mdash; the backward pass carries credit from future merges back to earlier states.
+        </div>
+        <div class="train-controls">
+          <label>Games:</label>
+          <input type="number" id="train-episodes" value="100" min="1" max="100000">
+          <label>Alpha:</label>
+          <input type="number" id="train-alpha" value="0.01" min="0.0001" max="1" step="0.001">
+          <button class="btn" id="btn-train" onclick="game.startTraining()">Train</button>
+          <button class="btn secondary" onclick="game.stopTraining()">Stop</button>
+          <button class="btn secondary" onclick="game.resetNetwork()">Reset Weights</button>
+        </div>
+        <div class="train-progress-bar"><div class="tpb-fill" id="train-pbar"></div></div>
+        <div class="train-stats" id="train-stats"></div>
+        <div class="bp-section" id="bp-section" style="display:none">
+          <h5>Last Game: TD(0) Backward Pass</h5>
+          <p>
+            After the game ends, the network walks <strong>backward</strong> through every afterstate.
+            At the terminal state, <code>V = 0</code> (game over, nothing left to gain).
+            For each earlier step: <code>target = R<sub>next</sub> + V(s'<sub>next</sub>)</code>, then
+            <code>error = target &minus; V(s')</code>, and weights are nudged: <code>V(s') += &alpha; &times; error</code>.
+            <br>Moves with <strong style="color:#ff9800">R = 0</strong> (no merge) but positive updates are <strong style="color:#ff9800">preparation moves</strong> &mdash;
+            the network learns they're valuable because they set up future merges.
+          </p>
+          <div id="bp-timeline-container"></div>
+          <div id="bp-steps"></div>
+          <div id="bp-prep-callout"></div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -1331,7 +1781,40 @@ const NTuple = (() => {
       }
       return value;
     }
+
+    /**
+     * Detailed per-symmetry breakdown for teacher mode.
+     * Returns array of { symIndex, positions, tiles, index, weight }.
+     */
+    estimateDetailed(grid) {
+      const details = [];
+      for (let s = 0; s < this.isoCount; s++) {
+        const positions = Array.from(this.isom[s]);
+        const tiles = positions.map(p => grid[p]);
+        const index = this.indexOf(this.isom[s], grid);
+        const weight = this.weights[index];
+        details.push({ symIndex: s, positions, tiles, index, weight });
+      }
+      return details;
+    }
+
+    /** TD update: add (adjust / isoCount) to each isomorphic lookup; return new sum. */
+    update(grid, adjust) {
+      let value = 0;
+      const a = adjust / this.isoCount;
+      for (let i = 0; i < this.isoCount; i++) {
+        const idx = this.indexOf(this.isom[i], grid);
+        this.weights[idx] += a;
+        value += this.weights[idx];
+      }
+      return value;
+    }
   }
+
+  const SYM_NAMES = [
+    'Identity', 'Rot 90\u00b0', 'Rot 180\u00b0', 'Rot 270\u00b0',
+    'Mirror', 'Mirror+90\u00b0', 'Mirror+180\u00b0', 'Mirror+270\u00b0'
+  ];
 
   /**
    * Network of N-Tuple patterns. Default: 4 six-tuples from the literature.
@@ -1364,6 +1847,24 @@ const NTuple = (() => {
         value += p.estimate(grid);
       }
       return value;
+    }
+
+    /** TD update: distribute adjust across patterns, return new value. */
+    update(grid, adjust) {
+      let value = 0;
+      const a = adjust / this.patterns.length;
+      for (const p of this.patterns) {
+        value += p.update(grid, a);
+      }
+      return value;
+    }
+
+    /** Reset all weights to zero (for fresh training). */
+    resetWeights() {
+      for (const p of this.patterns) {
+        p.weights.fill(0);
+      }
+      this.loaded = false;
     }
 
     /**
@@ -1438,7 +1939,7 @@ const NTuple = (() => {
     }
   }
 
-  return { NTupleNetwork };
+  return { NTupleNetwork, SYM_NAMES };
 })();
 
 
@@ -1472,6 +1973,275 @@ AI.tdl = function(board) {
     }
   }
   return best;
+};
+
+
+// ═══════════════════════════════════════════════════════════
+//  TRAINING ENGINE — TD(0) with backward pass recording
+// ═══════════════════════════════════════════════════════════
+
+const Trainer = {
+  running: false,
+  stats: { games: 0, totalScore: 0, maxScore: 0, maxTile: 0, tiles: {} },
+
+  /** Play one full game, record the path, then do TD(0) backward update.
+   *  Returns { path, backwardPass, score, maxTile } for visualization. */
+  trainOneGame(network, alpha) {
+    // — Forward pass: play the game, record afterstates + rewards —
+    const game = new Board2048();
+    game.addRandomTile();
+    game.addRandomTile();
+
+    const path = []; // { grid (afterstate), reward, moveDir }
+    let totalScore = 0;
+
+    for (;;) {
+      const moves = Board2048.getValidMoves(game);
+      if (moves.length === 0) break;
+
+      // Choose best move: max(score + V(afterstate))
+      let best = moves[0];
+      let bestVal = best.score + network.estimate(best.board.grid);
+      for (let i = 1; i < moves.length; i++) {
+        const val = moves[i].score + network.estimate(moves[i].board.grid);
+        if (val > bestVal) {
+          bestVal = val;
+          best = moves[i];
+        }
+      }
+
+      totalScore += best.score;
+      path.push({
+        grid: best.board.grid.slice(),
+        reward: best.score,
+        moveDir: best.direction,
+      });
+
+      // Copy the afterstate into the game board, then add random tile
+      for (let i = 0; i < 16; i++) game.grid[i] = best.board.grid[i];
+      game.addRandomTile();
+    }
+
+    // — Backward pass: TD(0) weight updates —
+    const backwardPass = []; // For visualization
+    let target = 0; // Terminal state V = 0
+
+    for (let i = path.length - 1; i >= 0; i--) {
+      const afterstate = path[i].grid;
+      const oldV = network.estimate(afterstate);
+      const error = target - oldV;
+      const newV = network.update(afterstate, alpha * error);
+      const reward = path[i].reward;
+
+      backwardPass.unshift({
+        stepIndex: i,
+        grid: afterstate,
+        reward,
+        moveDir: path[i].moveDir,
+        oldV,
+        target,
+        error,
+        newV,
+        isPrep: (reward === 0 && error > 0),
+      });
+
+      target = reward + newV;
+    }
+
+    // Find max tile
+    let maxTile = 0;
+    for (let i = 0; i < 16; i++) {
+      if (game.grid[i] > maxTile) maxTile = game.grid[i];
+    }
+
+    return { path, backwardPass, score: totalScore, maxTile };
+  },
+
+  /** Run training in async batches to keep UI responsive */
+  async run(network, episodes, alpha, onProgress, onGameDone) {
+    this.running = true;
+    this.stats = { games: 0, totalScore: 0, maxScore: 0, maxTile: 0, tiles: {} };
+
+    const BATCH_SIZE = 5; // games per animation frame
+    let lastResult = null;
+
+    for (let ep = 0; ep < episodes && this.running; ) {
+      const batchEnd = Math.min(ep + BATCH_SIZE, episodes);
+      for (; ep < batchEnd && this.running; ep++) {
+        const result = this.trainOneGame(network, alpha);
+        this.stats.games++;
+        this.stats.totalScore += result.score;
+        if (result.score > this.stats.maxScore) this.stats.maxScore = result.score;
+        if (result.maxTile > this.stats.maxTile) this.stats.maxTile = result.maxTile;
+        const tileName = (1 << result.maxTile);
+        this.stats.tiles[tileName] = (this.stats.tiles[tileName] || 0) + 1;
+        lastResult = result;
+      }
+      onProgress(ep, episodes, this.stats, lastResult);
+      // Yield to the UI thread
+      await new Promise(r => requestAnimationFrame(r));
+    }
+
+    this.running = false;
+    if (onGameDone) onGameDone(lastResult);
+    network.loaded = true; // Mark network as having weights
+  },
+
+  stop() { this.running = false; },
+};
+
+
+// ═══════════════════════════════════════════════════════════
+//  BACKWARD PASS VISUALIZATION
+// ═══════════════════════════════════════════════════════════
+
+const BPViz = {
+  DIR_ARROWS: ['\u2190', '\u2192', '\u2191', '\u2193'],
+
+  TILE_COLORS: {
+    0: ['var(--cell-bg)', 'transparent'],
+    1: ['#eee4da', '#776e65'],
+    2: ['#ede0c8', '#776e65'],
+    3: ['#f2b179', '#f9f6f2'],
+    4: ['#f59563', '#f9f6f2'],
+    5: ['#f67c5f', '#f9f6f2'],
+    6: ['#f65e3b', '#f9f6f2'],
+    7: ['#edcf72', '#f9f6f2'],
+    8: ['#edcc61', '#f9f6f2'],
+    9: ['#edc850', '#f9f6f2'],
+    10:['#edc53f', '#f9f6f2'],
+    11:['#edc22e', '#f9f6f2'],
+    12:['#3c3a32', '#f9f6f2'],
+  },
+
+  miniBoard(grid) {
+    let h = '';
+    for (let i = 0; i < 16; i++) {
+      const v = grid[i];
+      const c = this.TILE_COLORS[v] || this.TILE_COLORS[12];
+      h += `<div class="bpc" style="background:${c[0]}"></div>`;
+    }
+    return h;
+  },
+
+  renderTimeline(backwardPass) {
+    const container = document.getElementById('bp-timeline-container');
+    if (!container) return;
+    // Show last ~40 steps max for performance
+    const steps = backwardPass.length > 40 ? backwardPass.slice(-40) : backwardPass;
+    let h = '<div class="bp-timeline">';
+    for (let i = 0; i < steps.length; i++) {
+      const s = steps[i];
+      const cls = s.isPrep ? 'bp-node bp-prep' : 'bp-node';
+      const rewardCls = s.reward === 0 ? 'bp-reward zero' : 'bp-reward';
+      h += `<div class="${cls}" title="Step ${s.stepIndex}: ${this.DIR_ARROWS[s.moveDir]}  R=${s.reward}">`;
+      h += `<div class="bp-board">${this.miniBoard(s.grid)}</div>`;
+      h += `<div class="${rewardCls}">R=${s.reward}</div>`;
+      h += '</div>';
+      if (i < steps.length - 1) h += '<div class="bp-arrow">\u2190</div>';
+    }
+    h += '</div>';
+    if (backwardPass.length > 40) {
+      h += `<div style="font-size:0.6rem; opacity:0.5; margin-top:-6px;">Showing last 40 of ${backwardPass.length} steps</div>`;
+    }
+    container.innerHTML = h;
+  },
+
+  renderSteps(backwardPass) {
+    const container = document.getElementById('bp-steps');
+    if (!container) return;
+
+    // Show a few interesting steps: first, last, and preparation moves
+    const interesting = [];
+    const prepMoves = backwardPass.filter(s => s.isPrep);
+
+    // Always show last step (terminal)
+    if (backwardPass.length > 0) interesting.push(backwardPass[backwardPass.length - 1]);
+
+    // Show up to 3 prep moves
+    for (let i = 0; i < Math.min(3, prepMoves.length); i++) {
+      if (!interesting.includes(prepMoves[i])) interesting.push(prepMoves[i]);
+    }
+
+    // Show first step
+    if (backwardPass.length > 0 && !interesting.includes(backwardPass[0])) {
+      interesting.push(backwardPass[0]);
+    }
+
+    // Sort by stepIndex
+    interesting.sort((a, b) => a.stepIndex - b.stepIndex);
+
+    let h = '';
+    for (const s of interesting) {
+      const cls = s.isPrep ? 'bp-step-detail bp-prep-step' : 'bp-step-detail';
+      const label = s.isPrep ? `Step ${s.stepIndex} ${this.DIR_ARROWS[s.moveDir]} (Preparation Move)` :
+                    s.stepIndex === backwardPass.length - 1 ? `Step ${s.stepIndex} ${this.DIR_ARROWS[s.moveDir]} (Last Move)` :
+                    `Step ${s.stepIndex} ${this.DIR_ARROWS[s.moveDir]}`;
+      const delta = s.newV - s.oldV;
+      const deltaCls = delta > 0 ? 'bp-val-change bp-val-up' : delta < 0 ? 'bp-val-change bp-val-down' : 'bp-val-change';
+      const sign = delta >= 0 ? '+' : '';
+
+      h += `<div class="${cls}">`;
+      h += `<div class="bp-step-label">${label}</div>`;
+      h += `target = R<sub>next</sub> + V(s'<sub>next</sub>) = <strong>${s.target.toFixed(1)}</strong><br>`;
+      h += `old V(s') = <strong>${s.oldV.toFixed(1)}</strong><br>`;
+      h += `error = ${s.target.toFixed(1)} &minus; ${s.oldV.toFixed(1)} = <strong>${s.error.toFixed(2)}</strong><br>`;
+      h += `new V(s') = ${s.oldV.toFixed(1)} + &alpha;&times;${s.error.toFixed(2)} = <strong>${s.newV.toFixed(1)}</strong> `;
+      h += `<span class="${deltaCls}">${sign}${delta.toFixed(2)}</span>`;
+      if (s.isPrep) {
+        h += `<br><em style="color:#ff9800; font-size:0.62rem">` +
+             `Reward was 0 (no merge), but V increased because future steps had high rewards.</em>`;
+      }
+      h += '</div>';
+    }
+
+    if (backwardPass.length > interesting.length) {
+      h += `<div style="font-size:0.6rem; opacity:0.5; margin-top:4px;">` +
+           `Showing ${interesting.length} of ${backwardPass.length} steps ` +
+           `(${prepMoves.length} preparation moves in total)</div>`;
+    }
+
+    container.innerHTML = h;
+  },
+
+  renderPrepCallout(backwardPass) {
+    const container = document.getElementById('bp-prep-callout');
+    if (!container) return;
+
+    const prepMoves = backwardPass.filter(s => s.isPrep);
+    const totalSteps = backwardPass.length;
+    const pct = totalSteps > 0 ? (prepMoves.length / totalSteps * 100).toFixed(0) : 0;
+
+    if (prepMoves.length === 0) {
+      container.innerHTML = '<div class="bp-prep-callout">' +
+        '<strong>No preparation moves</strong> in this game. ' +
+        'Every move produced immediate reward (merged tiles). ' +
+        'Try training more games to see examples where the network makes strategic no-merge moves.' +
+        '</div>';
+      return;
+    }
+
+    const avgDelta = prepMoves.reduce((s, m) => s + (m.newV - m.oldV), 0) / prepMoves.length;
+
+    container.innerHTML = '<div class="bp-prep-callout">' +
+      `<strong>Preparation Moves: ${prepMoves.length} of ${totalSteps} steps (${pct}%)</strong><br>` +
+      `These moves didn't merge any tiles (R = 0), yet the backward pass <em>increased</em> their value ` +
+      `by an average of <strong>${avgDelta.toFixed(2)}</strong>. ` +
+      `Why? Because the moves that followed them produced high rewards. ` +
+      `TD(0) carries that credit backward: the network learns that the board layouts ` +
+      `produced by these "preparation" moves are <em>intrinsically valuable</em> &mdash; ` +
+      `they set up the big merges that come later. ` +
+      `Over thousands of games, the network builds an intuition for which board shapes ` +
+      `are worth pursuing, even when no immediate points are scored.` +
+      '</div>';
+  },
+
+  render(backwardPass) {
+    if (!backwardPass || backwardPass.length === 0) return;
+    this.renderTimeline(backwardPass);
+    this.renderSteps(backwardPass);
+    this.renderPrepCallout(backwardPass);
+  },
 };
 
 
@@ -1553,6 +2323,7 @@ const Teacher = {
         index: idx,
         positions: p.pattern,
         value: p.estimate(afterGrid),
+        detailed: p.estimateDetailed(afterGrid),
       }));
 
       return {
@@ -1737,8 +2508,10 @@ const Teacher = {
   renderPatternViz() {
     const viz = document.getElementById('teach-pattern-viz');
     const grids = document.getElementById('pattern-grids');
+    const explain = document.getElementById('pattern-explain');
     viz.style.display = 'block';
 
+    // ── Pattern grids ──
     const patterns = [[0,1,2,3,4,5],[4,5,6,7,8,9],[0,1,2,4,5,6],[4,5,6,8,9,10]];
     let html = '';
 
@@ -1757,6 +2530,323 @@ const Teacher = {
     });
 
     grids.innerHTML = html;
+
+    // ── Shape comparison: show the two distinct shapes ──
+    const shape1 = [0,1,2,3,4,5]; // row+2
+    const shape2 = [0,1,2,4,5,6]; // 2×3 rect
+    function miniShapeGrid(positions, color) {
+      const s = new Set(positions);
+      let h = '<div class="shape-grid">';
+      for (let i = 0; i < 16; i++) {
+        h += `<div class="${s.has(i) ? 'sg-on' : 'sg-off'}" ${s.has(i) ? 'style="background:'+color+'"' : ''}></div>`;
+      }
+      return h + '</div>';
+    }
+
+    // ── Full explanation ──
+    let ex = '<div class="pattern-why">';
+
+    ex += '<h5>Why these specific patterns?</h5>';
+
+    // Point 1: Two distinct shapes
+    ex += '<div class="why-point">';
+    ex += `<span class="why-icon" style="background:#3498db">1</span>`;
+    ex += `<div class="why-text"><strong>Two distinct shapes for shape diversity.</strong> The 4 patterns use only two base shapes, each shifted down one row to create a pair:</div>`;
+    ex += '</div>';
+
+    ex += '<div class="shape-compare">';
+    ex += '<div class="shape-item">';
+    ex += '<div class="shape-label">Shape A: "Row + 2"</div>';
+    ex += miniShapeGrid(shape1, '#e74c3c');
+    ex += '<div class="shape-label" style="margin-top:3px">P1, P2</div>';
+    ex += '</div>';
+    ex += '<div class="shape-item">';
+    ex += '<div class="shape-label">Shape B: "2\u00d73 Rectangle"</div>';
+    ex += miniShapeGrid(shape2, '#2ecc71');
+    ex += '<div class="shape-label" style="margin-top:3px">P3, P4</div>';
+    ex += '</div>';
+    ex += '</div>';
+
+    // Point 2: Contiguity / Locality
+    ex += '<div class="why-point">';
+    ex += `<span class="why-icon" style="background:#e74c3c">2</span>`;
+    ex += `<div class="why-text"><strong>Contiguous positions capture local structure.</strong> In 2048, tiles merge with their neighbors. All pattern positions are adjacent on the board, so each tuple captures relationships between tiles that directly interact &mdash; exactly the information needed to recognize good (or bad) tile configurations.</div>`;
+    ex += '</div>';
+
+    // Point 3: Shape A rationale
+    ex += '<div class="why-point">';
+    ex += `<span class="why-icon" style="background:#f39c12">3</span>`;
+    ex += `<div class="why-text"><strong>Shape A (row + 2) captures horizontal flow.</strong> A full row of 4 tiles detects merging chains like <code>[2,2,4,8]</code> and whether the row is monotonically increasing/decreasing. The 2 cells below link it to vertical structure, detecting L-shaped patterns and corner formations that are critical for high scores.</div>`;
+    ex += '</div>';
+
+    // Point 4: Shape B rationale
+    ex += '<div class="why-point">';
+    ex += `<span class="why-icon" style="background:#2ecc71">4</span>`;
+    ex += `<div class="why-text"><strong>Shape B (2\u00d73 rectangle) captures 2D local neighborhoods.</strong> This compact rectangle sees a dense patch of the board simultaneously, detecting spatial patterns like "high tile in corner with descending neighbors" or "two rows ready to merge together". It complements Shape A by being wider vertically (2 rows) but narrower horizontally (3 cols).</div>`;
+    ex += '</div>';
+
+    // Point 5: Vertical translation
+    ex += '<div class="why-point">';
+    ex += `<span class="why-icon" style="background:#9b59b6">5</span>`;
+    ex += `<div class="why-text"><strong>Each shape is used twice, shifted down by one row.</strong> P1 and P2 are the same shape in rows 0\u20131 and rows 1\u20132. P3 and P4 are the same shape in rows 0\u20131 and rows 1\u20132. The overlap at row 1 means positions 4\u20135 are seen by <em>all four</em> patterns, giving the network extra sensitivity to the middle of the board where the action often is.</div>`;
+    ex += '</div>';
+
+    // Point 6: Symmetry
+    ex += '<div class="why-point">';
+    ex += `<span class="why-icon" style="background:#1abc9c">6</span>`;
+    ex += `<div class="why-text"><strong>8-fold symmetry covers the entire board from just the top-left corner.</strong> Every base pattern sits in the top-left. Under 4 rotations \u00d7 2 mirrors = 8 transformations, each pattern "visits" all four corners and all four edges. This means the network evaluates the full board despite defining patterns in only one region &mdash; no positions are missed.</div>`;
+    ex += '</div>';
+
+    // Point 7: 6-tuple sweet spot
+    ex += '<div class="why-point">';
+    ex += `<span class="why-icon" style="background:#34495e">7</span>`;
+    ex += `<div class="why-text"><strong>6 is the sweet spot for tuple size.</strong> Each position holds a tile value 0\u201315, so a 6-tuple needs 16<sup>6</sup> = 16.7M weights. With 4 patterns that\u2019s ~67M weights (~256 MB) &mdash; large enough to encode complex patterns, small enough to fit in memory and train in hours. A 7-tuple would need 268M weights <em>per pattern</em>, making training impractical.</div>`;
+    ex += '</div>';
+
+    // Summary
+    ex += '<div style="margin-top:10px;padding:8px 10px;background:var(--bg);border-radius:6px;border-left:3px solid var(--accent);font-size:0.72rem;line-height:1.6">';
+    ex += '<strong>In total:</strong> 4 patterns \u00d7 8 symmetries = <strong>32 weight lookups per board evaluation</strong>. The network stores 4 \u00d7 16<sup>6</sup> \u2248 <strong>67M learnable weights</strong>, trained end-to-end through self-play using TD(0). These specific patterns are from the academic literature (Szubert &amp; Ja\u015Bkowski, 2014; Wu et al., 2014) and have been shown to achieve the best trade-off between expressiveness and tractability for 2048.';
+    ex += '</div>';
+
+    ex += '</div>';
+    explain.innerHTML = ex;
+  },
+
+  renderTDLWalkthrough(analysis, currentBoard) {
+    const wt = document.getElementById('teach-walkthrough');
+    const best = analysis.results[analysis.bestIdx];
+    if (!best || !best.perPattern) {
+      wt.style.display = 'none';
+      return;
+    }
+    wt.style.display = 'block';
+
+    // Use the first pattern for the detailed example
+    const exPattern = best.perPattern[0];
+    const exDetailed = exPattern.detailed;
+
+    // Helper: mini position grid highlighting specific positions
+    function posGrid(activePositions, color) {
+      const s = new Set(activePositions);
+      let h = '<span class="walk-pos-grid">';
+      for (let i = 0; i < 16; i++) {
+        if (s.has(i)) {
+          h += `<span class="wp-cell wp-active" style="background:${color || 'var(--accent)'}">${i}</span>`;
+        } else {
+          h += '<span class="wp-cell wp-inactive"></span>';
+        }
+      }
+      return h + '</span>';
+    }
+
+    let html = '<h4>Step-by-Step: How TDL Picks a Move</h4>';
+
+    // ── Step 1: Current Board ──
+    html += '<div class="walk-step" data-step="1">';
+    html += '<h5>Start with the current board</h5>';
+    html += '<p>The board has 16 cells. Each tile is stored as its log\u2082 value (e.g. tile 8 \u2192 value 3, tile 512 \u2192 value 9, empty \u2192 0).</p>';
+    html += Teacher.miniBoard(currentBoard);
+    html += '</div>';
+
+    // ── Step 2: Simulate all moves ──
+    html += '<div class="walk-step" data-step="2">';
+    html += '<h5>Simulate each move to get afterstates</h5>';
+    html += '<p>For each direction, slide and merge tiles (but do <strong>not</strong> add a random tile yet). This "afterstate" is what the network evaluates.</p>';
+    html += '<div class="walk-pipeline">';
+    for (const r of analysis.results) {
+      if (!r.valid) {
+        html += `<div class="pipe-box" style="opacity:0.3"><small>${DIR_NAMES[r.dir]}</small>\u2715 invalid</div>`;
+      } else {
+        const isBest = r === best;
+        html += `<div class="pipe-box${isBest ? ' pipe-best' : ''}"><small>${Teacher.DIR_ARROWS[r.dir]} ${DIR_NAMES[r.dir]}${isBest ? ' \u2605' : ''}</small>R = +${r.moveScore}</div>`;
+      }
+    }
+    html += '</div></div>';
+
+    // ── Step 3: Evaluate V(s') ──
+    html += '<div class="walk-step" data-step="3">';
+    html += `<h5>Evaluate V(s\u2032) for the ${Teacher.DIR_ARROWS[best.dir]} ${DIR_NAMES[best.dir]} afterstate</h5>`;
+    html += '<p>The N-tuple network computes <code>V(s\u2032)</code> by reading tile values at specific positions, combining them into an index, and looking up a learned weight. This is done for each of the <strong>4 patterns \u00d7 8 symmetries = 32 lookups</strong>.</p>';
+
+    // Show the afterstate board
+    html += Teacher.miniBoard(best.afterstate);
+
+    // ── Shared-table callout ──
+    html += '<div style="margin:10px 0;padding:8px 12px;background:rgba(52,152,219,0.08);border:1px solid rgba(52,152,219,0.25);border-radius:6px;font-size:0.7rem;line-height:1.6">';
+    html += '<strong style="color:#3498db">Key insight: One table per pattern, shared across all 8 symmetries.</strong><br>';
+    html += 'Each pattern has a <strong>single</strong> weight table with 16<sup>6</sup> = 16,777,216 entries. ';
+    html += 'All 8 symmetries (rotations + mirrors) compute different indices into this <strong>same</strong> table. ';
+    html += 'That is how rotational invariance works &mdash; if the network learns "a descending row is good," that knowledge ';
+    html += 'automatically applies to all 8 orientations. Total tables: <strong>4</strong> (one per pattern).';
+    html += '</div>';
+
+    // Detailed example: Pattern P1, all 8 symmetries
+    html += `<p style="margin-top:8px"><strong>Detailed lookup for <span style="color:${Teacher.PATTERN_COLORS[0]}">Pattern P1</span></strong> [${exPattern.positions.join(', ')}] &mdash; all 8 symmetries index into the <strong>same table</strong> of ${(tdlNetwork.patterns[0] ? (tdlNetwork.patterns[0].weights.length).toLocaleString() : '16,777,216')} weights:</p>`;
+
+    html += '<table class="sym-table">';
+    html += '<tr><th>Symmetry</th><th>Positions read</th><th>Tile values</th><th>Index (into same table)</th><th>Weight</th></tr>';
+
+    let symTotal = 0;
+    for (const d of exDetailed) {
+      const symName = NTuple.SYM_NAMES[d.symIndex];
+      const isIdentity = d.symIndex === 0;
+      const cls = isIdentity ? ' class="sym-identity"' : '';
+      const posStr = '[' + d.positions.join(',') + ']';
+      const tileStr = '[' + d.tiles.join(',') + ']';
+      const idxHex = '0x' + d.index.toString(16).toUpperCase().padStart(6, '0');
+      const wStr = d.weight >= 0 ? '+' + Teacher.fmt(d.weight, 1) : Teacher.fmt(d.weight, 1);
+      symTotal += d.weight;
+
+      html += `<tr${cls}>`;
+      html += `<td>${symName}${isIdentity ? ' \u25c0' : ''}</td>`;
+      html += `<td>${posStr}</td>`;
+      html += `<td>${tileStr}</td>`;
+      html += `<td>${idxHex}</td>`;
+      html += `<td>${wStr}</td>`;
+      html += '</tr>';
+    }
+    html += `<tr class="sym-total"><td>P1 subtotal</td><td></td><td></td><td></td><td>${Teacher.fmt(symTotal, 1)}</td></tr>`;
+    html += '</table>';
+
+    // Identity explanation
+    const id0 = exDetailed[0];
+    html += '<p style="font-size:0.65rem;opacity:0.6;margin-top:4px">';
+    html += `<strong>\u25c0 Identity row explained:</strong> Read tiles at positions [${id0.positions.join(',')}] from the afterstate. `;
+    html += `Got values [${id0.tiles.join(',')}]. `;
+    html += `Pack into index: ${id0.tiles.map((t,i) => t + '\u00d716<sup>'+i+'</sup>').join(' + ')} = 0x${id0.index.toString(16).toUpperCase().padStart(6,'0')}. `;
+    html += `Look up <code>weights[${id0.index}]</code> = ${id0.weight >= 0 ? '+' : ''}${Teacher.fmt(id0.weight, 1)}.`;
+    html += '</p>';
+
+    // Show click-to-expand for remaining patterns
+    html += '<span class="walk-toggle" onclick="this.nextElementSibling.classList.toggle(\'open\')">Show all 4 patterns \u25BC</span>';
+    html += '<div class="walk-collapsible">';
+    for (let p = 0; p < best.perPattern.length; p++) {
+      const pp = best.perPattern[p];
+      const detail = pp.detailed;
+      let pTotal = 0;
+      html += `<p style="margin-top:8px"><strong style="color:${Teacher.PATTERN_COLORS[p]}">Pattern P${p+1}</strong> [${pp.positions.join(', ')}] (same table, different symmetry positions):</p>`;
+      html += '<table class="sym-table">';
+      html += '<tr><th>Symmetry</th><th>Positions</th><th>Tiles</th><th>Index</th><th>Weight</th></tr>';
+      for (const d of detail) {
+        const symName = NTuple.SYM_NAMES[d.symIndex];
+        const wStr = d.weight >= 0 ? '+' + Teacher.fmt(d.weight, 1) : Teacher.fmt(d.weight, 1);
+        pTotal += d.weight;
+        html += `<tr><td>${symName}</td><td>[${d.positions.join(',')}]</td><td>[${d.tiles.join(',')}]</td><td>0x${d.index.toString(16).toUpperCase().padStart(6,'0')}</td><td>${wStr}</td></tr>`;
+      }
+      html += `<tr class="sym-total"><td>P${p+1} subtotal</td><td></td><td></td><td></td><td>${Teacher.fmt(pTotal, 1)}</td></tr>`;
+      html += '</table>';
+    }
+    html += '</div>'; // collapsible
+
+    html += '</div>'; // step 3
+
+    // ── Step 4: Final decision ──
+    html += '<div class="walk-step" data-step="4">';
+    html += '<h5>Compare Total = R(s,a) + V(s\u2032) for each move</h5>';
+
+    html += '<table class="sym-table" style="font-size:0.68rem">';
+    html += '<tr><th>Move</th><th>R(s,a)</th><th>V(s\u2032)</th><th>Total</th><th></th></tr>';
+    for (const r of analysis.results) {
+      if (!r.valid) {
+        html += `<tr style="opacity:0.3"><td>${Teacher.DIR_ARROWS[r.dir]} ${DIR_NAMES[r.dir]}</td><td>\u2014</td><td>\u2014</td><td>\u2014</td><td>invalid</td></tr>`;
+      } else {
+        const isBest = r === best;
+        const mark = isBest ? '<strong style="color:#4caf50">\u2605 BEST</strong>' : '';
+        html += `<tr${isBest ? ' style="font-weight:700"' : ''}>`;
+        html += `<td>${Teacher.DIR_ARROWS[r.dir]} ${DIR_NAMES[r.dir]}</td>`;
+        html += `<td>+${Teacher.fmt(r.moveScore)}</td>`;
+        html += `<td>${Teacher.fmt(r.networkVal, 1)}</td>`;
+        html += `<td>${Teacher.fmt(r.total, 1)}</td>`;
+        html += `<td>${mark}</td>`;
+        html += '</tr>';
+      }
+    }
+    html += '</table>';
+
+    html += `<p style="margin-top:6px">The network picks <strong>${Teacher.DIR_ARROWS[best.dir]} ${DIR_NAMES[best.dir]}</strong> because it has the highest Total = ${Teacher.fmt(best.moveScore)} + ${Teacher.fmt(best.networkVal, 1)} = <strong>${Teacher.fmt(best.total, 1)}</strong>.</p>`;
+    html += '</div>';
+
+    // ── Step 5: How weights are updated (training) ──
+    html += '<div class="walk-step" data-step="5">';
+    html += '<h5>How are these weights learned? (TD(0) Training)</h5>';
+
+    html += '<p>During play, the network only <em>reads</em> weights. But during <strong>training</strong>, after each full game, it <em>updates</em> them via a backward pass. Here\'s the process:</p>';
+
+    // Sub-step A: Forward play
+    html += '<div style="margin:8px 0;padding:8px 12px;background:var(--bg);border-radius:6px;border-left:3px solid #3498db">';
+    html += '<strong style="font-size:0.72rem">A. Play a full game, recording the path</strong>';
+    html += '<p style="font-size:0.68rem;margin:4px 0;line-height:1.6">';
+    html += 'At each turn, the network picks the best move (max <code>R + V(s\')</code>), records the <strong>afterstate</strong> and its <strong>reward</strong>, then a random tile is added and the game continues.</p>';
+    html += '<div style="font-family:var(--mono);font-size:0.64rem;line-height:1.6;opacity:0.8;margin:4px 0">';
+    html += 'path = [<br>';
+    html += '&nbsp;&nbsp;{ afterstate: s\'<sub>0</sub>, reward: R<sub>0</sub> }, &nbsp; <span style="opacity:0.5">// move 0: e.g. \u2190 merged two 4s, R=8</span><br>';
+    html += '&nbsp;&nbsp;{ afterstate: s\'<sub>1</sub>, reward: R<sub>1</sub> }, &nbsp; <span style="opacity:0.5">// move 1: e.g. \u2191 rearranged, R=0 (preparation!)</span><br>';
+    html += '&nbsp;&nbsp;{ afterstate: s\'<sub>2</sub>, reward: R<sub>2</sub> }, &nbsp; <span style="opacity:0.5">// move 2: e.g. \u2192 merged two 8s, R=16</span><br>';
+    html += '&nbsp;&nbsp;...<br>';
+    html += '&nbsp;&nbsp;{ afterstate: s\'<sub>N</sub>, reward: R<sub>N</sub> }, &nbsp; <span style="opacity:0.5">// last move before game over</span><br>';
+    html += ']';
+    html += '</div></div>';
+
+    // Sub-step B: Backward pass
+    html += '<div style="margin:8px 0;padding:8px 12px;background:var(--bg);border-radius:6px;border-left:3px solid #e74c3c">';
+    html += '<strong style="font-size:0.72rem">B. Walk backward, updating weights at each step</strong>';
+    html += '<p style="font-size:0.68rem;margin:4px 0;line-height:1.6">Starting from the end of the game (where <code>V = 0</code>, game over), propagate value backward:</p>';
+    html += '<div style="font-family:var(--mono);font-size:0.64rem;line-height:2;margin:6px 0">';
+    html += 'target = 0 &nbsp; <span style="opacity:0.5">// terminal state: nothing left to gain</span><br>';
+    html += '<strong>for i = N down to 0:</strong><br>';
+    html += '&nbsp;&nbsp;error = target \u2212 V(s\'<sub>i</sub>) &nbsp; <span style="opacity:0.5">// how wrong is the current estimate?</span><br>';
+    html += '&nbsp;&nbsp;V(s\'<sub>i</sub>) += \u03b1 \u00d7 error &nbsp; <span style="opacity:0.5">// nudge the 32 weights that V reads from</span><br>';
+    html += '&nbsp;&nbsp;target = R<sub>i</sub> + V(s\'<sub>i</sub>) &nbsp; <span style="opacity:0.5">// pass value to the previous step</span>';
+    html += '</div></div>';
+
+    // Sub-step C: How preparation moves get credit
+    html += '<div style="margin:8px 0;padding:8px 12px;background:rgba(255,152,0,0.08);border-radius:6px;border-left:3px solid #ff9800">';
+    html += '<strong style="font-size:0.72rem;color:#ff9800">C. How "preparation moves" earn credit</strong>';
+    html += '<p style="font-size:0.68rem;margin:4px 0;line-height:1.6">Consider a game fragment where:</p>';
+    html += '<div style="font-family:var(--mono);font-size:0.64rem;line-height:2;margin:6px 0">';
+    html += '<span style="color:#ff9800;font-weight:700">Step 5: \u2191 Up</span> &mdash; rearranged tiles, <strong>R = 0</strong> (no merge!)<br>';
+    html += '<span style="color:#4caf50;font-weight:700">Step 6: \u2192 Right</span> &mdash; merged two 128s, <strong>R = 256</strong><br>';
+    html += '<span style="color:#4caf50;font-weight:700">Step 7: \u2190 Left</span> &mdash; merged two 64s, <strong>R = 128</strong>';
+    html += '</div>';
+    html += '<p style="font-size:0.68rem;margin:4px 0;line-height:1.6">The backward pass processes step 7 first, then 6, then 5:</p>';
+    html += '<table style="font-size:0.64rem;font-family:var(--mono);width:100%;border-collapse:collapse;margin:4px 0">';
+    html += '<tr style="border-bottom:1px solid var(--card-border)"><th style="text-align:left;padding:3px 6px">Step</th><th style="text-align:left;padding:3px 6px">R</th><th style="text-align:left;padding:3px 6px">old V(s\')</th><th style="text-align:left;padding:3px 6px">target</th><th style="text-align:left;padding:3px 6px">error</th><th style="text-align:left;padding:3px 6px">new V(s\')</th></tr>';
+    html += '<tr style="color:#4caf50"><td style="padding:3px 6px">Step 7 (last)</td><td style="padding:3px 6px">128</td><td style="padding:3px 6px">50</td><td style="padding:3px 6px">0</td><td style="padding:3px 6px">\u221250</td><td style="padding:3px 6px">49.5</td></tr>';
+    html += '<tr style="color:#4caf50"><td style="padding:3px 6px">Step 6</td><td style="padding:3px 6px">256</td><td style="padding:3px 6px">100</td><td style="padding:3px 6px">128 + 49.5 = 177.5</td><td style="padding:3px 6px">+77.5</td><td style="padding:3px 6px">100.8</td></tr>';
+    html += '<tr style="color:#ff9800;font-weight:700"><td style="padding:3px 6px">Step 5 \u2605</td><td style="padding:3px 6px">0</td><td style="padding:3px 6px">200</td><td style="padding:3px 6px">256 + 100.8 = 356.8</td><td style="padding:3px 6px">+156.8</td><td style="padding:3px 6px">201.6</td></tr>';
+    html += '</table>';
+    html += '<p style="font-size:0.68rem;margin:6px 0;line-height:1.6">';
+    html += '<strong style="color:#ff9800">Step 5 had R = 0</strong> (no merge) but its V(s\') <em>increased</em> because the backward pass carried ';
+    html += 'the combined value of steps 6 + 7 (R=256+128) backward through the <code>target = R + V(s\')</code> chain. ';
+    html += 'The network now knows: <em>that specific board configuration (the afterstate of the "preparation" move) is worth ~201 points of future score.</em> ';
+    html += 'Over thousands of games, these weight updates accumulate. The 32 weights that were read when evaluating s\'<sub>5</sub> each get nudged upward, ';
+    html += 'encoding the lesson: "this pattern of tiles leads to good things."';
+    html += '</p></div>';
+
+    // Sub-step D: What exactly gets updated
+    html += '<div style="margin:8px 0;padding:8px 12px;background:var(--bg);border-radius:6px;border-left:3px solid #9b59b6">';
+    html += '<strong style="font-size:0.72rem">D. What exactly changes in the weight tables?</strong>';
+    html += '<p style="font-size:0.68rem;margin:4px 0;line-height:1.6">';
+    html += 'When we "update V(s\')" we adjust the <strong>32 specific weights</strong> that were read during evaluation ';
+    html += '(4 patterns \u00d7 8 symmetries = 32 lookups, each into its pattern\'s table). The adjustment <code>\u03b1 \u00d7 error</code> ';
+    html += 'is divided evenly: each pattern gets <code>\u03b1 \u00d7 error / 4</code>, and within a pattern, each of the 8 symmetry lookups gets <code>\u03b1 \u00d7 error / 32</code>. ';
+    html += 'So each of the 32 specific table entries gets a tiny nudge. Over millions of games, these tiny nudges converge to a value function that ';
+    html += 'accurately predicts the expected future score from any board position.';
+    html += '</p></div>';
+
+    // Summary callout
+    html += '<div style="margin:8px 0;padding:10px 12px;background:rgba(76,175,80,0.06);border:1px solid rgba(76,175,80,0.2);border-radius:6px;font-size:0.7rem;line-height:1.6">';
+    html += '<strong style="color:#4caf50">The big picture:</strong> ';
+    html += 'The network plays itself \u2192 records every afterstate + reward \u2192 walks backward updating V so it better predicts the future. ';
+    html += 'Moves that didn\'t score any points but led to big merges get "credit" via the backward chain. ';
+    html += 'This is <strong>Temporal Difference Learning</strong>: the network doesn\'t need to know the optimal strategy in advance &mdash; ';
+    html += 'it discovers that some board shapes are intrinsically valuable by observing what happens after them, game after game. ';
+    html += 'Try the <strong>Train</strong> button below to watch this process live!';
+    html += '</div>';
+
+    html += '</div>'; // step 5
+
+    wt.innerHTML = html;
   },
 
   renderHeuristicDetail(analysis) {
@@ -1801,11 +2891,13 @@ const Teacher = {
     const patternsSection = document.getElementById('teach-patterns-section');
     const patternViz = document.getElementById('teach-pattern-viz');
     const heurDetail = document.getElementById('teach-heuristic-detail');
+    const walkthrough = document.getElementById('teach-walkthrough');
 
     // Hide optional sections
     patternsSection.style.display = 'none';
     patternViz.style.display = 'none';
     heurDetail.style.display = 'none';
+    walkthrough.style.display = 'none';
     formula.style.display = 'none';
 
     let analysis;
@@ -1825,6 +2917,7 @@ const Teacher = {
 
         analysis = Teacher.analyzeTDL(board);
         Teacher.renderMoveCards(analysis);
+        Teacher.renderTDLWalkthrough(analysis, board);
         Teacher.renderTDLPatternBreakdown(analysis);
         Teacher.renderPatternViz();
         break;
@@ -2426,9 +3519,91 @@ class GameUI {
 
   updateTeacher() {
     if (!this.teacherMode) return;
-    if (this.gameOver) return;
     const player = this.getSelectedPlayer();
+
+    // Training section is always visible for TDL (even when game over)
+    const trainSec = document.getElementById('train-section');
+    if (trainSec) {
+      trainSec.classList.toggle('visible', player === 'tdl');
+    }
+
+    if (this.gameOver) return;
     Teacher.render(this.board, player);
+  }
+
+  /** Start training the TDL network from the browser */
+  startTraining() {
+    if (Trainer.running) return;
+
+    const episodes = parseInt(document.getElementById('train-episodes').value) || 100;
+    const alpha = parseFloat(document.getElementById('train-alpha').value) || 0.01;
+
+    const statsEl = document.getElementById('train-stats');
+    const pbar = document.getElementById('train-pbar');
+    const bpSec = document.getElementById('bp-section');
+    const btn = document.getElementById('btn-train');
+    btn.textContent = 'Training...';
+    btn.disabled = true;
+
+    Trainer.run(
+      tdlNetwork,
+      episodes,
+      alpha,
+      // onProgress
+      (ep, total, stats, lastResult) => {
+        const pct = (ep / total * 100).toFixed(0);
+        pbar.style.width = pct + '%';
+        const avg = stats.games > 0 ? Math.round(stats.totalScore / stats.games) : 0;
+
+        // Tile distribution
+        let tileDist = '';
+        const entries = Object.entries(stats.tiles).sort((a,b) => +b[0] - +a[0]);
+        for (const [tile, count] of entries.slice(0, 5)) {
+          tileDist += `${tile}: ${(count/stats.games*100).toFixed(0)}%  `;
+        }
+
+        statsEl.innerHTML =
+          `<div class="train-stat"><div class="ts-label">Games</div><div class="ts-value">${stats.games}</div></div>` +
+          `<div class="train-stat"><div class="ts-label">Avg Score</div><div class="ts-value">${avg.toLocaleString()}</div></div>` +
+          `<div class="train-stat"><div class="ts-label">Best</div><div class="ts-value">${stats.maxScore.toLocaleString()}</div></div>` +
+          `<div class="train-stat"><div class="ts-label">Max Tile</div><div class="ts-value">${1 << stats.maxTile}</div></div>`;
+
+        if (tileDist) {
+          statsEl.innerHTML += `<div class="train-stat" style="grid-column:1/-1"><div class="ts-label">Max Tile Distribution</div><div class="ts-value" style="font-size:0.7rem">${tileDist}</div></div>`;
+        }
+
+        // Render backward pass for last game
+        if (lastResult && lastResult.backwardPass.length > 0) {
+          bpSec.style.display = '';
+          BPViz.render(lastResult.backwardPass);
+        }
+      },
+      // onDone
+      (lastResult) => {
+        btn.textContent = 'Train';
+        btn.disabled = false;
+        pbar.style.width = '100%';
+        // Refresh teacher view in case TDL is active
+        this.updateTeacher();
+      }
+    );
+  }
+
+  /** Stop ongoing training */
+  stopTraining() {
+    Trainer.stop();
+    const btn = document.getElementById('btn-train');
+    btn.textContent = 'Train';
+    btn.disabled = false;
+  }
+
+  /** Reset network weights to zero */
+  resetNetwork() {
+    tdlNetwork.resetWeights();
+    document.getElementById('train-stats').innerHTML = '';
+    document.getElementById('bp-section').style.display = 'none';
+    document.getElementById('train-pbar').style.width = '0%';
+    this.updateTeacher();
   }
 }
 
