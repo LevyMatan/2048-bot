@@ -102,6 +102,20 @@
       color: var(--accent);
       background: var(--accent-soft);
     }
+    nav.sidebar a.nav-cta {
+      display: block;
+      margin-top: 0.25rem;
+      padding: 0.45rem 0.75rem;
+      font-weight: 700;
+      color: #fff;
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+      border-radius: 6px;
+      text-align: center;
+    }
+    nav.sidebar a.nav-cta:hover {
+      background: linear-gradient(135deg, #2563eb, #7c3aed);
+      color: #fff;
+    }
 
     /* Main content */
     main { min-width: 0; }
@@ -119,6 +133,23 @@
     .hero p { color: #cbd5e1; font-size: 1.05rem; margin-top: 0.5rem; }
     .hero p:last-child { margin-bottom: 0; }
     .hero a { color: #93c5fd; }
+    .hero .cta-play {
+      display: inline-block;
+      margin-top: 0.75rem;
+      padding: 0.65rem 1.6rem;
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: #fff;
+      background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+      border-radius: 8px;
+      text-decoration: none;
+      box-shadow: 0 4px 14px rgba(59,130,246,0.45);
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    .hero .cta-play:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(59,130,246,0.55);
+    }
     .hero .tags { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 1rem; }
     .hero .tag {
       display: inline-block;
@@ -178,8 +209,16 @@
       border: 1px solid var(--code-border);
       margin: 0.75rem 0;
       line-height: 1.55;
+      white-space: pre !important;
+      display: block !important;
     }
-    pre code { padding: 0; border: none; background: none; }
+    pre code {
+      padding: 0;
+      border: none;
+      background: none;
+      white-space: pre !important;
+      display: block !important;
+    }
 
     /* Tables */
     table {
@@ -239,6 +278,8 @@
       font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
       font-size: 0.82rem;
       line-height: 1.6;
+      white-space: pre;
+      overflow-x: auto;
       background: var(--code-bg);
       border: 1px solid var(--code-border);
       padding: 1rem 1.25rem;
@@ -273,7 +314,7 @@
   <nav class="sidebar">
     <div class="nav-group">
       <div class="nav-label">Play</div>
-      <a href="play.html">Play in Browser</a>
+      <a class="nav-cta" href="play.html">&#9654; Play in Browser</a>
     </div>
     <div class="nav-group">
       <div class="nav-label">Overview</div>
@@ -314,7 +355,8 @@
     <section class="hero" id="intro">
       <h1>2048 Bot</h1>
       <p>A high-performance 2048 AI exploring multiple strategies &mdash; from simple heuristics to a <strong>temporal-difference learning</strong> agent that regularly reaches the <strong>8192</strong> tile and beyond.</p>
-      <p><a href="https://github.com/LevyMatan/2048-bot">View on GitHub</a> &middot; <a href="play.html" style="font-weight:700;font-size:1.1em">&#9654; Play in Browser</a></p>
+      <p><a href="https://github.com/LevyMatan/2048-bot">View on GitHub</a></p>
+      <a class="cta-play" href="play.html">&#9654;&ensp;Play in Browser</a>
       <div class="tags">
         <span class="tag">C++17</span>
         <span class="tag">CMake</span>
@@ -335,29 +377,29 @@
 
       <div class="file-tree">
 <span class="dir">2048-bot/</span>
-<span class="dir">&boxvr;&boxh; cpp/</span>                         <span class="comment"># C++ implementation</span>
-&boxv;   <span class="dir">&boxvr;&boxh; src/</span>                     <span class="comment"># Source files</span>
-&boxv;   &boxv;   &boxvr;&boxh; main.cpp              <span class="comment"># Entry point &amp; game runner</span>
-&boxv;   &boxv;   &boxvr;&boxh; board.cpp/hpp          <span class="comment"># 64-bit board representation</span>
-&boxv;   &boxv;   &boxvr;&boxh; game.cpp/hpp           <span class="comment"># Game loop &amp; mechanics</span>
-&boxv;   &boxv;   &boxvr;&boxh; players.hpp            <span class="comment"># Player base class &amp; configs</span>
-&boxv;   &boxv;   &boxvr;&boxh; random_player.cpp      <span class="comment"># Random move selection</span>
-&boxv;   &boxv;   &boxvr;&boxh; heuristic_player.cpp   <span class="comment"># Weighted heuristic eval</span>
-&boxv;   &boxv;   &boxvr;&boxh; expectimax_player.cpp  <span class="comment"># Expectimax search</span>
-&boxv;   &boxv;   &boxvr;&boxh; tdl_player.cpp/hpp     <span class="comment"># TD-Learning player + multi-threaded training</span>
-&boxv;   &boxv;   &boxvr;&boxh; ntuple_network.hpp     <span class="comment"># N-Tuple network impl</span>
-&boxv;   &boxv;   &boxvr;&boxh; evaluation.cpp/hpp     <span class="comment"># Heuristic evaluation fns</span>
-&boxv;   &boxv;   &boxvr;&boxh; arg_parser.cpp/hpp     <span class="comment"># CLI argument parsing</span>
-&boxv;   &boxv;   &boxur;&boxh; logger.cpp/hpp         <span class="comment"># Configurable logger</span>
-&boxv;   <span class="dir">&boxvr;&boxh; configurations/</span>      <span class="comment"># JSON config files</span>
-&boxv;   <span class="dir">&boxvr;&boxh; tests/</span>               <span class="comment"># Google Test suite</span>
-&boxv;   &boxur;&boxh; CMakeLists.txt        <span class="comment"># Build configuration</span>
-<span class="dir">&boxvr;&boxh; python/</span>                      <span class="comment"># Python implementation</span>
-<span class="dir">&boxvr;&boxh; docs/</span>                        <span class="comment"># Documentation + browser GUI</span>
-&boxv;   &boxvr;&boxh; index.html              <span class="comment"># This documentation site</span>
-&boxv;   &boxur;&boxh; play.html               <span class="comment"># Browser GUI (play, train, learn)</span>
-<span class="dir">&boxvr;&boxh; .github/workflows/</span>          <span class="comment"># CI: tests, benchmarks</span>
-&boxur;&boxh; README.md
+<span class="dir">&#x251C;&#x2500; cpp/</span>                         <span class="comment"># C++ implementation</span>
+&#x2502;   <span class="dir">&#x251C;&#x2500; src/</span>                     <span class="comment"># Source files</span>
+&#x2502;   &#x2502;   &#x251C;&#x2500; main.cpp              <span class="comment"># Entry point &amp; game runner</span>
+&#x2502;   &#x2502;   &#x251C;&#x2500; board.cpp/hpp          <span class="comment"># 64-bit board representation</span>
+&#x2502;   &#x2502;   &#x251C;&#x2500; game.cpp/hpp           <span class="comment"># Game loop &amp; mechanics</span>
+&#x2502;   &#x2502;   &#x251C;&#x2500; players.hpp            <span class="comment"># Player base class &amp; configs</span>
+&#x2502;   &#x2502;   &#x251C;&#x2500; random_player.cpp      <span class="comment"># Random move selection</span>
+&#x2502;   &#x2502;   &#x251C;&#x2500; heuristic_player.cpp   <span class="comment"># Weighted heuristic eval</span>
+&#x2502;   &#x2502;   &#x251C;&#x2500; expectimax_player.cpp  <span class="comment"># Expectimax search</span>
+&#x2502;   &#x2502;   &#x251C;&#x2500; tdl_player.cpp/hpp     <span class="comment"># TD-Learning player + multi-threaded training</span>
+&#x2502;   &#x2502;   &#x251C;&#x2500; ntuple_network.hpp     <span class="comment"># N-Tuple network impl</span>
+&#x2502;   &#x2502;   &#x251C;&#x2500; evaluation.cpp/hpp     <span class="comment"># Heuristic evaluation fns</span>
+&#x2502;   &#x2502;   &#x251C;&#x2500; arg_parser.cpp/hpp     <span class="comment"># CLI argument parsing</span>
+&#x2502;   &#x2502;   &#x2514;&#x2500; logger.cpp/hpp         <span class="comment"># Configurable logger</span>
+&#x2502;   <span class="dir">&#x251C;&#x2500; configurations/</span>      <span class="comment"># JSON config files</span>
+&#x2502;   <span class="dir">&#x251C;&#x2500; tests/</span>               <span class="comment"># Google Test suite</span>
+&#x2502;   &#x2514;&#x2500; CMakeLists.txt        <span class="comment"># Build configuration</span>
+<span class="dir">&#x251C;&#x2500; python/</span>                      <span class="comment"># Python implementation</span>
+<span class="dir">&#x251C;&#x2500; docs/</span>                        <span class="comment"># Documentation + browser GUI</span>
+&#x2502;   &#x251C;&#x2500; index.html              <span class="comment"># This documentation site</span>
+&#x2502;   &#x2514;&#x2500; play.html               <span class="comment"># Browser GUI (play, train, learn)</span>
+<span class="dir">&#x251C;&#x2500; .github/workflows/</span>          <span class="comment"># CI: tests, benchmarks</span>
+&#x2514;&#x2500; README.md
       </div>
 
       <h3>Board Representation</h3>
@@ -1187,6 +1229,19 @@ xychart-beta
       lineColor: '#64748b',
       secondaryColor: '#e0f2fe',
       tertiaryColor: '#f8fafc'
+    }
+  });
+
+  /* Fix for browsers that collapse whitespace inside <pre> elements */
+  document.querySelectorAll('pre').forEach(function(pre) {
+    var code = pre.querySelector('code');
+    var el = code || pre;
+    var text = el.textContent;
+    if (text && text.includes('\n')) {
+      var lines = text.split('\n');
+      el.innerHTML = lines.map(function(l) {
+        return l.replace(/ /g, '&nbsp;');
+      }).join('<br>');
     }
   });
 </script>
