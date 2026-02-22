@@ -33,4 +33,9 @@
 
 ## Reproducibility and regression
 - **Runner:** From repo root, `cd cpp && scripts/run_benchmark.sh [baseline|tuned|full]`. Uses BENCHMARK_GAMES (default 500) and BENCHMARK_THREADS (default 4).
-- **Regression guard:** `cd cpp && scripts/check_8k_regression.sh [min_hit_rate_8k] [num_games] [config]`. Fails if hitRate8K is below threshold. Example: `scripts/check_8k_regression.sh 0.0 50` (ensure no regression). CI: `.github/workflows/benchmark-8k-regression.yml` runs weekly and on dispatch with 30 games and threshold 0.
+- **Regression guard:** `cd cpp && scripts/check_8k_regression.sh [min_hit_rate_8k] [num_games] [config]`. Fails if hitRate8K is below threshold.
+- **CI:** `.github/workflows/benchmark-8k-regression.yml` runs weekly and on dispatch.
+  - Uses TDL player (`configurations/tdl_config.json`). Trains the n-tuple network (100K episodes) then benchmarks 100 games.
+  - Threshold: 10% 8K hit rate. TDL achieves ~17% after 100K episodes, giving comfortable margin.
+  - Environment variables: `TRAIN_EPISODES`, `TRAIN_THREADS`, `BENCHMARK_THREADS`.
+  - The script auto-trains when `weights.bin` is missing, so CI is fully self-contained.
